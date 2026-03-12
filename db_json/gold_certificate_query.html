@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Certificate Query</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 2rem;
+        }
+        input, button {
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gold Certificate Data</h1>
+    <div>
+        <label for="jsonFileInput">Select gold_certificate.json:</label>
+        <input type="file" id="jsonFileInput" accept=".json">
+        <button onclick="copyTableData()">Copy to Clipboard</button>
+    </div>
+    <hr style="margin-top: 1rem;">
+    <h2>Results</h2>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Mode of Payment</th>
+                <th>Total</th>
+                <th>GST</th>
+                <th>GST Bill Number</th>
+                <th>Total Tax</th>
+                <th>Customer ID</th>
+                <th>Certificate Number</th>
+                <th>Name</th>
+                <th>Item</th>
+                <th>Total Weight</th>
+                <th>Test Weight</th>
+                <th>Purity</th>
+                <th>Returned</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        let jsonData = [];
+        document.getElementById('jsonFileInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        jsonData = JSON.parse(e.target.result);
+                        renderTable(jsonData);
+                    } catch (error) {
+                        alert('Error parsing JSON file.');
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            data.forEach(certificate => {
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(certificate.data);
+                } catch (e) {
+                    // if data is not a json string, we just display the raw data
+                    const row = tableBody.insertRow();
+                    row.insertCell(0).innerText = certificate.id;
+                    row.insertCell(1).innerText = certificate.created;
+                    row.insertCell(2).innerText = certificate.status;
+                    row.insertCell(3).innerText = certificate.mode_of_payment;
+                    row.insertCell(4).innerText = certificate.total;
+                    row.insertCell(5).innerText = certificate.gst;
+                    row.insertCell(6).innerText = certificate.gst_bill_number;
+                    row.insertCell(7).innerText = certificate.total_tax;
+                    row.insertCell(8).innerText = certificate.customer_id;
+                    const cell = row.insertCell(9);
+                    cell.colSpan = 7;
+                    cell.innerText = certificate.data;
+                    return;
+                }
+
+                if (Array.isArray(parsedData)) {
+                    const numItems = parsedData.length;
+                    parsedData.forEach((item, index) => {
+                        const row = tableBody.insertRow();
+                        if (index === 0) {
+                            const idCell = row.insertCell(0);
+                            idCell.innerText = certificate.id;
+                            if (numItems > 1) idCell.rowSpan = numItems;
+
+                            const createdCell = row.insertCell(1);
+                            createdCell.innerText = certificate.created;
+                            if (numItems > 1) createdCell.rowSpan = numItems;
+
+                            const statusCell = row.insertCell(2);
+                            statusCell.innerText = certificate.status;
+                            if (numItems > 1) statusCell.rowSpan = numItems;
+                            
+                            const modeOfPaymentCell = row.insertCell(3);
+                            modeOfPaymentCell.innerText = certificate.mode_of_payment;
+                            if (numItems > 1) modeOfPaymentCell.rowSpan = numItems;
+
+                            const totalCell = row.insertCell(4);
+                            totalCell.innerText = certificate.total;
+                            if (numItems > 1) totalCell.rowSpan = numItems;
+
+                            const gstCell = row.insertCell(5);
+                            gstCell.innerText = certificate.gst;
+                            if (numItems > 1) gstCell.rowSpan = numItems;
+
+                            const gstBillNumberCell = row.insertCell(6);
+                            gstBillNumberCell.innerText = certificate.gst_bill_number;
+                            if (numItems > 1) gstBillNumberCell.rowSpan = numItems;
+
+                            const totalTaxCell = row.insertCell(7);
+                            totalTaxCell.innerText = certificate.total_tax;
+                            if (numItems > 1) totalTaxCell.rowSpan = numItems;
+
+                            const customerIdCell = row.insertCell(8);
+                            customerIdCell.innerText = certificate.customer_id;
+                            if (numItems > 1) customerIdCell.rowSpan = numItems;
+                        }
+                        
+                        row.insertCell().innerText = item.certificate_number || '';
+                        row.insertCell().innerText = item.name || '';
+                        row.insertCell().innerText = item.item || '';
+                        row.insertCell().innerText = item.total_weight || '';
+                        row.insertCell().innerText = item.test_weight || '';
+                        row.insertCell().innerText = item.purity || '';
+                        row.insertCell().innerText = item.returned ? 'Yes' : 'No';
+                    });
+                }
+            });
+        }
+
+        function copyTableData() {
+            if (jsonData.length === 0) {
+                alert('Please load the JSON file first.');
+                return;
+            }
+
+            const headers = [
+                "ID", "Created", "Status", "Mode of Payment", "Total", "GST", "GST Bill Number", "Total Tax", "Customer ID",
+                "Certificate Number", "Name", "Item", "Total Weight", "Test Weight", "Purity", "Returned"
+            ];
+            let dataString = headers.join('\t') + '\n';
+
+            jsonData.forEach(certificate => {
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(certificate.data);
+                } catch(e) {
+                    parsedData = [{}]; // Create a single empty item to show the main certificate data
+                }
+
+
+                if (Array.isArray(parsedData)) {
+                    parsedData.forEach(item => {
+                        const rowData = [
+                            certificate.id,
+                            certificate.created,
+                            certificate.status,
+                            certificate.mode_of_payment,
+                            certificate.total,
+                            certificate.gst,
+                            certificate.gst_bill_number,
+                            certificate.total_tax,
+                            certificate.customer_id,
+                            item.certificate_number || '',
+                            item.name || '',
+                            item.item || '',
+                            item.total_weight || '',
+                            item.test_weight || '',
+                            item.purity || '',
+                            item.returned ? 'Yes' : 'No'
+                        ];
+                        dataString += rowData.join('\t') + '\n';
+                    });
+                }
+            });
+
+            navigator.clipboard.writeText(dataString).then(() => {
+                alert('Table data copied to clipboard!');
+            }, (err) => {
+                alert('Failed to copy data.');
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

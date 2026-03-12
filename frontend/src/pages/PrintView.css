@@ -1,0 +1,249 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+.print-container {
+    background-color: #f0f2f5;
+    min-height: 100vh;
+    font-family: 'Outfit', sans-serif;
+}
+
+.print-toolbar {
+    background: #1a1a1a;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.print-toolbar button {
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.print-toolbar button:first-child {
+    background: #D4AF37;
+    color: white;
+}
+
+.print-toolbar button:last-child {
+    background: #444;
+    color: white;
+}
+
+.print-content {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+/* Certificate Styling */
+.certificate-card {
+    width: 210mm;
+    min-height: 297mm;
+    background: white;
+    padding: 25mm;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border: 12px solid #D4AF37;
+    outline: 2px solid #1a1a1a;
+    outline-offset: -8px;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.cert-header {
+    text-align: center;
+    border-bottom: 2px solid #D4AF37;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.cert-header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    color: #D4AF37;
+    letter-spacing: 2px;
+}
+
+.cert-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+}
+
+.cert-meta .label {
+    display: block;
+    font-size: 0.75rem;
+    color: #D4AF37;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cert-meta .value {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.cert-content {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 3rem;
+    min-height: 300px;
+}
+
+.cert-photo {
+    width: 250px;
+    height: 250px;
+    border: 3px solid #D4AF37;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.cert-photo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+}
+
+.cert-details {
+    flex: 1;
+}
+
+.cert-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.cert-table th {
+    background: #D4AF37;
+    color: white;
+    text-align: left;
+    padding: 0.75rem;
+}
+
+.cert-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+}
+
+.cert-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: auto;
+    padding-top: 4rem;
+}
+
+.signature {
+    text-align: center;
+    width: 180px;
+}
+
+.sign-line {
+    border-top: 1px solid #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.seal {
+    width: 100px;
+    height: 100px;
+    border: 4px double #D4AF37;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #D4AF37;
+    transform: rotate(-15deg);
+}
+
+/* Receipt Styling - User Specified */
+.test-receipt {
+    background: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    font-family: 'Courier New', Courier, monospace;
+    /* Classic thermal print feel */
+}
+
+.receipt-header {
+    text-align: center;
+    border-bottom: 1px dashed #ccc;
+    padding-bottom: 5mm;
+    margin-bottom: 5mm;
+}
+
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 5mm;
+}
+
+.receipt-table th {
+    text-align: left;
+    border-bottom: 1px solid #000;
+}
+
+.receipt-total {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 1.2rem;
+    border-top: 1px solid #000;
+    padding-top: 2mm;
+}
+
+.receipt-footer {
+    text-align: center;
+    margin-top: 10mm;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.no-gold-row td {
+    color: #ff0000 !important;
+    text-decoration: line-through;
+}
+
+.no-gold-row td:last-child {
+    text-decoration: none;
+    font-weight: 900;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .print-container {
+        background: none;
+        padding: 0;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .certificate-card {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+    }
+
+    .test-receipt {
+        box-shadow: none;
+        margin: 0;
+    }
+}

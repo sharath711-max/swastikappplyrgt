@@ -1,0 +1,42 @@
+{
+  "name": "backend",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "backup": "node utils/backup.js",
+    "test": "jest tests/unit tests/integration",
+    "test:workflow": "node test_workflows.js",
+    "test:workflow:v2": "node test_workflows_v2.js",
+    "test:watch": "jest --watch tests/unit tests/integration"
+  },
+  "bin": "app.js",
+  "pkg": {
+    "scripts": "app.js",
+    "assets": [
+      "public/**/*",
+      "db/init.sql",
+      "node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ]
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1004.0",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^11.5.0",
+    "chokidar": "5.0.0",
+    "cors": "^2.8.5",
+    "decimal.js": "^10.6.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
+    "supertest": "^7.2.2"
+  }
+}

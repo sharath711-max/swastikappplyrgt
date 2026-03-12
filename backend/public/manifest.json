@@ -1,0 +1,8 @@
+{
+    "short_name": "Swastik Lab",
+    "name": "Swastik Gold & Silver Testing Lab",
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#D4AF37",
+    "background_color": "#ffffff"
+}

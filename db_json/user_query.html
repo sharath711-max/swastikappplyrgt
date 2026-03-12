@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Query</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 2rem;
+        }
+        input, button {
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>User Data</h1>
+    <div>
+        <label for="jsonFileInput">Select user.json:</label>
+        <input type="file" id="jsonFileInput" accept=".json">
+        <button onclick="copyTableData()">Copy to Clipboard</button>
+    </div>
+    <hr style="margin-top: 1rem;">
+    <h2>Results</h2>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Created</th>
+                <th>Password Hash</th>
+                <th>Role ID</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        let jsonData = [];
+        document.getElementById('jsonFileInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        jsonData = JSON.parse(e.target.result);
+                        renderTable(jsonData);
+                    } catch (error) {
+                        alert('Error parsing JSON file.');
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).innerText = item.id;
+                row.insertCell(1).innerText = item.created;
+                row.insertCell(2).innerText = item.password_hash;
+                row.insertCell(3).innerText = item.role_id;
+                row.insertCell(4).innerText = item.email;
+            });
+        }
+
+        function copyTableData() {
+            if (jsonData.length === 0) {
+                alert('Please load the JSON file first.');
+                return;
+            }
+
+            const headers = [
+                "ID", "Created", "Password Hash", "Role ID", "Email"
+            ];
+            let dataString = headers.join('\t') + '\n';
+
+            jsonData.forEach(item => {
+                const rowData = [
+                    item.id,
+                    item.created,
+                    item.password_hash,
+                    item.role_id,
+                    item.email
+                ];
+                dataString += rowData.join('\t') + '\n';
+            });
+
+            navigator.clipboard.writeText(dataString).then(() => {
+                alert('Table data copied to clipboard!');
+            }, (err) => {
+                alert('Failed to copy data.');
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

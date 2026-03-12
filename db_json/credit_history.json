@@ -1,0 +1,6122 @@
+[
+  {
+    "id": "P4Eznued_g",
+    "created": "2022-07-05 13:49:54.834257",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "sEcWYC_K2A",
+    "created": "2022-07-08 16:19:36.166936",
+    "customer_id": "tcodtBzuLg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ispYfclz4A",
+    "created": "2022-07-11 18:05:17.201950",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "7bXJqMA9hg",
+    "created": "2022-07-11 20:27:39.932952",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 50
+  },
+  {
+    "id": "LZL2-rtzIQ",
+    "created": "2022-07-12 19:30:39.557507",
+    "customer_id": "Zq41E7TDmQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "sLzEs_-ntg",
+    "created": "2022-07-13 21:08:06.883544",
+    "customer_id": "diKEa0QLjw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "SmqIcbtR-A",
+    "created": "2022-07-14 18:55:03.433807",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "vQTJfE7c4A",
+    "created": "2022-07-14 18:55:08.850081",
+    "customer_id": "Goz68mmVRw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "5CVc54fiAQ",
+    "created": "2022-07-15 19:29:07.368570",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "NQm9gvNXFg",
+    "created": "2022-07-18 17:47:48.566362",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "zCeR6aI09Q",
+    "created": "2022-08-02 16:49:16.054940",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "7Px4XW-C-w",
+    "created": "2022-08-08 19:15:02.007804",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 60
+  },
+  {
+    "id": "XNgdkbYdfA",
+    "created": "2022-08-08 19:27:25.788066",
+    "customer_id": "tFpyEsfQgg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "0tViTr_1Vw",
+    "created": "2022-08-08 19:27:29.338520",
+    "customer_id": "r_IWSvv2Ng",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "CiPyDPGq6w",
+    "created": "2022-08-08 19:27:35.503319",
+    "customer_id": "h44O4QRT0A",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "isgUataoFA",
+    "created": "2022-08-08 19:27:38.431131",
+    "customer_id": "-7uCPuLV1A",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "eosHX1LjKw",
+    "created": "2022-08-10 18:57:54.142922",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ZCCO9T0KWA",
+    "created": "2022-08-11 14:24:03.485023",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 90
+  },
+  {
+    "id": "gt_fjl9ubw",
+    "created": "2022-08-12 19:14:31.544660",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 120
+  },
+  {
+    "id": "ISRviph_jg",
+    "created": "2022-08-12 19:14:38.396736",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 170
+  },
+  {
+    "id": "5IZEzl27_w",
+    "created": "2022-08-12 19:14:40.944388",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 200
+  },
+  {
+    "id": "irhNtinHQw",
+    "created": "2022-08-12 21:10:25.754761",
+    "customer_id": "40IMCbzyJg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "u_dgygFI4Q",
+    "created": "2022-08-12 21:10:28.261103",
+    "customer_id": "40IMCbzyJg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 50
+  },
+  {
+    "id": "M0iTU9aHaw",
+    "created": "2022-08-14 11:56:09.348597",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 100
+  },
+  {
+    "id": "n4DGVMJk5g",
+    "created": "2022-08-15 19:07:50.142873",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 230
+  },
+  {
+    "id": "jr89DSS9DA",
+    "created": "2022-08-16 17:05:19.058142",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "6IOZosMu_Q",
+    "created": "2022-08-17 17:39:21.234468",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 260
+  },
+  {
+    "id": "iC4Qb0ISPg",
+    "created": "2022-08-17 17:39:25.084267",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 290
+  },
+  {
+    "id": "2E3-st8llw",
+    "created": "2022-08-17 17:39:28.649336",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 320
+  },
+  {
+    "id": "jmT7kgZx2A",
+    "created": "2022-08-17 17:39:28.680450",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 320
+  },
+  {
+    "id": "9j6AylTMMg",
+    "created": "2022-08-19 20:27:09.404822",
+    "customer_id": "7rjaOh9H3Q",
+    "type": "credit",
+    "amount": 50,
+    "mode_of_payment": "cash",
+    "previous_balance": 0
+  },
+  {
+    "id": "qke9qR8tVA",
+    "created": "2022-08-19 20:27:38.097541",
+    "customer_id": "7rjaOh9H3Q",
+    "type": "credit",
+    "amount": 100,
+    "mode_of_payment": "upi",
+    "previous_balance": -50
+  },
+  {
+    "id": "2Y7pwFT_yw",
+    "created": "2022-08-20 11:59:22.297154",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 380
+  },
+  {
+    "id": "5-k4a__duA",
+    "created": "2022-08-20 16:37:18.768279",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 410
+  },
+  {
+    "id": "17YlQz5Guw",
+    "created": "2022-08-20 17:03:05.771217",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 510
+  },
+  {
+    "id": "czeuxYAe5w",
+    "created": "2022-08-23 12:54:38.168807",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 130
+  },
+  {
+    "id": "PVAwscC-Nw",
+    "created": "2022-08-23 18:09:02.728669",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 540
+  },
+  {
+    "id": "B_7r7yLuYg",
+    "created": "2022-08-23 20:31:21.379815",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 60
+  },
+  {
+    "id": "cjnhUWFDLw",
+    "created": "2022-08-24 21:34:56.778181",
+    "customer_id": "0Ie0r-kLXA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "iA2dig9uFw",
+    "created": "2022-08-25 13:22:14.375988",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 570
+  },
+  {
+    "id": "1cO4T63r9w",
+    "created": "2022-08-26 15:41:19.100070",
+    "customer_id": "A6uWfcQ8JQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "FPOhytGFZA",
+    "created": "2022-08-26 16:35:19.953692",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 620
+  },
+  {
+    "id": "giL5t7ZFQA",
+    "created": "2022-08-27 11:08:58.627681",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 190
+  },
+  {
+    "id": "TpdkkE-eRQ",
+    "created": "2022-08-27 12:33:15.053606",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 650
+  },
+  {
+    "id": "xsR7msr2EQ",
+    "created": "2022-08-27 17:27:35.170250",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 240
+  },
+  {
+    "id": "SDYGFq0RHQ",
+    "created": "2022-08-27 19:25:43.171650",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 680
+  },
+  {
+    "id": "UXq05Tx9SQ",
+    "created": "2022-08-30 13:06:44.184887",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 290
+  },
+  {
+    "id": "_4a1kWsaLw",
+    "created": "2022-08-30 13:09:22.248569",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 320
+  },
+  {
+    "id": "jq6tLwuoeg",
+    "created": "2022-08-30 16:18:07.226992",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 710
+  },
+  {
+    "id": "HiVk40KWDA",
+    "created": "2022-08-30 16:18:14.067136",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 740
+  },
+  {
+    "id": "uSKH1UjAxA",
+    "created": "2022-08-30 16:18:16.914942",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 790
+  },
+  {
+    "id": "C9tDeBPElA",
+    "created": "2022-08-30 16:55:33.688351",
+    "customer_id": "A4996uUKgQ",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "wOTZPj20jw",
+    "created": "2022-08-30 18:20:52.993276",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ORvyEAup6Q",
+    "created": "2022-08-30 18:33:18.776221",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 120
+  },
+  {
+    "id": "C5v9kPRzZw",
+    "created": "2022-09-01 12:19:31.331181",
+    "customer_id": "A4996uUKgQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 90
+  },
+  {
+    "id": "IO_NyGOfMg",
+    "created": "2022-09-02 14:28:47.128939",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 90
+  },
+  {
+    "id": "q79bxHEtQw",
+    "created": "2022-09-03 12:32:03.400980",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 350
+  },
+  {
+    "id": "E1ggNrJryQ",
+    "created": "2022-09-03 12:32:08.013091",
+    "customer_id": "5SHr3b59cQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "r-ANkN2W_w",
+    "created": "2022-09-05 14:49:11.084708",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 840
+  },
+  {
+    "id": "5yGfZSgWQQ",
+    "created": "2022-09-05 14:57:00.977818",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 870
+  },
+  {
+    "id": "JPRGu1B5rQ",
+    "created": "2022-09-05 19:24:46.772957",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 150
+  },
+  {
+    "id": "E47mb_Z-aw",
+    "created": "2022-09-06 14:14:29.742378",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 900
+  },
+  {
+    "id": "7WVsErP28w",
+    "created": "2022-09-06 14:28:45.514966",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 930
+  },
+  {
+    "id": "zRfi7iJ66g",
+    "created": "2022-09-07 12:37:18.368614",
+    "customer_id": "c8MQRMA_AQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "d7lo043bfQ",
+    "created": "2022-09-07 16:26:36.436096",
+    "customer_id": "MHjmNrrE9Q",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "AowTk2m0LA",
+    "created": "2022-09-07 16:26:39.072428",
+    "customer_id": "RY7rAtu4LA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "iKZARjAtwA",
+    "created": "2022-09-07 16:26:40.977011",
+    "customer_id": "o5Ej1XwdFg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "TZnktdcX8Q",
+    "created": "2022-09-07 17:39:57.697168",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 960
+  },
+  {
+    "id": "3HDdKAHXvg",
+    "created": "2022-09-10 11:06:14.058579",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 380
+  },
+  {
+    "id": "RMqpZzz0Sg",
+    "created": "2022-09-10 11:09:45.318729",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 470
+  },
+  {
+    "id": "SaJ_zRJUwg",
+    "created": "2022-09-11 12:25:27.924377",
+    "customer_id": "M9A_OOWOfQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "nuthtJAuXg",
+    "created": "2022-09-11 12:25:29.960365",
+    "customer_id": "ywW_BEDh0Q",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "YWQhl34J5g",
+    "created": "2022-09-12 12:39:18.411784",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 990
+  },
+  {
+    "id": "ePlzogT8UQ",
+    "created": "2022-09-12 13:37:55.132146",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 60
+  },
+  {
+    "id": "PPLCj5220A",
+    "created": "2022-09-12 14:13:29.785460",
+    "customer_id": "mglCZRJoKw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "eR9ucfu2oA",
+    "created": "2022-09-12 18:00:42.766348",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1020
+  },
+  {
+    "id": "2fx8R0H7AA",
+    "created": "2022-09-12 19:51:04.074108",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 1050
+  },
+  {
+    "id": "tb0N1ZFn5w",
+    "created": "2022-09-13 17:17:54.208447",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1140
+  },
+  {
+    "id": "Bsido6wYxQ",
+    "created": "2022-09-14 10:56:12.024615",
+    "customer_id": "87i9Htb1og",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "y9gDTqhUWg",
+    "created": "2022-09-14 18:07:22.404873",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 560
+  },
+  {
+    "id": "nB49lMnbIw",
+    "created": "2022-09-14 18:07:26.806217",
+    "customer_id": "a_1mPazMdw",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "5n01I8dZCA",
+    "created": "2022-09-14 21:00:28.838609",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1170
+  },
+  {
+    "id": "R-fRXg3vjg",
+    "created": "2022-09-15 16:07:56.505753",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1200
+  },
+  {
+    "id": "XUPUfmOAeQ",
+    "created": "2022-09-15 18:25:16.609292",
+    "customer_id": "cXIawTePFQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "N33QnJzshg",
+    "created": "2022-09-16 10:22:51.572959",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 590
+  },
+  {
+    "id": "KFEXJ4wd1Q",
+    "created": "2022-09-19 12:08:50.656163",
+    "customer_id": "XlbFe1FqVw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "M68nd15P7Q",
+    "created": "2022-09-19 17:57:43.497341",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1230
+  },
+  {
+    "id": "57wAJoJU7Q",
+    "created": "2022-09-20 14:38:10.341048",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 640
+  },
+  {
+    "id": "a-7NzoQzxg",
+    "created": "2022-09-20 17:28:20.543462",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1260
+  },
+  {
+    "id": "SZDYkEnLUQ",
+    "created": "2022-09-21 12:33:07.179706",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1290
+  },
+  {
+    "id": "fBO2hnsGQA",
+    "created": "2022-09-21 12:33:09.846221",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1320
+  },
+  {
+    "id": "XO5Uyld3aw",
+    "created": "2022-09-21 17:39:58.113161",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1350
+  },
+  {
+    "id": "l1tKlgbzVA",
+    "created": "2022-09-21 18:05:09.399522",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1380
+  },
+  {
+    "id": "WeLlXaLo2A",
+    "created": "2022-09-22 14:19:47.141253",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1410
+  },
+  {
+    "id": "TD-NBroc6g",
+    "created": "2022-09-22 14:20:05.637043",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1440
+  },
+  {
+    "id": "7hPNWVpCbQ",
+    "created": "2022-09-22 14:20:13.417712",
+    "customer_id": "LHJ4-sdtGg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "l1FDTNbTKw",
+    "created": "2022-09-22 15:30:46.196660",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 110
+  },
+  {
+    "id": "NO0ngCLimQ",
+    "created": "2022-09-22 18:50:13.832339",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1470
+  },
+  {
+    "id": "KgIjLaz1Rg",
+    "created": "2022-09-26 11:02:04.377612",
+    "customer_id": "E--Q_PbXOg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "FyJfH4DBuw",
+    "created": "2022-09-27 21:01:15.649015",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 690
+  },
+  {
+    "id": "xNjPXdE5oQ",
+    "created": "2022-09-29 18:00:12.486384",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1500
+  },
+  {
+    "id": "-g9MlxU2nA",
+    "created": "2022-09-30 13:52:43.841701",
+    "customer_id": "5J1iARG4HA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "87KUKVfNGA",
+    "created": "2022-09-30 16:49:50.129821",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1530
+  },
+  {
+    "id": "io---3wSBg",
+    "created": "2022-09-30 16:49:53.927902",
+    "customer_id": "wixkx2FFkw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "6jPmehXV2g",
+    "created": "2022-09-30 16:49:56.660938",
+    "customer_id": "6PPYVN7QOA",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ws8ZMGsMbQ",
+    "created": "2022-09-30 17:59:27.525584",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 740
+  },
+  {
+    "id": "p2rlgo2Xyg",
+    "created": "2022-10-01 16:50:56.453137",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 770
+  },
+  {
+    "id": "vH5zYd6y4Q",
+    "created": "2022-10-02 13:00:24.946104",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1560
+  },
+  {
+    "id": "WOAbZZ6lRg",
+    "created": "2022-10-03 11:17:15.893514",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 800
+  },
+  {
+    "id": "RLFtNIv0Hg",
+    "created": "2022-10-03 16:10:17.995995",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 1590
+  },
+  {
+    "id": "tIuoKAvWAQ",
+    "created": "2022-10-03 16:53:42.981007",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 120,
+    "mode_of_payment": "bill",
+    "previous_balance": 120
+  },
+  {
+    "id": "c0NWs8bHpw",
+    "created": "2022-10-03 16:53:52.051609",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 180,
+    "mode_of_payment": "bill",
+    "previous_balance": 240
+  },
+  {
+    "id": "I_Kj-ERZxA",
+    "created": "2022-10-03 17:23:44.254848",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1680
+  },
+  {
+    "id": "rw0zF7DR7w",
+    "created": "2022-10-04 18:28:17.903137",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1710
+  },
+  {
+    "id": "atz8FCb19Q",
+    "created": "2022-10-05 17:33:52.785512",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1740
+  },
+  {
+    "id": "kV0ftgyjHg",
+    "created": "2022-10-06 18:43:51.337129",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1770
+  },
+  {
+    "id": "aApzaOs2sw",
+    "created": "2022-10-06 20:42:18.571461",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 850
+  },
+  {
+    "id": "jPEdox6OJg",
+    "created": "2022-10-12 14:44:22.815368",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1800
+  },
+  {
+    "id": "bj286J3ynQ",
+    "created": "2022-10-12 18:24:52.483823",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1830
+  },
+  {
+    "id": "CYBz4bY08w",
+    "created": "2022-10-12 18:30:34.410065",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1880
+  },
+  {
+    "id": "t-4SKrsMDg",
+    "created": "2022-10-15 20:50:33.906721",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 900
+  },
+  {
+    "id": "oGXiir9ZYQ",
+    "created": "2022-10-17 13:41:24.110866",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 950
+  },
+  {
+    "id": "B-bUT3asZQ",
+    "created": "2022-10-17 18:40:56.971808",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1910
+  },
+  {
+    "id": "quYiUuMzDA",
+    "created": "2022-10-18 19:48:48.148106",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1940
+  },
+  {
+    "id": "Ll0TPa0aDw",
+    "created": "2022-10-19 14:17:08.522938",
+    "customer_id": "jP33eekPhA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "64HRXVjU2g",
+    "created": "2022-10-20 13:03:38.568314",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1000
+  },
+  {
+    "id": "wcpp6dZnlw",
+    "created": "2022-10-20 13:36:43.051668",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1970
+  },
+  {
+    "id": "hMomu4uDCw",
+    "created": "2022-10-20 17:51:23.684759",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2030
+  },
+  {
+    "id": "HeDxsSE_nA",
+    "created": "2022-10-20 17:51:23.737377",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2060
+  },
+  {
+    "id": "vVHmNcjYMQ",
+    "created": "2022-10-20 17:51:26.068825",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2090
+  },
+  {
+    "id": "XIpD4oD2Qw",
+    "created": "2022-10-26 11:35:21.052681",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 1050
+  },
+  {
+    "id": "nRbhuzIUmg",
+    "created": "2022-10-27 15:17:49.896785",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2120
+  },
+  {
+    "id": "bz4cwh-QsQ",
+    "created": "2022-10-29 20:52:03.521632",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1150
+  },
+  {
+    "id": "3vZjK6AmdA",
+    "created": "2022-11-01 14:11:37.244678",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2150
+  },
+  {
+    "id": "WWXg13iG3Q",
+    "created": "2022-11-01 14:11:39.279004",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2180
+  },
+  {
+    "id": "h5V6OakyYg",
+    "created": "2022-11-01 18:42:20.377199",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1200
+  },
+  {
+    "id": "CNEAhRMKVQ",
+    "created": "2022-11-07 10:27:55.523017",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1250
+  },
+  {
+    "id": "GKP1WLxjyQ",
+    "created": "2022-11-07 10:40:47.441778",
+    "customer_id": "gJFSH8BqlA",
+    "type": "credit",
+    "amount": 50,
+    "mode_of_payment": "cash",
+    "previous_balance": 2210
+  },
+  {
+    "id": "_LUQATh-ZQ",
+    "created": "2022-11-07 10:41:53.586322",
+    "customer_id": "gJFSH8BqlA",
+    "type": "credit",
+    "amount": 50,
+    "mode_of_payment": "cash",
+    "previous_balance": 2160
+  },
+  {
+    "id": "oNwmGgvj2w",
+    "created": "2022-11-07 10:42:57.492463",
+    "customer_id": "gJFSH8BqlA",
+    "type": "credit",
+    "amount": 2110,
+    "mode_of_payment": "cash",
+    "previous_balance": 2110
+  },
+  {
+    "id": "8HfBDPv8ug",
+    "created": "2022-11-07 16:50:50.282938",
+    "customer_id": "BDiMj2MR-w",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "qPHfOF481w",
+    "created": "2022-11-10 17:15:05.149643",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "Ymd0WnVpsA",
+    "created": "2022-11-11 20:20:45.190894",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1300
+  },
+  {
+    "id": "RXO7gIhlnw",
+    "created": "2022-11-16 12:25:44.122039",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1350
+  },
+  {
+    "id": "yWZkzZafFA",
+    "created": "2022-11-16 17:13:53.740410",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "IYtzEXnpUw",
+    "created": "2022-11-18 20:18:33.822350",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 420
+  },
+  {
+    "id": "rI0whHJQXA",
+    "created": "2022-11-19 14:05:02.381302",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 60
+  },
+  {
+    "id": "3-d-RJgypw",
+    "created": "2022-11-19 14:05:02.418299",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 90
+  },
+  {
+    "id": "nWKRiWTreg",
+    "created": "2022-11-19 14:05:02.438806",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 120
+  },
+  {
+    "id": "UvXpyEjD7w",
+    "created": "2022-11-19 14:05:04.331359",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 150
+  },
+  {
+    "id": "egh_kl3gVg",
+    "created": "2022-11-19 14:05:07.002497",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 180
+  },
+  {
+    "id": "5b0viUveCQ",
+    "created": "2022-11-19 14:05:12.529120",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 210
+  },
+  {
+    "id": "WBfJN-mhoQ",
+    "created": "2022-11-19 14:05:12.581387",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 240
+  },
+  {
+    "id": "tDP93BrVPQ",
+    "created": "2022-11-19 14:05:12.609518",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 270
+  },
+  {
+    "id": "3_Dzy-yYQA",
+    "created": "2022-11-19 14:05:15.046978",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 300
+  },
+  {
+    "id": "MruOBnRJ0Q",
+    "created": "2022-11-19 14:05:16.650665",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 330
+  },
+  {
+    "id": "NFXVpe0wGw",
+    "created": "2022-11-19 14:05:22.510901",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 360
+  },
+  {
+    "id": "Ud48O2HoIw",
+    "created": "2022-11-19 14:05:22.569361",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 390
+  },
+  {
+    "id": "1n-IllxM1Q",
+    "created": "2022-11-19 14:05:22.601043",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 420
+  },
+  {
+    "id": "BiE4PkGZAw",
+    "created": "2022-11-19 14:05:26.009547",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 450
+  },
+  {
+    "id": "bMK6xFOg0Q",
+    "created": "2022-11-19 14:05:27.851314",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 480
+  },
+  {
+    "id": "fSRwkXU55Q",
+    "created": "2022-11-19 14:05:34.746616",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 510
+  },
+  {
+    "id": "Kvs3yTOdMQ",
+    "created": "2022-11-19 14:05:34.786914",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 540
+  },
+  {
+    "id": "zrgUgweIgQ",
+    "created": "2022-11-19 18:55:41.154771",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 570
+  },
+  {
+    "id": "4VMjMxjaTw",
+    "created": "2022-11-20 12:13:11.961581",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 600
+  },
+  {
+    "id": "HbaKclB9hg",
+    "created": "2022-11-20 12:22:00.692107",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 630
+  },
+  {
+    "id": "ZtKSXKC1iA",
+    "created": "2022-11-20 12:22:02.588231",
+    "customer_id": "O288gpaHQg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "jX6ZWzvTMg",
+    "created": "2022-11-20 12:22:09.823698",
+    "customer_id": "Um3QyAXAxg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "yIAcIIlCLw",
+    "created": "2022-11-21 16:41:03.692516",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 660
+  },
+  {
+    "id": "MGmj55bJLA",
+    "created": "2022-11-21 16:41:05.373057",
+    "customer_id": "CtOIi5LZVA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ZBGRuabFCA",
+    "created": "2022-11-21 16:41:06.764868",
+    "customer_id": "dWr1wZLYdA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "74CKziP6ZQ",
+    "created": "2022-11-23 11:51:46.105393",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1400
+  },
+  {
+    "id": "OA5nszWCaA",
+    "created": "2022-11-23 13:32:09.427802",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 510
+  },
+  {
+    "id": "kq5Zvg4nHQ",
+    "created": "2022-11-23 16:41:23.341693",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 690
+  },
+  {
+    "id": "1CzyZEABtQ",
+    "created": "2022-11-24 19:21:02.057829",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 140
+  },
+  {
+    "id": "SKJy5U4qqg",
+    "created": "2022-11-25 13:54:34.814766",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 720
+  },
+  {
+    "id": "LaD7n4okag",
+    "created": "2022-11-26 19:32:16.566287",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 780
+  },
+  {
+    "id": "wTOfyfXmpg",
+    "created": "2022-11-26 20:47:27.740401",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 170
+  },
+  {
+    "id": "dYaBXnJdZg",
+    "created": "2022-11-27 12:13:49.673034",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 840
+  },
+  {
+    "id": "vCwxZ3sDDw",
+    "created": "2022-11-27 14:37:57.591802",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 870
+  },
+  {
+    "id": "4Q3t3uFu-A",
+    "created": "2022-11-28 15:09:00.327709",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 900
+  },
+  {
+    "id": "FDwcv2frqg",
+    "created": "2022-11-28 15:12:38.075484",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 930
+  },
+  {
+    "id": "xIlacxxreA",
+    "created": "2022-11-28 15:50:10.284422",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 960
+  },
+  {
+    "id": "XIwWVPIvcA",
+    "created": "2022-11-28 15:50:10.321901",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1020
+  },
+  {
+    "id": "lXisTC9G0g",
+    "created": "2022-11-28 18:14:33.447659",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1080
+  },
+  {
+    "id": "NARsDfak9A",
+    "created": "2022-11-28 19:30:01.500512",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1110
+  },
+  {
+    "id": "ks6Jx36Q_A",
+    "created": "2022-11-28 19:30:04.993342",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1160
+  },
+  {
+    "id": "yDQ_9xmvHw",
+    "created": "2022-11-29 14:27:34.440731",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "gsikq1_41w",
+    "created": "2022-11-29 17:26:14.463254",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1210
+  },
+  {
+    "id": "UJWTZsfGUQ",
+    "created": "2022-11-29 18:52:24.478546",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1240
+  },
+  {
+    "id": "9zQ2Q92Syg",
+    "created": "2022-12-02 20:28:53.165670",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1450
+  },
+  {
+    "id": "AUFiNid93A",
+    "created": "2022-12-05 14:58:01.638631",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1300
+  },
+  {
+    "id": "9H03AJ3XYA",
+    "created": "2022-12-06 09:56:02.951960",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1360
+  },
+  {
+    "id": "RgKpMuc2_A",
+    "created": "2022-12-06 12:39:02.308911",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "_-msZlgMvQ",
+    "created": "2022-12-07 19:55:15.840399",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1410
+  },
+  {
+    "id": "6ZyxHepBqw",
+    "created": "2022-12-07 19:55:25.696854",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1440
+  },
+  {
+    "id": "rVnHZakuhQ",
+    "created": "2022-12-08 15:04:37.324319",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 60
+  },
+  {
+    "id": "5d16SuVa2g",
+    "created": "2022-12-09 12:33:06.366748",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1470
+  },
+  {
+    "id": "to2PbPz5wQ",
+    "created": "2022-12-10 11:59:23.609212",
+    "customer_id": "zLmOUbSg3Q",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "3Iq8wRnLzw",
+    "created": "2022-12-11 13:52:38.519967",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 90
+  },
+  {
+    "id": "uCRrTgQFOQ",
+    "created": "2022-12-12 14:55:53.835065",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 150
+  },
+  {
+    "id": "f5nmh2vEjg",
+    "created": "2022-12-12 15:29:50.160700",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1500
+  },
+  {
+    "id": "UouEcaIq_g",
+    "created": "2022-12-13 18:31:35.553760",
+    "customer_id": "RamOhi1cRQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "46Y58vaUbw",
+    "created": "2022-12-14 13:41:13.917425",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 540
+  },
+  {
+    "id": "JZ3aKYur1A",
+    "created": "2022-12-15 20:34:46.299513",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 200
+  },
+  {
+    "id": "24vO0vKK3Q",
+    "created": "2022-12-17 18:15:39.348220",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1530
+  },
+  {
+    "id": "q9UuZjFr0w",
+    "created": "2022-12-19 18:27:50.707991",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1560
+  },
+  {
+    "id": "nzart2r__g",
+    "created": "2022-12-20 19:22:15.200749",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 600
+  },
+  {
+    "id": "zaZEbcUZQg",
+    "created": "2022-12-22 18:48:41.843409",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1590
+  },
+  {
+    "id": "arsCu43Otg",
+    "created": "2022-12-22 21:37:24.688124",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1500
+  },
+  {
+    "id": "ss7Wx2L4_w",
+    "created": "2022-12-22 21:37:27.038477",
+    "customer_id": "vkaS1yp3gg",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "mqH-yx6bLg",
+    "created": "2022-12-22 21:37:29.099721",
+    "customer_id": "X8NPE0Hbtw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "urcXpVC7zA",
+    "created": "2022-12-22 21:37:30.658111",
+    "customer_id": "aZG_OqXjNQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "CDny6STF5Q",
+    "created": "2022-12-24 13:23:52.201928",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1620
+  },
+  {
+    "id": "YlW2x_QAWA",
+    "created": "2022-12-24 15:32:22.110788",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1650
+  },
+  {
+    "id": "H3ARNa8rPw",
+    "created": "2022-12-26 19:00:06.340118",
+    "customer_id": "Dobu-m9NGQ",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "yxnkLQccYA",
+    "created": "2022-12-26 19:46:43.327794",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1680
+  },
+  {
+    "id": "2NsW32Xqpw",
+    "created": "2022-12-27 11:23:34.614318",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 300
+  },
+  {
+    "id": "qSiZPJkN6Q",
+    "created": "2022-12-31 21:41:01.948224",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 630
+  },
+  {
+    "id": "lkfTjWkhPA",
+    "created": "2022-12-31 21:41:03.480994",
+    "customer_id": "VW2XdhOAMw",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "90eMaCe-XQ",
+    "created": "2023-01-03 19:19:45.764446",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1710
+  },
+  {
+    "id": "SIB035EbvQ",
+    "created": "2023-01-05 14:33:21.114935",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 690
+  },
+  {
+    "id": "8UtXuNZODA",
+    "created": "2023-01-06 12:18:36.795327",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 350
+  },
+  {
+    "id": "YwMDIaINgg",
+    "created": "2023-01-07 18:54:10.583842",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1740
+  },
+  {
+    "id": "z0-2PwSFPg",
+    "created": "2023-01-08 12:49:44.190178",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1770
+  },
+  {
+    "id": "aLQCFiqmvA",
+    "created": "2023-01-09 10:05:46.225876",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1830
+  },
+  {
+    "id": "GSCw2ugzoA",
+    "created": "2023-01-09 10:05:47.635594",
+    "customer_id": "gcHjfYO9iQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "v6dufhI9VA",
+    "created": "2023-01-10 16:43:30.925301",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1860
+  },
+  {
+    "id": "outN_rgu7w",
+    "created": "2023-01-10 19:26:00.039768",
+    "customer_id": "kZzu9jTMSg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "DHrVjF5Jgg",
+    "created": "2023-01-11 18:00:43.731824",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1890
+  },
+  {
+    "id": "4gvwjKtu5A",
+    "created": "2023-01-12 18:45:19.035153",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1920
+  },
+  {
+    "id": "Bazuyt62Ag",
+    "created": "2023-01-13 16:32:37.710514",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1950
+  },
+  {
+    "id": "dsxh2O3H4A",
+    "created": "2023-01-13 17:49:08.289045",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1530
+  },
+  {
+    "id": "D7fRsdzJoA",
+    "created": "2023-01-14 16:59:53.042166",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1980
+  },
+  {
+    "id": "JJ53Jb-F9g",
+    "created": "2023-01-14 16:59:54.756295",
+    "customer_id": "_lmhHdTVaA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "TpbAW19uog",
+    "created": "2023-01-15 14:28:04.740244",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2010
+  },
+  {
+    "id": "53mmjUDPbQ",
+    "created": "2023-01-16 10:11:12.568016",
+    "customer_id": "jP33eekPhA",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "jb5BcKykrA",
+    "created": "2023-01-18 16:09:09.707150",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2040
+  },
+  {
+    "id": "5X2led85bw",
+    "created": "2023-01-18 18:37:32.153825",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2070
+  },
+  {
+    "id": "ls9SbscueQ",
+    "created": "2023-01-19 14:50:43.137376",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 400
+  },
+  {
+    "id": "vMN0zv0pVg",
+    "created": "2023-01-20 12:50:42.866142",
+    "customer_id": "_Et4A10aHw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "E6fBczLH1g",
+    "created": "2023-01-20 12:50:46.070529",
+    "customer_id": "PswL2RNV6g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "WQx8S_cJ7Q",
+    "created": "2023-01-20 12:51:05.577301",
+    "customer_id": "_Et4A10aHw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "1UcnBB8vzA",
+    "created": "2023-01-20 14:25:19.337408",
+    "customer_id": "XlbFe1FqVw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "AYLTSYcbGQ",
+    "created": "2023-01-21 16:58:54.301132",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2100
+  },
+  {
+    "id": "bx_ZYUAW0w",
+    "created": "2023-01-21 18:06:19.216670",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2130
+  },
+  {
+    "id": "8DG-QOxW9A",
+    "created": "2023-01-21 18:06:21.574980",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2160
+  },
+  {
+    "id": "ktfSsY3iNg",
+    "created": "2023-01-23 20:10:25.480749",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2190
+  },
+  {
+    "id": "AV4-7y3nog",
+    "created": "2023-01-23 21:36:19.875523",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 720
+  },
+  {
+    "id": "afWcufGiUQ",
+    "created": "2023-01-25 16:02:22.432009",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2220
+  },
+  {
+    "id": "iYYe7UVg5Q",
+    "created": "2023-01-25 16:02:25.578128",
+    "customer_id": "hSIYUC6BCA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "B6hhCVW-dA",
+    "created": "2023-01-25 16:02:27.750214",
+    "customer_id": "gvze4e73_w",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "wEn0vYET7g",
+    "created": "2023-01-25 16:02:29.643336",
+    "customer_id": "S7T92NZVdw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ONK9L5CFyg",
+    "created": "2023-01-25 16:02:33.537745",
+    "customer_id": "pyh1BQWj0A",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "AeL7XYBRpQ",
+    "created": "2023-01-26 15:29:05.068014",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2250
+  },
+  {
+    "id": "39bSePvucg",
+    "created": "2023-01-30 18:57:06.018914",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 750
+  },
+  {
+    "id": "36QjyZfeBw",
+    "created": "2023-01-30 18:57:09.860803",
+    "customer_id": "o5Ej1XwdFg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "H7ysKvnM3g",
+    "created": "2023-01-30 18:57:11.645100",
+    "customer_id": "8VoAYEwHnQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "utUbFR1H_Q",
+    "created": "2023-01-30 18:57:13.288096",
+    "customer_id": "zK6J86sqnQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "aJOPGkI0yg",
+    "created": "2023-01-30 18:57:19.426665",
+    "customer_id": "o01AiorxDw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "SgDwWscDuQ",
+    "created": "2023-01-31 14:00:18.142134",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2280
+  },
+  {
+    "id": "t43C8rTC9w",
+    "created": "2023-01-31 14:00:20.413080",
+    "customer_id": "6W6frHtmZQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "VZFwSr2bCg",
+    "created": "2023-01-31 17:46:36.956002",
+    "customer_id": "eay8s1t4zg",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ib0jiDqMUw",
+    "created": "2023-01-31 19:00:57.893828",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2310
+  },
+  {
+    "id": "ClnlX4UQfw",
+    "created": "2023-02-03 13:39:08.830161",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2340
+  },
+  {
+    "id": "xTtK4fvTOg",
+    "created": "2023-02-03 13:39:19.667507",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2370
+  },
+  {
+    "id": "N8VhGlXDkg",
+    "created": "2023-02-03 21:04:26.875765",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2400
+  },
+  {
+    "id": "yOMX7yitPA",
+    "created": "2023-02-03 21:04:36.165776",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2430
+  },
+  {
+    "id": "RGQQiUmx7Q",
+    "created": "2023-02-05 12:43:40.968147",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 2460
+  },
+  {
+    "id": "PKsdxvtLlw",
+    "created": "2023-02-06 12:28:31.629879",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 780
+  },
+  {
+    "id": "8gQJydDSOg",
+    "created": "2023-02-07 13:28:24.524333",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1580
+  },
+  {
+    "id": "JofgXrFtQQ",
+    "created": "2023-02-07 16:00:19.985739",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2520
+  },
+  {
+    "id": "-nF6VzSLkQ",
+    "created": "2023-02-10 16:31:36.500410",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2550
+  },
+  {
+    "id": "pbcjwuFJSQ",
+    "created": "2023-02-14 16:16:06.073810",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2580
+  },
+  {
+    "id": "B6-TI7imVA",
+    "created": "2023-02-14 18:58:41.853648",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2610
+  },
+  {
+    "id": "Qi4isH5sQQ",
+    "created": "2023-02-14 19:01:22.546740",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2640
+  },
+  {
+    "id": "mZlOVYICtw",
+    "created": "2023-02-14 19:01:25.429819",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 810
+  },
+  {
+    "id": "vfnnjnYkfg",
+    "created": "2023-02-15 18:46:31.128740",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 860
+  },
+  {
+    "id": "LKvMBHI-zg",
+    "created": "2023-02-16 21:01:04.578962",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 890
+  },
+  {
+    "id": "5YXEVBAbeg",
+    "created": "2023-02-17 18:54:29.534033",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2690
+  },
+  {
+    "id": "Nd9Ey899AQ",
+    "created": "2023-02-17 18:54:31.494105",
+    "customer_id": "rzcc98CrZA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "2BU92ihHHA",
+    "created": "2023-02-18 16:19:50.498673",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2720
+  },
+  {
+    "id": "RiSp7qECbg",
+    "created": "2023-02-18 20:38:41.523100",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2770
+  },
+  {
+    "id": "jWvwOJs_qg",
+    "created": "2023-02-19 11:47:58.607004",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 450
+  },
+  {
+    "id": "yAJGwbgydg",
+    "created": "2023-02-20 12:24:11.076408",
+    "customer_id": "KhiqrI3i9w",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "qwOEmUe8mA",
+    "created": "2023-02-20 13:47:19.566798",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2820
+  },
+  {
+    "id": "t8B0nDZAOA",
+    "created": "2023-02-22 13:25:20.800825",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2850
+  },
+  {
+    "id": "z7EbX1bsVw",
+    "created": "2023-02-23 14:21:58.893645",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2880
+  },
+  {
+    "id": "gxIMZjEdcQ",
+    "created": "2023-02-23 14:22:01.448071",
+    "customer_id": "T2KrqRhRag",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "rs4yDb31dg",
+    "created": "2023-02-24 14:25:27.554755",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2910
+  },
+  {
+    "id": "AoJKsXO3qQ",
+    "created": "2023-02-24 14:25:29.460902",
+    "customer_id": "Sbeaq2zJKQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "9XQRfR8vSQ",
+    "created": "2023-02-24 19:00:47.473365",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 500
+  },
+  {
+    "id": "RQilpJ-T1w",
+    "created": "2023-02-25 10:09:44.459793",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 530
+  },
+  {
+    "id": "HCBFSlS07g",
+    "created": "2023-02-27 18:27:12.862195",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 580
+  },
+  {
+    "id": "ekdYUonP5A",
+    "created": "2023-02-27 19:23:21.555658",
+    "customer_id": "kyElVou6ag",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "4SKqUVh0Ow",
+    "created": "2023-02-28 19:33:01.141181",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2940
+  },
+  {
+    "id": "d9EBApiL-g",
+    "created": "2023-02-28 19:33:09.295237",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2970
+  },
+  {
+    "id": "1nNZUkCQKg",
+    "created": "2023-03-02 18:03:59.069771",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3000
+  },
+  {
+    "id": "CEqz9CIKMg",
+    "created": "2023-03-02 18:04:00.709707",
+    "customer_id": "8syuGA5G9A",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "03j8Ot84-Q",
+    "created": "2023-03-04 14:49:59.361044",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3030
+  },
+  {
+    "id": "1BDUJaRpGw",
+    "created": "2023-03-08 20:11:48.181677",
+    "customer_id": "EkKEzsR25w",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "jE966RiGLw",
+    "created": "2023-03-09 17:06:49.157036",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3060
+  },
+  {
+    "id": "OZUaI1pA6w",
+    "created": "2023-03-09 18:57:20.860040",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3090
+  },
+  {
+    "id": "GpwEhd3QGQ",
+    "created": "2023-03-13 10:01:41.479473",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3120
+  },
+  {
+    "id": "K0M4jmZdTA",
+    "created": "2023-03-13 10:01:44.612045",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3170
+  },
+  {
+    "id": "WHbstdNHng",
+    "created": "2023-03-13 11:09:39.766808",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 1630
+  },
+  {
+    "id": "2j9CWtQQHw",
+    "created": "2023-03-13 19:37:59.270725",
+    "customer_id": "PflyYunOBg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "zfHnC55SFw",
+    "created": "2023-03-15 20:37:50.042338",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3220
+  },
+  {
+    "id": "cxtnMDR06w",
+    "created": "2023-03-16 10:27:05.583029",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 80
+  },
+  {
+    "id": "6kopiPMQtQ",
+    "created": "2023-03-16 15:03:26.643391",
+    "customer_id": "Yi_m-zFF5g",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "aInoL_dxug",
+    "created": "2023-03-18 15:52:12.676967",
+    "customer_id": "A4996uUKgQ",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 120
+  },
+  {
+    "id": "NAOYVkKJiA",
+    "created": "2023-03-20 19:49:02.775351",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3250
+  },
+  {
+    "id": "Q1qigbTdRQ",
+    "created": "2023-03-23 15:32:56.842463",
+    "customer_id": "5TkIOkHs6Q",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "JBI5vrooiA",
+    "created": "2023-03-23 16:34:20.322934",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 200
+  },
+  {
+    "id": "pAwuXPJvIg",
+    "created": "2023-03-24 16:30:18.874152",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 940
+  },
+  {
+    "id": "GP5okqQoPg",
+    "created": "2023-03-24 17:49:34.730325",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3300
+  },
+  {
+    "id": "H7ldaFh01Q",
+    "created": "2023-03-24 17:49:38.442334",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3350
+  },
+  {
+    "id": "o3wxsls3jg",
+    "created": "2023-03-24 19:28:15.236256",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3400
+  },
+  {
+    "id": "hSrfn5u_6g",
+    "created": "2023-03-24 19:28:26.588655",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3430
+  },
+  {
+    "id": "RAhCnQV0Cw",
+    "created": "2023-03-25 16:13:17.879814",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 630
+  },
+  {
+    "id": "VP928uKwcg",
+    "created": "2023-03-25 16:13:20.137952",
+    "customer_id": "YslRhy40XQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "BTVo2-P-9w",
+    "created": "2023-03-25 16:13:21.893261",
+    "customer_id": "-eZh5mAxWw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "FgL7kNZYPg",
+    "created": "2023-03-25 16:13:24.468282",
+    "customer_id": "2nMc2lQXjQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "nDn4LHvcqQ",
+    "created": "2023-03-27 20:19:34.636914",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 130
+  },
+  {
+    "id": "ZpC0tkNMcQ",
+    "created": "2023-03-28 16:24:39.719313",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 180
+  },
+  {
+    "id": "BAuOHs0lEw",
+    "created": "2023-03-28 18:22:18.099416",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3460
+  },
+  {
+    "id": "mpljhRJ3Pw",
+    "created": "2023-03-29 18:33:52.836968",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1730
+  },
+  {
+    "id": "uD8yabj1fA",
+    "created": "2023-03-29 18:33:54.484322",
+    "customer_id": "QWupjaOKcg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "rnKepwCTnQ",
+    "created": "2023-03-29 18:33:55.936758",
+    "customer_id": "W-0hL5dQEg",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "QdQgY3OkNg",
+    "created": "2023-03-30 16:51:52.865460",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3490
+  },
+  {
+    "id": "_Kyr7xToRw",
+    "created": "2023-03-30 16:56:10.872685",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3520
+  },
+  {
+    "id": "tQ3Bn2o5XA",
+    "created": "2023-03-30 19:30:13.814574",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3550
+  },
+  {
+    "id": "llTnxAEtiQ",
+    "created": "2023-04-01 14:16:04.953024",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 660
+  },
+  {
+    "id": "x4JTWVYHmA",
+    "created": "2023-04-02 13:01:45.676468",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3580
+  },
+  {
+    "id": "qHCJOjZkKw",
+    "created": "2023-04-02 13:09:34.798340",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3610
+  },
+  {
+    "id": "bRczbXPoew",
+    "created": "2023-04-03 13:18:49.374843",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1790
+  },
+  {
+    "id": "OUxLH0PJtw",
+    "created": "2023-04-03 14:55:10.080592",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3640
+  },
+  {
+    "id": "TJb5cuZRbQ",
+    "created": "2023-04-03 17:28:42.748877",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 3670
+  },
+  {
+    "id": "8uypoNY0Ow",
+    "created": "2023-04-03 17:28:44.851146",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3730
+  },
+  {
+    "id": "pnaHYcjrgw",
+    "created": "2023-04-03 17:28:46.400861",
+    "customer_id": "64ZDkk6iuQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "s2GZR2w0iQ",
+    "created": "2023-04-03 17:28:48.172977",
+    "customer_id": "VnI_YbTm5g",
+    "type": "debit",
+    "amount": 90,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "YrTYnLJL-w",
+    "created": "2023-04-03 17:28:50.122172",
+    "customer_id": "KhiqrI3i9w",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "R_aX-xU7ZA",
+    "created": "2023-04-04 13:00:10.398507",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 710
+  },
+  {
+    "id": "byfc0d_iKg",
+    "created": "2023-04-05 13:37:06.712013",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3760
+  },
+  {
+    "id": "zIXJVsN4zw",
+    "created": "2023-04-09 11:47:32.187533",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 740
+  },
+  {
+    "id": "8mA9m6BWiQ",
+    "created": "2023-04-10 19:22:01.653659",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3790
+  },
+  {
+    "id": "fxxWN6x6lQ",
+    "created": "2023-04-10 19:22:03.855981",
+    "customer_id": "KwnI4MzChQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "GxPFFgbfyA",
+    "created": "2023-04-11 17:46:32.979432",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3820
+  },
+  {
+    "id": "mCIEzDy5DA",
+    "created": "2023-04-11 17:46:33.011223",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3820
+  },
+  {
+    "id": "18mEgZxXGg",
+    "created": "2023-04-11 17:46:33.042416",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3820
+  },
+  {
+    "id": "KxhDylypQA",
+    "created": "2023-04-11 17:46:33.145312",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3850
+  },
+  {
+    "id": "yu_rQ_Y-4Q",
+    "created": "2023-04-11 17:46:33.200995",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3880
+  },
+  {
+    "id": "bH1mI8ujwg",
+    "created": "2023-04-11 17:46:33.242920",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3910
+  },
+  {
+    "id": "ydK8O8h_fQ",
+    "created": "2023-04-11 17:46:33.269139",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3940
+  },
+  {
+    "id": "V9CnJwTjkg",
+    "created": "2023-04-11 17:46:33.349031",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3970
+  },
+  {
+    "id": "o2Gb5sjQHQ",
+    "created": "2023-04-11 17:46:35.476593",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4000
+  },
+  {
+    "id": "uaFpxbMLEg",
+    "created": "2023-04-12 15:47:49.655611",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 970
+  },
+  {
+    "id": "gAf1D9a62A",
+    "created": "2023-04-12 19:07:06.835738",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 770
+  },
+  {
+    "id": "lLiJdMCOOw",
+    "created": "2023-04-12 19:27:54.450327",
+    "customer_id": "eplCdXM5bA",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "X3GagyKQCQ",
+    "created": "2023-04-15 20:12:48.678357",
+    "customer_id": "g2KXbexqzw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "rWd5PkDnAw",
+    "created": "2023-04-17 12:47:03.109337",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 820
+  },
+  {
+    "id": "LbTeNykuZA",
+    "created": "2023-04-17 19:20:58.086856",
+    "customer_id": "P4uYXQ8w-g",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "ZuZ1i8Yk4w",
+    "created": "2023-04-19 20:22:17.999726",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4030
+  },
+  {
+    "id": "fmsojBuiZQ",
+    "created": "2023-04-19 20:22:21.118834",
+    "customer_id": "7YcqW-3PzA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "4YYF6uJycQ",
+    "created": "2023-04-19 21:15:14.774216",
+    "customer_id": "g2KXbexqzw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 50
+  },
+  {
+    "id": "aA_mQ_xU9Q",
+    "created": "2023-04-24 13:26:06.665590",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4060
+  },
+  {
+    "id": "L7VwfgngRw",
+    "created": "2023-04-26 15:02:24.118581",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 4090
+  },
+  {
+    "id": "PMOL8RuuIw",
+    "created": "2023-04-26 21:07:04.142298",
+    "customer_id": "g2KXbexqzw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 100
+  },
+  {
+    "id": "RBKXFoROnA",
+    "created": "2023-04-26 21:07:07.261184",
+    "customer_id": "g2KXbexqzw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 150
+  },
+  {
+    "id": "a1X7skEeCg",
+    "created": "2023-04-27 13:42:29.684940",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4140
+  },
+  {
+    "id": "5eeNpnN7Mw",
+    "created": "2023-04-27 14:07:02.068533",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1000
+  },
+  {
+    "id": "mgQfPvLQ6Q",
+    "created": "2023-04-28 20:05:14.856664",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4170
+  },
+  {
+    "id": "k7ckgvJzwA",
+    "created": "2023-04-28 20:05:17.685050",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4200
+  },
+  {
+    "id": "Ljcvzh0rRA",
+    "created": "2023-04-29 12:15:46.659098",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4230
+  },
+  {
+    "id": "1rO3DuGBOQ",
+    "created": "2023-04-29 12:15:46.723249",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4260
+  },
+  {
+    "id": "anN6osN9Zg",
+    "created": "2023-04-29 12:15:47.037233",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4290
+  },
+  {
+    "id": "BkmVzfk8cg",
+    "created": "2023-04-29 16:35:52.600059",
+    "customer_id": "Yh0Unov6ng",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "e5wgM43SkQ",
+    "created": "2023-04-30 11:40:03.433329",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 870
+  },
+  {
+    "id": "SIk4fcPgsw",
+    "created": "2023-05-01 13:23:36.491362",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4320
+  },
+  {
+    "id": "j9n-lwhGjg",
+    "created": "2023-05-01 13:27:31.436856",
+    "customer_id": "YvYJi6uHyg",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "uHvdJIc_RA",
+    "created": "2023-05-02 21:14:24.069736",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1840
+  },
+  {
+    "id": "aLoYT7WITA",
+    "created": "2023-05-03 17:04:58.589142",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4350
+  },
+  {
+    "id": "aobdWaHyFQ",
+    "created": "2023-05-04 18:22:07.745960",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4380
+  },
+  {
+    "id": "aXsRUhwk6Q",
+    "created": "2023-05-06 15:20:56.985968",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 4410
+  },
+  {
+    "id": "saxaIow0dg",
+    "created": "2023-05-10 12:24:35.478963",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4470
+  },
+  {
+    "id": "7-J3onzaVA",
+    "created": "2023-05-10 17:32:52.566024",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4500
+  },
+  {
+    "id": "PT0kVK32KQ",
+    "created": "2023-05-11 18:17:41.716737",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4530
+  },
+  {
+    "id": "mlwSH2n-uA",
+    "created": "2023-05-12 17:48:08.455566",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1060
+  },
+  {
+    "id": "7gZUpspOIQ",
+    "created": "2023-05-14 13:47:11.543580",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 4560
+  },
+  {
+    "id": "KKMv-5drCw",
+    "created": "2023-05-15 14:51:22.722615",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4620
+  },
+  {
+    "id": "BAf3_PEvdg",
+    "created": "2023-05-16 17:05:44.991109",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4650
+  },
+  {
+    "id": "RJmt6BdFCA",
+    "created": "2023-05-17 17:57:49.229650",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1890
+  },
+  {
+    "id": "HsII-fgJpQ",
+    "created": "2023-05-18 13:39:50.540121",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4680
+  },
+  {
+    "id": "lMkzCFjEjQ",
+    "created": "2023-05-22 11:41:18.478370",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 920
+  },
+  {
+    "id": "8hg0GTnW2Q",
+    "created": "2023-05-22 15:03:14.035961",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1940
+  },
+  {
+    "id": "poyGsWJkIA",
+    "created": "2023-05-22 15:03:17.488956",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1990
+  },
+  {
+    "id": "fpv7hlHg6w",
+    "created": "2023-05-22 17:14:23.149236",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 210
+  },
+  {
+    "id": "2OjFKLe3_Q",
+    "created": "2023-05-22 17:20:32.869255",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1090
+  },
+  {
+    "id": "rK_j1_0VbA",
+    "created": "2023-05-23 19:19:01.157601",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4710
+  },
+  {
+    "id": "coJZKRp4cA",
+    "created": "2023-05-23 19:19:03.656013",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4740
+  },
+  {
+    "id": "reMyxywlpg",
+    "created": "2023-05-23 20:18:28.641220",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2040
+  },
+  {
+    "id": "1yU3AvGZCw",
+    "created": "2023-05-25 13:45:57.811021",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4770
+  },
+  {
+    "id": "smRiHiQZ_g",
+    "created": "2023-05-25 13:45:57.889562",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4800
+  },
+  {
+    "id": "t35seI515w",
+    "created": "2023-05-26 19:22:46.942620",
+    "customer_id": "xsFT2GarwQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "zMIoGj9XHw",
+    "created": "2023-05-27 20:28:45.579410",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 180,
+    "mode_of_payment": "bill",
+    "previous_balance": 1120
+  },
+  {
+    "id": "LNQEXf4HPg",
+    "created": "2023-05-29 18:48:30.433022",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4830
+  },
+  {
+    "id": "B9IcVSyWjA",
+    "created": "2023-05-30 19:19:23.742042",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4860
+  },
+  {
+    "id": "rEat_1IVSw",
+    "created": "2023-06-01 21:11:43.474120",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4890
+  },
+  {
+    "id": "p4SHuuNloA",
+    "created": "2023-06-04 13:01:43.570454",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4920
+  },
+  {
+    "id": "J3ltlkn3lA",
+    "created": "2023-06-05 14:23:38.598558",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1300
+  },
+  {
+    "id": "KLPoqzGPeQ",
+    "created": "2023-06-07 14:56:18.653793",
+    "customer_id": "O2jwfOscDw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "9GfZekgx0Q",
+    "created": "2023-06-07 17:26:32.888596",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4950
+  },
+  {
+    "id": "m8ii12UCpA",
+    "created": "2023-06-10 13:23:32.325806",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2090
+  },
+  {
+    "id": "Z32XkD5qSw",
+    "created": "2023-06-14 19:47:40.669395",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 4980
+  },
+  {
+    "id": "A4DiQGRLfw",
+    "created": "2023-06-15 19:40:10.454152",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 240
+  },
+  {
+    "id": "qW_fRFb9AQ",
+    "created": "2023-06-15 19:40:13.471565",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5010
+  },
+  {
+    "id": "ALbTkcGt2w",
+    "created": "2023-06-15 19:40:23.048751",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 270
+  },
+  {
+    "id": "mnayWNds0Q",
+    "created": "2023-06-17 18:26:41.301365",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5040
+  },
+  {
+    "id": "wGSye8MmtA",
+    "created": "2023-06-19 17:21:25.820178",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5070
+  },
+  {
+    "id": "TZPvv8OO5Q",
+    "created": "2023-06-22 16:26:16.644078",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 150,
+    "mode_of_payment": "bill",
+    "previous_balance": 970
+  },
+  {
+    "id": "IPdAH-OIZw",
+    "created": "2023-06-22 16:26:21.234424",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 1330
+  },
+  {
+    "id": "PiT1q3t6ng",
+    "created": "2023-06-22 16:26:25.085216",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1430
+  },
+  {
+    "id": "fJsRy0K_sw",
+    "created": "2023-06-22 19:54:25.967057",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1120
+  },
+  {
+    "id": "egRtrZEPxw",
+    "created": "2023-06-23 13:22:35.323210",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1170
+  },
+  {
+    "id": "LkzmkhcYXQ",
+    "created": "2023-06-23 19:47:39.402200",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5100
+  },
+  {
+    "id": "fQHeDlN1JA",
+    "created": "2023-06-26 16:06:10.340450",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1200
+  },
+  {
+    "id": "iMl8lPPkoQ",
+    "created": "2023-06-27 17:23:18.270980",
+    "customer_id": "GRlJagPqxw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "043kfg0GbA",
+    "created": "2023-06-27 17:23:20.223136",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5130
+  },
+  {
+    "id": "YQ_IXB3Xfg",
+    "created": "2023-06-27 21:31:33.439318",
+    "customer_id": "g2KXbexqzw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 200
+  },
+  {
+    "id": "MPhcdg33aw",
+    "created": "2023-06-28 21:50:21.679230",
+    "customer_id": null,
+    "type": "credit",
+    "amount": 60000,
+    "mode_of_payment": "cash",
+    "previous_balance": 0
+  },
+  {
+    "id": "-MDiD-8f9g",
+    "created": "2023-06-28 21:52:05.996154",
+    "customer_id": null,
+    "type": "credit",
+    "amount": -120000,
+    "mode_of_payment": "cash",
+    "previous_balance": -60000
+  },
+  {
+    "id": "S3_03JgySQ",
+    "created": "2023-07-01 17:24:49.962344",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5160
+  },
+  {
+    "id": "RUFmU0GPRg",
+    "created": "2023-07-01 17:24:51.863193",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5190
+  },
+  {
+    "id": "e2skLAPaaQ",
+    "created": "2023-07-03 15:50:34.218739",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5220
+  },
+  {
+    "id": "_nbQKzhKwA",
+    "created": "2023-07-03 17:03:35.062032",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5250
+  },
+  {
+    "id": "aBUzyzC-8w",
+    "created": "2023-07-03 17:03:35.093254",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5280
+  },
+  {
+    "id": "5e5GXVjBtg",
+    "created": "2023-07-03 17:11:22.148966",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 5310
+  },
+  {
+    "id": "PGeFv3GxIg",
+    "created": "2023-07-05 18:31:27.065916",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 160
+  },
+  {
+    "id": "Y4ANGmHhNg",
+    "created": "2023-07-05 18:31:29.767237",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 210
+  },
+  {
+    "id": "7aAmwb8-Aw",
+    "created": "2023-07-05 18:31:32.154487",
+    "customer_id": "wKHJrKEXaA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "7LQAbuplNA",
+    "created": "2023-07-05 21:39:41.875984",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5360
+  },
+  {
+    "id": "olSu7vb7GA",
+    "created": "2023-07-05 21:39:44.411742",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5390
+  },
+  {
+    "id": "kFXvAz1JaQ",
+    "created": "2023-07-05 21:39:46.680748",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5420
+  },
+  {
+    "id": "bPfP_wUx7w",
+    "created": "2023-07-05 21:39:48.599167",
+    "customer_id": "z0-iq_PI-A",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "jm_3vJqt8w",
+    "created": "2023-07-05 21:39:50.490232",
+    "customer_id": "nCa5I8S_aw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "yxpbqJNxWg",
+    "created": "2023-07-10 17:24:26.789072",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2140
+  },
+  {
+    "id": "3sK-b7Rumw",
+    "created": "2023-07-11 10:58:30.565588",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2190
+  },
+  {
+    "id": "xxKDpzsqyw",
+    "created": "2023-07-11 16:02:40.791722",
+    "customer_id": "O288gpaHQg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "qQZaJ3jU-Q",
+    "created": "2023-07-11 16:02:42.631123",
+    "customer_id": "O288gpaHQg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 60
+  },
+  {
+    "id": "M43yv367Iw",
+    "created": "2023-07-11 16:02:45.166987",
+    "customer_id": "I2P-FhttFg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "WJfcrVCDKw",
+    "created": "2023-07-11 16:02:47.956574",
+    "customer_id": "x30MZzaIDg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "FeXnqy9bZQ",
+    "created": "2023-07-11 19:50:17.448776",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5450
+  },
+  {
+    "id": "VTzMCSaHyg",
+    "created": "2023-07-12 17:50:04.570515",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5480
+  },
+  {
+    "id": "yYzDFctqxQ",
+    "created": "2023-07-12 17:50:06.472249",
+    "customer_id": "T-FvbSxCpA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "mqjtWkrheA",
+    "created": "2023-07-14 13:34:18.399970",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1460
+  },
+  {
+    "id": "9uklZyBpAg",
+    "created": "2023-07-14 13:34:18.518851",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1490
+  },
+  {
+    "id": "_H7GH6HMVg",
+    "created": "2023-07-16 13:10:38.209489",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1250
+  },
+  {
+    "id": "8L-TaLL9Ng",
+    "created": "2023-07-16 13:19:03.962248",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 5510
+  },
+  {
+    "id": "Y9Sn_YlpHw",
+    "created": "2023-07-17 15:29:19.927768",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5570
+  },
+  {
+    "id": "_wZkZYn8Yg",
+    "created": "2023-07-18 14:27:33.572197",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1300
+  },
+  {
+    "id": "5tfx-rGSlA",
+    "created": "2023-07-18 17:49:11.978889",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5600
+  },
+  {
+    "id": "NXbLUmDhow",
+    "created": "2023-07-20 19:31:11.109303",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1350
+  },
+  {
+    "id": "bRGMxFVhcA",
+    "created": "2023-07-27 17:19:18.686771",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5630
+  },
+  {
+    "id": "FqIr-HoWzQ",
+    "created": "2023-07-28 19:04:55.961943",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5660
+  },
+  {
+    "id": "Wczq2uWR1g",
+    "created": "2023-07-29 18:37:49.312501",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5690
+  },
+  {
+    "id": "Mfo6_ulfGQ",
+    "created": "2023-07-29 20:03:27.381061",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5720
+  },
+  {
+    "id": "nBIlBh5tSw",
+    "created": "2023-07-31 14:45:23.088346",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5750
+  },
+  {
+    "id": "fKSGNgsUOg",
+    "created": "2023-07-31 16:43:27.532864",
+    "customer_id": "GsSCvtOv5g",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "kSyOp1BqYQ",
+    "created": "2023-07-31 17:48:45.966974",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5780
+  },
+  {
+    "id": "Nhy2r6o2cQ",
+    "created": "2023-07-31 20:45:24.918849",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5810
+  },
+  {
+    "id": "MzCvolamoQ",
+    "created": "2023-08-01 17:29:55.534169",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1400
+  },
+  {
+    "id": "Pt8Mr9XdyA",
+    "created": "2023-08-02 17:00:26.856220",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5840
+  },
+  {
+    "id": "1K3CJKaeCg",
+    "created": "2023-08-03 15:12:18.463542",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1430
+  },
+  {
+    "id": "IqJQGdaDcA",
+    "created": "2023-08-08 09:57:31.712912",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1480
+  },
+  {
+    "id": "d22pmLshXA",
+    "created": "2023-08-08 14:51:10.167109",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5870
+  },
+  {
+    "id": "5JGlOQB7wg",
+    "created": "2023-08-11 18:59:07.489594",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5900
+  },
+  {
+    "id": "V3dhhwYDFg",
+    "created": "2023-08-14 14:29:27.556767",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1530
+  },
+  {
+    "id": "oplCy0ipaA",
+    "created": "2023-08-16 09:49:21.859332",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1580
+  },
+  {
+    "id": "WAKONLdgdg",
+    "created": "2023-08-17 16:40:46.332364",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5930
+  },
+  {
+    "id": "zrRjzikxjg",
+    "created": "2023-08-17 16:50:55.089212",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5960
+  },
+  {
+    "id": "KTBMOcgb6g",
+    "created": "2023-08-17 16:50:55.133990",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 5990
+  },
+  {
+    "id": "juLaKdaWHA",
+    "created": "2023-08-17 21:45:42.675342",
+    "customer_id": "p23GwZcxpg",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "Wr3HLjLM4Q",
+    "created": "2023-08-18 12:28:04.116678",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6020
+  },
+  {
+    "id": "6jU_zwHDHw",
+    "created": "2023-08-21 14:51:19.682427",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1630
+  },
+  {
+    "id": "2P6tl-rQuA",
+    "created": "2023-08-21 17:01:59.718326",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1680
+  },
+  {
+    "id": "0b6V8wAWmA",
+    "created": "2023-08-21 17:02:02.004424",
+    "customer_id": "EFs1rqS8Bg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "MdWUwJcyYQ",
+    "created": "2023-08-21 17:02:03.572135",
+    "customer_id": "-WrfIOXv_Q",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "0FPKP3fiMw",
+    "created": "2023-08-22 13:20:31.814709",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1710
+  },
+  {
+    "id": "Kh9KRB_x7g",
+    "created": "2023-08-22 20:11:00.899876",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6050
+  },
+  {
+    "id": "uSO9a9xWWA",
+    "created": "2023-08-24 12:01:18.714908",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6080
+  },
+  {
+    "id": "3FrkMturTg",
+    "created": "2023-08-24 16:54:16.229631",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6110
+  },
+  {
+    "id": "PQWcILdZGA",
+    "created": "2023-08-26 19:45:57.920960",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 6140
+  },
+  {
+    "id": "OUr3QtPF0w",
+    "created": "2023-08-26 20:47:23.523876",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1760
+  },
+  {
+    "id": "bjUad9I_Xg",
+    "created": "2023-08-27 13:31:16.854384",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6200
+  },
+  {
+    "id": "QwWy88ytkg",
+    "created": "2023-08-28 22:00:26.927173",
+    "customer_id": "btT0BqLwew",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "VjUnzJi-uw",
+    "created": "2023-09-02 17:30:00.516104",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6230
+  },
+  {
+    "id": "yoxT1guDRA",
+    "created": "2023-09-04 11:40:14.601973",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2240
+  },
+  {
+    "id": "-ZMx5FfJ0g",
+    "created": "2023-09-04 17:18:25.057661",
+    "customer_id": "wKHJrKEXaA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 50
+  },
+  {
+    "id": "c9knRbVXmQ",
+    "created": "2023-09-04 17:18:26.759138",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 260
+  },
+  {
+    "id": "nlWulVkIZw",
+    "created": "2023-09-04 20:03:45.783593",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1810
+  },
+  {
+    "id": "bPjTYP2Rug",
+    "created": "2023-09-04 21:35:04.358129",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1860
+  },
+  {
+    "id": "p5PYDC8ERA",
+    "created": "2023-09-05 13:51:29.584909",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6260
+  },
+  {
+    "id": "644F8wea4g",
+    "created": "2023-09-07 13:10:38.015962",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 290
+  },
+  {
+    "id": "cRsEfaZ4wg",
+    "created": "2023-09-09 12:51:57.512882",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6290
+  },
+  {
+    "id": "UtFsmg3YaA",
+    "created": "2023-09-09 14:55:43.535933",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6320
+  },
+  {
+    "id": "S8SrEK6wuA",
+    "created": "2023-09-11 18:31:44.730798",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 2290
+  },
+  {
+    "id": "Ri1z0t0U8g",
+    "created": "2023-09-16 09:56:51.596059",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1890
+  },
+  {
+    "id": "Rl3Rabll5Q",
+    "created": "2023-09-16 19:55:43.373892",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6350
+  },
+  {
+    "id": "OQoNcQsCSg",
+    "created": "2023-09-20 16:32:27.934554",
+    "customer_id": "3KZAK54Jog",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 230
+  },
+  {
+    "id": "HzPU_niKoA",
+    "created": "2023-09-21 12:52:08.959716",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6380
+  },
+  {
+    "id": "nQctIK85uQ",
+    "created": "2023-09-21 13:02:46.585167",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6410
+  },
+  {
+    "id": "ju3AspAWGw",
+    "created": "2023-09-21 13:02:54.361670",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 6440
+  },
+  {
+    "id": "Oxk7ryKDBw",
+    "created": "2023-09-21 13:03:09.388225",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 6500
+  },
+  {
+    "id": "LNoW6eGxuw",
+    "created": "2023-09-23 17:51:19.778208",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6560
+  },
+  {
+    "id": "Hh4FnjNhEw",
+    "created": "2023-09-24 14:55:08.707235",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6590
+  },
+  {
+    "id": "oarOsdv_Zg",
+    "created": "2023-09-27 14:54:40.073136",
+    "customer_id": "pj-6XRZXNA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "_sxb2JWadQ",
+    "created": "2023-09-27 14:54:42.408167",
+    "customer_id": "PiyIififYw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "yinXjtcP1w",
+    "created": "2023-09-30 09:57:48.207449",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6620
+  },
+  {
+    "id": "seV-AFiurA",
+    "created": "2023-09-30 09:57:49.608510",
+    "customer_id": "GTUWNtJ5zA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "Ulmv9h0n1Q",
+    "created": "2023-09-30 09:57:50.826117",
+    "customer_id": "j13cqP_z1g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "OiHcNz7K2A",
+    "created": "2023-09-30 09:57:52.109841",
+    "customer_id": "XDohimUj9g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "JYRSyNDaGA",
+    "created": "2023-09-30 09:57:53.362336",
+    "customer_id": "5w0n6Sc1xw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "0Np3SQAb_g",
+    "created": "2023-09-30 09:57:54.679014",
+    "customer_id": "-7_leTHz7A",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "qVTxt0RKeg",
+    "created": "2023-09-30 09:57:56.065050",
+    "customer_id": "kZXv6QkH4g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "e0p8tvJ6WA",
+    "created": "2023-09-30 09:57:57.383215",
+    "customer_id": "H2gBziIh-Q",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "iH2hCi17NA",
+    "created": "2023-10-01 13:20:28.897136",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2390
+  },
+  {
+    "id": "rqX9IIzufg",
+    "created": "2023-10-02 18:47:40.795983",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2440
+  },
+  {
+    "id": "b1bPa4XdAw",
+    "created": "2023-10-05 20:49:16.226486",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 6650
+  },
+  {
+    "id": "mTwgT8H4VQ",
+    "created": "2023-10-07 19:02:15.277498",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2490
+  },
+  {
+    "id": "dD0kbnKVAg",
+    "created": "2023-10-13 17:23:32.607206",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2540
+  },
+  {
+    "id": "fDExWAjqXA",
+    "created": "2023-10-14 18:32:55.371797",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6700
+  },
+  {
+    "id": "n179fdzThQ",
+    "created": "2023-10-14 18:50:02.582278",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6730
+  },
+  {
+    "id": "zKnV1ZsiQg",
+    "created": "2023-10-16 20:08:12.644121",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6760
+  },
+  {
+    "id": "iJT5Pzmhew",
+    "created": "2023-10-16 20:08:14.212067",
+    "customer_id": "jP33eekPhA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 120
+  },
+  {
+    "id": "kV2c3EinNw",
+    "created": "2023-10-16 20:08:22.736143",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6790
+  },
+  {
+    "id": "OS8j-oaa2A",
+    "created": "2023-10-17 19:43:57.335545",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6820
+  },
+  {
+    "id": "bnImFn69oA",
+    "created": "2023-10-19 21:36:32.543012",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 1520
+  },
+  {
+    "id": "862u_DJS0w",
+    "created": "2023-10-20 20:26:23.601267",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6850
+  },
+  {
+    "id": "FU1lf_D-uA",
+    "created": "2023-10-24 09:53:37.871815",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 1940
+  },
+  {
+    "id": "YSvPyLlh8Q",
+    "created": "2023-10-24 16:58:22.475193",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 300
+  },
+  {
+    "id": "5G1Lix4NWA",
+    "created": "2023-10-25 12:58:13.779635",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1990
+  },
+  {
+    "id": "7B-1uL-XGg",
+    "created": "2023-10-25 12:58:15.381523",
+    "customer_id": "wfbLtSBGNg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "T2eBdV3Qbg",
+    "created": "2023-10-25 19:15:09.239725",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6880
+  },
+  {
+    "id": "CsNyuUt25w",
+    "created": "2023-10-25 19:15:11.492384",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 6910
+  },
+  {
+    "id": "YhcZamU6sQ",
+    "created": "2023-10-26 19:42:55.772644",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 1620
+  },
+  {
+    "id": "ijg8IwnLqw",
+    "created": "2023-10-28 20:54:05.642650",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1650
+  },
+  {
+    "id": "4l_LLjMBAA",
+    "created": "2023-11-01 11:49:32.384636",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2020
+  },
+  {
+    "id": "nkXCVy0uqw",
+    "created": "2023-11-04 14:17:26.439740",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 6970
+  },
+  {
+    "id": "bjx_X59UfA",
+    "created": "2023-11-04 14:17:28.341407",
+    "customer_id": "L15PAVbd2A",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "yXy2zfvpQg",
+    "created": "2023-11-04 14:17:30.259999",
+    "customer_id": "a44ALSo5gg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "awWRqnO9KA",
+    "created": "2023-11-07 20:16:40.665403",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2070
+  },
+  {
+    "id": "Ivwo-NGm3w",
+    "created": "2023-11-09 11:42:25.405244",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2120
+  },
+  {
+    "id": "SeQ0jCn_tw",
+    "created": "2023-11-15 15:41:56.011898",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7000
+  },
+  {
+    "id": "d0e4hA23yA",
+    "created": "2023-11-15 18:56:59.855538",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7030
+  },
+  {
+    "id": "58yvltnrEA",
+    "created": "2023-11-16 13:47:47.254157",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2170
+  },
+  {
+    "id": "qxPGyHPgFQ",
+    "created": "2023-11-16 13:48:11.879419",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7060
+  },
+  {
+    "id": "253aYB5Bpg",
+    "created": "2023-11-18 20:15:02.160937",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2220
+  },
+  {
+    "id": "scoIA3TVcQ",
+    "created": "2023-11-20 15:01:58.096491",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7090
+  },
+  {
+    "id": "-c2JTrx1Jw",
+    "created": "2023-11-20 19:59:06.630057",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2270
+  },
+  {
+    "id": "hIAGo00JCw",
+    "created": "2023-11-20 20:14:17.390579",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 7120
+  },
+  {
+    "id": "cEvAMW-OsA",
+    "created": "2023-11-20 20:14:19.075431",
+    "customer_id": "FlXD5KHOlQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "izifIAAsyw",
+    "created": "2023-11-20 20:14:21.210666",
+    "customer_id": "X3j4ro6O_g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "7f09gxWGpQ",
+    "created": "2023-11-20 20:14:22.845505",
+    "customer_id": "dgrttXP2rA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "CU20_Jdc9A",
+    "created": "2023-11-22 19:31:50.715553",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7180
+  },
+  {
+    "id": "hFhz3781Pw",
+    "created": "2023-11-23 17:13:28.837707",
+    "customer_id": "wDjiLH8uPQ",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 1710
+  },
+  {
+    "id": "NGWkuZdheg",
+    "created": "2023-11-25 19:07:47.411088",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7210
+  },
+  {
+    "id": "a2jhBrOPAg",
+    "created": "2023-11-25 21:33:26.765866",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2320
+  },
+  {
+    "id": "e4w22ALSNg",
+    "created": "2023-11-26 13:29:29.446411",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7240
+  },
+  {
+    "id": "BpVw_he_Zg",
+    "created": "2023-11-27 21:07:45.910447",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7270
+  },
+  {
+    "id": "KDPaD0Y6lA",
+    "created": "2023-11-29 20:51:25.525754",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7300
+  },
+  {
+    "id": "jLDMJF3rbA",
+    "created": "2023-12-01 19:35:21.999698",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7330
+  },
+  {
+    "id": "w-Z7b3AxgA",
+    "created": "2023-12-01 19:35:23.684659",
+    "customer_id": "YWaRKbjJSA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "s9H0WsGt-A",
+    "created": "2023-12-01 19:35:25.419836",
+    "customer_id": "KYwpw9QUmg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "0kOaeqp5Yw",
+    "created": "2023-12-06 12:20:06.343675",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7360
+  },
+  {
+    "id": "mymT9-Yq-Q",
+    "created": "2023-12-06 19:43:30.785818",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 7390
+  },
+  {
+    "id": "1bHREvn27g",
+    "created": "2023-12-07 13:21:05.827136",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2370
+  },
+  {
+    "id": "LcxpTTZ24w",
+    "created": "2023-12-07 20:00:42.920497",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7450
+  },
+  {
+    "id": "KdfmkKyUaA",
+    "created": "2023-12-07 20:00:56.233602",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7480
+  },
+  {
+    "id": "kJhF91u0EA",
+    "created": "2023-12-08 12:54:30.555111",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2590
+  },
+  {
+    "id": "-Hynih3-9g",
+    "created": "2023-12-10 13:03:07.208204",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 7510
+  },
+  {
+    "id": "cjMI0gpsJw",
+    "created": "2023-12-11 19:47:23.431969",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7570
+  },
+  {
+    "id": "lcJlLqwL9Q",
+    "created": "2023-12-11 19:57:42.467399",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7600
+  },
+  {
+    "id": "NLAbd2qEkQ",
+    "created": "2023-12-11 19:57:44.903051",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7630
+  },
+  {
+    "id": "lxJyTfBnJA",
+    "created": "2023-12-12 11:50:41.211240",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2640
+  },
+  {
+    "id": "9E51TjJnrw",
+    "created": "2023-12-18 13:51:00.187458",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2420
+  },
+  {
+    "id": "ScmYu4cetw",
+    "created": "2023-12-19 16:44:46.417954",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2470
+  },
+  {
+    "id": "A4GzcH3oTg",
+    "created": "2023-12-19 16:44:50.004742",
+    "customer_id": "S3Rz-huQkg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "CJOHVSY5ug",
+    "created": "2023-12-23 16:24:37.890391",
+    "customer_id": "mbPW6Ekwag",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "lW2OgWJtEA",
+    "created": "2023-12-24 11:44:58.607184",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2520
+  },
+  {
+    "id": "dk5FLwgWpA",
+    "created": "2023-12-24 11:45:08.050109",
+    "customer_id": "L15PAVbd2A",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "Tq2SMK3BlQ",
+    "created": "2023-12-26 20:52:03.958066",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7660
+  },
+  {
+    "id": "kGNY3oofYw",
+    "created": "2023-12-27 21:30:58.395512",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7690
+  },
+  {
+    "id": "YZOnZqnKsg",
+    "created": "2023-12-29 20:14:08.269230",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7720
+  },
+  {
+    "id": "_SpeiIAQtQ",
+    "created": "2023-12-30 18:27:23.891287",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7750
+  },
+  {
+    "id": "q-DInUXiBg",
+    "created": "2024-01-02 18:41:35.752084",
+    "customer_id": "x1YCU4XY2g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 320
+  },
+  {
+    "id": "Sw8p7ESYtw",
+    "created": "2024-01-02 18:42:00.026369",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2570
+  },
+  {
+    "id": "c6V2Da4ExQ",
+    "created": "2024-01-03 19:40:24.082761",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7780
+  },
+  {
+    "id": "LGreJxokzA",
+    "created": "2024-01-03 19:40:26.051677",
+    "customer_id": "6PPYVN7QOA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 90
+  },
+  {
+    "id": "Z5yiahOc4Q",
+    "created": "2024-01-05 19:46:43.424277",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 7810
+  },
+  {
+    "id": "r70dmBEUTA",
+    "created": "2024-01-05 19:46:45.059275",
+    "customer_id": "EkYMVqLkbQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "jWqMW_QNAg",
+    "created": "2024-01-05 19:46:46.493999",
+    "customer_id": "BlaqrdHDpQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "4KhcBD8BjQ",
+    "created": "2024-01-05 19:46:48.195945",
+    "customer_id": "AGtLiKxnzg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "KKmfw43Ugg",
+    "created": "2024-01-05 19:46:49.981080",
+    "customer_id": "ig619cmSgA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "5Cp7oLpzKQ",
+    "created": "2024-01-15 19:01:51.733595",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 7870
+  },
+  {
+    "id": "MERJ6DGheA",
+    "created": "2024-01-17 20:58:10.342776",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7930
+  },
+  {
+    "id": "39HMfeg3NQ",
+    "created": "2024-01-17 20:58:16.398907",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7960
+  },
+  {
+    "id": "F-n1K6XkMQ",
+    "created": "2024-01-22 13:06:39.096829",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2620
+  },
+  {
+    "id": "wESBLTrk7Q",
+    "created": "2024-01-23 15:08:00.266662",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 7990
+  },
+  {
+    "id": "Jqh8rfO-uA",
+    "created": "2024-01-25 18:39:39.681393",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8020
+  },
+  {
+    "id": "8xXQf4LjWA",
+    "created": "2024-01-25 18:39:41.766216",
+    "customer_id": "xsFT2GarwQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "yoATo_BlpQ",
+    "created": "2024-01-27 20:17:06.980987",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2670
+  },
+  {
+    "id": "eaGxVR90HA",
+    "created": "2024-02-01 19:33:52.218075",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2670
+  },
+  {
+    "id": "1K9aAVeE9g",
+    "created": "2024-02-02 20:04:00.230915",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8050
+  },
+  {
+    "id": "pqHUCZoFLg",
+    "created": "2024-02-04 13:21:48.062972",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8080
+  },
+  {
+    "id": "Uhc-72xAng",
+    "created": "2024-02-04 14:26:29.508919",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 8110
+  },
+  {
+    "id": "vNpXcaeqzQ",
+    "created": "2024-02-07 10:02:40.886219",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2720
+  },
+  {
+    "id": "ljJ699DUGA",
+    "created": "2024-02-07 11:57:51.009216",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8160
+  },
+  {
+    "id": "8bTa8xPeQg",
+    "created": "2024-02-07 19:57:38.797369",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8190
+  },
+  {
+    "id": "fIQnR2CoJQ",
+    "created": "2024-02-07 19:57:51.542001",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8220
+  },
+  {
+    "id": "pU6OoKUL3Q",
+    "created": "2024-02-08 18:03:00.392344",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8250
+  },
+  {
+    "id": "sniUc9gdpA",
+    "created": "2024-02-08 20:09:09.824902",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8280
+  },
+  {
+    "id": "LhsHpi9JNw",
+    "created": "2024-02-12 13:30:31.832897",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8310
+  },
+  {
+    "id": "eU8CDnnKMQ",
+    "created": "2024-02-14 20:37:36.371106",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8340
+  },
+  {
+    "id": "_jd4nb2dbg",
+    "created": "2024-02-14 20:37:39.224188",
+    "customer_id": "zDUDj7mqag",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "apIRWkcn9A",
+    "created": "2024-02-14 20:37:40.791818",
+    "customer_id": "K1sJChzAMg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "vRdmplmI9Q",
+    "created": "2024-02-14 20:37:42.228883",
+    "customer_id": "AGtLiKxnzg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 30
+  },
+  {
+    "id": "CWUbO1c9hQ",
+    "created": "2024-02-14 20:37:44.062397",
+    "customer_id": "VI3nR-LlTA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "HvAsOjUorw",
+    "created": "2024-02-14 20:37:45.312857",
+    "customer_id": "HuoKOCuvCw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "637I_etvmg",
+    "created": "2024-02-16 09:41:41.582405",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8370
+  },
+  {
+    "id": "T3cHJETbZQ",
+    "created": "2024-02-16 09:41:42.882931",
+    "customer_id": "TLi1pXfH6g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "Kr2hbIBckw",
+    "created": "2024-02-16 09:41:44.568208",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8400
+  },
+  {
+    "id": "IBeIkD6qJQ",
+    "created": "2024-02-17 17:11:00.585305",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8430
+  },
+  {
+    "id": "q7yFblrZgQ",
+    "created": "2024-02-19 19:32:29.892771",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8460
+  },
+  {
+    "id": "m0zw6DYWmQ",
+    "created": "2024-02-21 19:26:20.541282",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8490
+  },
+  {
+    "id": "AwSuh9vUzQ",
+    "created": "2024-02-21 20:09:43.719768",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8520
+  },
+  {
+    "id": "n13b7geYvA",
+    "created": "2024-02-23 20:50:47.214775",
+    "customer_id": "H8QRAA7YuA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2770
+  },
+  {
+    "id": "TbvTR0b-Aw",
+    "created": "2024-02-27 20:22:57.687495",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8550
+  },
+  {
+    "id": "3-RkAkGYjA",
+    "created": "2024-02-29 20:05:30.624445",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2720
+  },
+  {
+    "id": "x9lGCB_O2w",
+    "created": "2024-03-01 20:49:59.580374",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8580
+  },
+  {
+    "id": "XMGi7u-5Fw",
+    "created": "2024-03-02 20:17:44.362014",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2770
+  },
+  {
+    "id": "MDs3hy4PHw",
+    "created": "2024-03-02 21:44:03.790098",
+    "customer_id": "13fFAyK5Vw",
+    "type": "debit",
+    "amount": 100,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "4Fmgp9O9FA",
+    "created": "2024-03-04 13:43:54.732431",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2820
+  },
+  {
+    "id": "c0fiA1hpPA",
+    "created": "2024-03-04 13:44:09.664077",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2870
+  },
+  {
+    "id": "X-cCWPNBIg",
+    "created": "2024-03-07 13:13:03.344416",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8610
+  },
+  {
+    "id": "laJsNGKB7Q",
+    "created": "2024-03-08 20:32:07.645526",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8640
+  },
+  {
+    "id": "Pm_bUcLdJQ",
+    "created": "2024-03-08 20:32:09.797483",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8670
+  },
+  {
+    "id": "KxMO4iSs9w",
+    "created": "2024-03-08 20:32:27.165165",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8700
+  },
+  {
+    "id": "zmSB25uZOw",
+    "created": "2024-03-09 20:36:49.457430",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8730
+  },
+  {
+    "id": "HaO6TtoFMQ",
+    "created": "2024-03-11 14:31:57.290991",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 2920
+  },
+  {
+    "id": "hR9TW-FMpg",
+    "created": "2024-03-11 14:34:20.233462",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8760
+  },
+  {
+    "id": "8dBLtmKdQw",
+    "created": "2024-03-12 18:51:27.052664",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 2970
+  },
+  {
+    "id": "zXXoLG4IHg",
+    "created": "2024-03-12 19:36:23.499583",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 3000
+  },
+  {
+    "id": "h-jSgES_Vg",
+    "created": "2024-03-13 20:14:38.380715",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8790
+  },
+  {
+    "id": "vBPRr9flUQ",
+    "created": "2024-03-13 20:25:37.022307",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8820
+  },
+  {
+    "id": "qdQPG0Hh1w",
+    "created": "2024-03-13 20:25:39.074165",
+    "customer_id": "u7BgqvhgGQ",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "j_kXtLL9Tw",
+    "created": "2024-03-14 17:02:32.269357",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 8850
+  },
+  {
+    "id": "Rw3y07483Q",
+    "created": "2024-03-15 12:14:23.415182",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 8880
+  },
+  {
+    "id": "bn4bsp4e1g",
+    "created": "2024-03-15 12:21:40.835774",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 8940
+  },
+  {
+    "id": "G31fOdwSLw",
+    "created": "2024-03-20 14:01:08.604054",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 9000
+  },
+  {
+    "id": "rY0Ks8SP7A",
+    "created": "2024-03-20 17:28:45.406996",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9060
+  },
+  {
+    "id": "zBKOArRlag",
+    "created": "2024-03-21 17:24:57.170828",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3030
+  },
+  {
+    "id": "Mb82bn24Sg",
+    "created": "2024-03-21 18:53:15.151284",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9090
+  },
+  {
+    "id": "7JNB_FZzQQ",
+    "created": "2024-03-22 19:30:43.356666",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9120
+  },
+  {
+    "id": "quPkjNe_Og",
+    "created": "2024-03-22 19:30:46.009298",
+    "customer_id": "-HQYjJPklA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "Z8VDSGLcrQ",
+    "created": "2024-03-26 13:03:08.977747",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3080
+  },
+  {
+    "id": "ojpf4tlurg",
+    "created": "2024-03-26 21:30:52.685111",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9150
+  },
+  {
+    "id": "Dv9H0GAJMg",
+    "created": "2024-03-27 17:38:49.532003",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9180
+  },
+  {
+    "id": "YQHHv3plGA",
+    "created": "2024-03-27 19:07:36.295520",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3130
+  },
+  {
+    "id": "BZlRBKX37A",
+    "created": "2024-03-28 13:28:03.658780",
+    "customer_id": "pqTJHcTmew",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "Kh9iidSDoA",
+    "created": "2024-03-30 20:17:38.694650",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 9210
+  },
+  {
+    "id": "pAlMtZd5vw",
+    "created": "2024-04-03 16:32:28.275091",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 330
+  },
+  {
+    "id": "TC04aTIZEg",
+    "created": "2024-04-03 21:30:18.096146",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3180
+  },
+  {
+    "id": "BtxS1VM7DA",
+    "created": "2024-04-04 15:21:02.283588",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 60,
+    "mode_of_payment": "bill",
+    "previous_balance": 380
+  },
+  {
+    "id": "YXX4OVCzfw",
+    "created": "2024-04-05 16:35:02.980665",
+    "customer_id": "6-fTndbGGw",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 440
+  },
+  {
+    "id": "bVsZkao7Xw",
+    "created": "2024-04-05 16:35:06.817518",
+    "customer_id": "JIVXBE8g-g",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 0
+  },
+  {
+    "id": "t02B8wyyOg",
+    "created": "2024-04-06 12:48:53.604791",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9270
+  },
+  {
+    "id": "GMhEjy6FfA",
+    "created": "2024-04-06 18:22:44.644885",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9300
+  },
+  {
+    "id": "00QBYORdmw",
+    "created": "2024-04-11 09:56:40.559590",
+    "customer_id": "58TzeyAKrg",
+    "type": "debit",
+    "amount": 50,
+    "mode_of_payment": "bill",
+    "previous_balance": 3230
+  },
+  {
+    "id": "14dBbRI0Hg",
+    "created": "2024-04-13 13:08:54.933776",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9330
+  },
+  {
+    "id": "XAbFk14HHA",
+    "created": "2024-04-15 20:10:16.533153",
+    "customer_id": "gJFSH8BqlA",
+    "type": "debit",
+    "amount": 30,
+    "mode_of_payment": "bill",
+    "previous_balance": 9360
+  }
+]

@@ -1,0 +1,92 @@
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    SyntaxError: C:\Users\pc\OneDrive\Desktop\Utility\swastik-gold-silver-lab\frontend\src\components\core\__tests__\PriceCalculationTable.test.js: Support for the experimental syntax 'jsx' isn't currently enabled (8:16):
+
+    [0m [90m  6 |[39m describe([32m'Pillar 3: Unit Testing - Financial Engine (PriceCalculationTable)'[39m[33m,[39m () [33m=>[39m {
+     [90m  7 |[39m     test([32m'GST Mode 1 (Inclusive): 127.12 split should result in base 107.73 and tax 19.39'[39m[33m,[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m  8 |[39m         render([33m<[39m[33mPriceCalculationTable[39m total[33m=[39m{[35m127.12[39m} includeGst[33m=[39m{[36mtrue[39m} modeOfPayment[33m=[39m[32m"cash"[39m [33m/[39m[33m>[39m)[33m;[39m
+     [90m    |[39m                [31m[1m^[22m[39m
+     [90m  9 |[39m
+     [90m 10 |[39m         expect(screen[33m.[39mgetByText([35m/Base Amount/i[39m)[33m.[39mparentElement)[33m.[39mtoHaveTextContent([32m'₹107.73'[39m)[33m;[39m
+     [90m 11 |[39m         expect(screen[33m.[39mgetByText([35m/GST \(18% Incl.\)/i[39m)[33m.[39mparentElement)[33m.[39mtoHaveTextContent([32m'₹19.39'[39m)[33m;[39m[0m
+
+    Add @babel/preset-react (https://github.com/babel/babel/tree/main/packages/babel-preset-react) to the 'presets' section of your Babel config to enable transformation.
+    If you want to leave it as-is, add @babel/plugin-syntax-jsx (https://github.com/babel/babel/tree/main/packages/babel-plugin-syntax-jsx) to the 'plugins' section to enable parsing.
+
+    If you already added the plugin for this syntax to your config, it's possible that your config isn't being loaded.
+    You can re-run Babel with the BABEL_SHOW_CONFIG_FOR environment variable to show the loaded configuration:
+    	npx cross-env BABEL_SHOW_CONFIG_FOR=C:\Users\pc\OneDrive\Desktop\Utility\swastik-gold-silver-lab\frontend\src\components\core\__tests__\PriceCalculationTable.test.js <your build command>
+    See https://babeljs.io/docs/configuration#print-effective-configs for more info.
+
+      at toParseError (../node_modules/@babel/parser/src/parse-error.ts:95:45)
+      at Parser.raise (../node_modules/@babel/parser/src/tokenizer/index.ts:1504:19)
+      at Parser.expectOnePlugin (../node_modules/@babel/parser/src/tokenizer/index.ts:1569:18)
+      at Parser.parseExprAtom (../node_modules/@babel/parser/src/parser/expression.ts:1272:22)
+      at Parser.parseExprSubscripts (../node_modules/@babel/parser/src/parser/expression.ts:742:23)
+      at Parser.parseUpdate (../node_modules/@babel/parser/src/parser/expression.ts:721:21)
+      at Parser.parseMaybeUnary (../node_modules/@babel/parser/src/parser/expression.ts:683:23)
+      at Parser.parseMaybeUnaryOrPrivate (../node_modules/@babel/parser/src/parser/expression.ts:417:14)
+      at Parser.parseExprOps (../node_modules/@babel/parser/src/parser/expression.ts:429:23)
+      at Parser.parseMaybeConditional (../node_modules/@babel/parser/src/parser/expression.ts:384:23)
+      at Parser.parseMaybeAssign (../node_modules/@babel/parser/src/parser/expression.ts:301:21)
+      at callback (../node_modules/@babel/parser/src/parser/expression.ts:257:12)
+      at Parser.allowInAnd (../node_modules/@babel/parser/src/parser/expression.ts:3194:12)
+      at Parser.parseMaybeAssignAllowIn (../node_modules/@babel/parser/src/parser/expression.ts:256:17)
+      at Parser.parseMaybeAssignAllowInOrVoidPattern (../node_modules/@babel/parser/src/parser/expression.ts:3308:17)
+      at Parser.parseExprListItem (../node_modules/@babel/parser/src/parser/expression.ts:2790:18)
+      at Parser.parseCallExpressionArguments (../node_modules/@babel/parser/src/parser/expression.ts:1042:14)
+      at Parser.parseCoverCallAndAsyncArrowHead (../node_modules/@babel/parser/src/parser/expression.ts:922:29)
+      at Parser.parseSubscript (../node_modules/@babel/parser/src/parser/expression.ts:804:19)
+      at Parser.parseSubscripts (../node_modules/@babel/parser/src/parser/expression.ts:763:19)
+      at Parser.parseExprSubscripts (../node_modules/@babel/parser/src/parser/expression.ts:748:17)
+      at Parser.parseUpdate (../node_modules/@babel/parser/src/parser/expression.ts:721:21)
+      at Parser.parseMaybeUnary (../node_modules/@babel/parser/src/parser/expression.ts:683:23)
+      at Parser.parseMaybeUnaryOrPrivate (../node_modules/@babel/parser/src/parser/expression.ts:417:14)
+      at Parser.parseExprOps (../node_modules/@babel/parser/src/parser/expression.ts:429:23)
+      at Parser.parseMaybeConditional (../node_modules/@babel/parser/src/parser/expression.ts:384:23)
+      at Parser.parseMaybeAssign (../node_modules/@babel/parser/src/parser/expression.ts:301:21)
+      at Parser.parseExpressionBase (../node_modules/@babel/parser/src/parser/expression.ts:226:23)
+      at callback (../node_modules/@babel/parser/src/parser/expression.ts:217:39)
+      at Parser.allowInAnd (../node_modules/@babel/parser/src/parser/expression.ts:3189:16)
+      at Parser.parseExpression (../node_modules/@babel/parser/src/parser/expression.ts:217:17)
+      at Parser.parseStatementContent (../node_modules/@babel/parser/src/parser/statement.ts:688:23)
+      at Parser.parseStatementLike (../node_modules/@babel/parser/src/parser/statement.ts:482:17)
+      at Parser.parseStatementListItem (../node_modules/@babel/parser/src/parser/statement.ts:431:17)
+      at Parser.parseBlockOrModuleBlockBody (../node_modules/@babel/parser/src/parser/statement.ts:1444:16)
+      at Parser.parseBlockBody (../node_modules/@babel/parser/src/parser/statement.ts:1417:10)
+      at Parser.parseBlock (../node_modules/@babel/parser/src/parser/statement.ts:1385:10)
+      at Parser.parseFunctionBody (../node_modules/@babel/parser/src/parser/expression.ts:2618:24)
+      at Parser.parseArrowExpression (../node_modules/@babel/parser/src/parser/expression.ts:2559:10)
+      at Parser.parseParenAndDistinguishExpression (../node_modules/@babel/parser/src/parser/expression.ts:1847:12)
+      at Parser.parseExprAtom (../node_modules/@babel/parser/src/parser/expression.ts:1170:21)
+      at Parser.parseExprSubscripts (../node_modules/@babel/parser/src/parser/expression.ts:742:23)
+      at Parser.parseUpdate (../node_modules/@babel/parser/src/parser/expression.ts:721:21)
+      at Parser.parseMaybeUnary (../node_modules/@babel/parser/src/parser/expression.ts:683:23)
+      at Parser.parseMaybeUnaryOrPrivate (../node_modules/@babel/parser/src/parser/expression.ts:417:14)
+      at Parser.parseExprOps (../node_modules/@babel/parser/src/parser/expression.ts:429:23)
+      at Parser.parseMaybeConditional (../node_modules/@babel/parser/src/parser/expression.ts:384:23)
+      at Parser.parseMaybeAssign (../node_modules/@babel/parser/src/parser/expression.ts:301:21)
+      at callback (../node_modules/@babel/parser/src/parser/expression.ts:257:12)
+      at Parser.allowInAnd (../node_modules/@babel/parser/src/parser/expression.ts:3194:12)

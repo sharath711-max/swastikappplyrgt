@@ -1,0 +1,9 @@
+[
+  {
+    "id": "q_7pHIg6WQ",
+    "created": "2022-07-03 16:09:27.755481",
+    "password_hash": "pbkdf2:sha256:260000$f4OgkoyyWTFulIFK$0543b0cec2a0f24a7c502dfa3b3a0144b0311e6340dace5ec54641ecdca39be7",
+    "role_id": "rwZ8QThINg",
+    "email": "admin@swastik.com"
+  }
+]

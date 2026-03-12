@@ -1,0 +1,3337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Testing Kanban Board</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .new-sample-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+        }
+        
+        .refresh-btn {
+            position: absolute;
+            top: 0;
+            right: 150px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .batch-transfer-btn {
+            position: absolute;
+            top: 0;
+            right: 310px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .batch-transfer-btn:hover, .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .batch-transfer-btn.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .batch-mode .card {
+            cursor: pointer;
+        }
+        
+        .card.selected {
+            border: 3px solid #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .batch-controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            display: none;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+        }
+        
+        .batch-controls.active {
+            display: flex;
+        }
+        
+        .batch-controls select {
+            padding: 10px 15px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95em;
+            cursor: pointer;
+        }
+        
+        .batch-controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .batch-move-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .batch-move-btn:hover {
+            background: #2563eb;
+        }
+        
+        .batch-cancel-btn {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .batch-cancel-btn:hover {
+            background: #d1d5db;
+        }
+        
+        .selection-count {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .new-sample-btn:hover {
+            background: #f3f4f6;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+        
+        .new-sample-btn:active {
+            transform: translateY(0);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 968px) {
+            .board {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .column {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            min-height: 500px;
+        }
+        
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid;
+        }
+        
+        .column-title {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+        
+        .column-count {
+            background: rgba(0,0,0,0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .pending { border-bottom-color: #f59e0b; }
+        .in-progress { border-bottom-color: #3b82f6; }
+        .testing { border-bottom-color: #8b5cf6; }
+        .completed { border-bottom-color: #10b981; }
+        
+        .cards {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 400px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: move;
+            transition: all 0.2s;
+            border-left: 4px solid;
+            position: relative;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .card.dragging {
+            opacity: 0.5;
+        }
+        
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1f2937;
+            font-size: 1em;
+        }
+        
+        .card-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.85em;
+            color: #6b7280;
+        }
+        
+        .card-detail {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-border-pending { border-left-color: #f59e0b; }
+        .card-border-testing { border-left-color: #8b5cf6; }
+        .card-border-completed-pass { border-left-color: #10b981; }
+        .card-border-completed-fail { border-left-color: #ef4444; }
+
+        .card-detail-primary {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 1.05em;
+        }
+
+        .card-detail-items {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .card-detail-status {
+            margin-top: 8px;
+        }
+
+        .card-compact-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .card-compact-date {
+            color: #6b7280;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+
+        .tested-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .tested-section {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #f9fafb;
+        }
+
+        .tested-section-title {
+            font-size: 0.72em;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+        }
+
+        .tested-section-line {
+            font-size: 0.9em;
+            color: #1f2937;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-awaiting { background: #fef3c7; color: #92400e; }
+        .status-active { background: #dbeafe; color: #1e40af; }
+        .status-analysis { background: #ede9fe; color: #5b21b6; }
+        .status-pass { background: #d1fae5; color: #065f46; }
+        .status-fail { background: #fee2e2; color: #991b1b; }
+        
+        .card.is-tested-ready {
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .card.is-tested-ready::before {
+            content: '\2713';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #3b82f6;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+        
+        .card-form {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #3b82f6;
+            display: none;
+        }
+        
+        .card-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.9em;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .form-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .form-buttons button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-save {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-save:hover {
+            background: #2563eb;
+        }
+        
+        .btn-cancel {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .btn-cancel:hover {
+            background: #d1d5db;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            color: #9ca3af;
+            display: none;
+        }
+        
+        .drop-zone.active {
+            display: block;
+            background: #f9fafb;
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 16px;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-form {
+            background: white;
+            border-radius: 18px;
+            padding: clamp(20px, 2.5vw, 34px);
+            max-width: 760px;
+            width: min(760px, calc(100vw - 32px));
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            box-shadow: 0 28px 72px rgba(15, 23, 42, 0.35);
+            animation: slideIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 22px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .modal-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .modal-title {
+            font-size: clamp(1.45rem, 2.2vw, 2rem);
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 2em;
+            color: #9ca3af;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .copy-share-btn {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #3730a3;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.85em;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-share-btn .copy-share-text {
+            font-size: 0.78em;
+            letter-spacing: 0.01em;
+        }
+
+        .copy-share-btn:hover {
+            background: #e0e7ff;
+        }
+
+        .sample-print-btn {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            color: #0c4a6e;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.78em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.16s ease;
+            white-space: nowrap;
+        }
+
+        .sample-print-btn:hover {
+            background: #e0f2fe;
+            transform: translateY(-1px);
+        }
+        
+        .modal-form .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .modal-form .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 1em;
+        }
+        
+        .modal-form .form-group label .required {
+            color: #ef4444;
+            margin-left: 4px;
+        }
+        
+        .modal-form .form-group input,
+        .modal-form .form-group select,
+        .modal-form .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .modal-form .form-group input:focus,
+        .modal-form .form-group select:focus,
+        .modal-form .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .modal-form .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .search-wrapper {
+            position: relative;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #3b82f6;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+        
+        .search-results.active {
+            display: block;
+        }
+        
+        .search-result-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-item:hover {
+            background: #f3f4f6;
+        }
+        
+        .search-result-item .customer-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .search-result-item .customer-id {
+            font-size: 0.85em;
+            color: #6b7280;
+        }
+        
+        .readonly-field {
+            background: #f9fafb;
+            cursor: not-allowed;
+        }
+        
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 32px;
+            background: #d1d5db;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #10b981;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .toggle-switch.active::after {
+            transform: translateX(28px);
+        }
+
+        .toggle-switch.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .toggle-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .sample-list {
+            margin-top: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .sample-list-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sample-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+        
+        .sample-list-items {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .sample-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        
+        .sample-item:last-child {
+            border-bottom: none;
+        }
+        
+        .sample-item:hover {
+            background: #f9fafb;
+        }
+        
+        .sample-info {
+            flex: 1;
+        }
+        
+        .sample-item-type {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .return-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.75em;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+
+        .return-tag.returned {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .return-tag.not-returned {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .sample-item-weights {
+            font-size: 0.85em;
+            color: #6b7280;
+        }
+        
+        .sample-remove-btn {
+            background: #fee2e2;
+            color: #991b1b;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        
+        .sample-remove-btn:hover {
+            background: #fecaca;
+        }
+        
+        .add-sample-btn {
+            width: 100%;
+            padding: 10px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+        
+        .add-sample-btn:hover {
+            background: #2563eb;
+        }
+        
+        .empty-list {
+            padding: 40px;
+            text-align: center;
+            color: #9ca3af;
+        }
+        
+        .form-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+        }
+        
+        .form-actions.three-buttons {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group-no-margin {
+            margin: 0;
+        }
+
+        .form-row-top {
+            margin-top: 10px;
+        }
+
+        .toggle-wrapper-top {
+            margin-top: 10px;
+        }
+
+        .sample-list-hidden {
+            display: none;
+        }
+
+        .modal-form-compact {
+            max-width: 500px;
+        }
+
+        .purity-summary {
+            background: #e6f7f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #10b981;
+        }
+
+        .purity-summary-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+            font-size: 1em;
+        }
+
+        .purity-summary-note {
+            font-size: 0.9em;
+            color: #059669;
+        }
+
+        .purity-samples {
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .purity-samples-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: #f3f4f6;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .purity-samples-items {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .purity-samples-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.86em;
+        }
+
+        .purity-samples-table thead {
+            background: #f9fafb;
+        }
+
+        .purity-samples-table th {
+            text-align: left;
+            padding: 10px 8px;
+            color: #374151;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+        .purity-samples-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #1f2937;
+            vertical-align: middle;
+        }
+
+        .purity-samples-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .purity-samples-table .sample-purity-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9em;
+            min-width: 140px;
+        }
+
+        .purity-samples-table .sample-purity-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .purity-samples-empty {
+            padding: 14px;
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+
+        .payment-section {
+            margin-top: 16px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 14px;
+            background: #f9fafb;
+        }
+
+        .payment-section-title {
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .payment-summary-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .payment-summary-date {
+            font-size: 0.9em;
+            color: #065f46;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .payment-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Modal and button polish overrides */
+        .modal-close {
+            transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+        }
+
+        .modal-close:hover {
+            transform: translateY(-1px);
+        }
+
+        .copy-share-btn {
+            transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .copy-share-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(59, 130, 246, 0.18);
+        }
+
+        .form-actions {
+            margin-top: 22px;
+            padding-top: 16px;
+        }
+
+        .form-actions button {
+            min-height: 42px;
+            border-radius: 10px;
+            font-weight: 700;
+            border: none;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+        }
+
+        .form-actions button:hover {
+            transform: translateY(-1px);
+        }
+
+        .form-actions button:active {
+            transform: translateY(0);
+            filter: brightness(0.98);
+        }
+
+        .form-actions button:focus-visible,
+        .copy-share-btn:focus-visible,
+        .modal-close:focus-visible {
+            outline: 3px solid rgba(59, 130, 246, 0.35);
+            outline-offset: 2px;
+        }
+
+        .modal-form-compact {
+            max-width: 700px;
+        }
+
+        @media (max-width: 640px) {
+            .modal-overlay {
+                padding: 10px;
+            }
+
+            .modal-form {
+                width: calc(100vw - 20px);
+                max-height: calc(100vh - 20px);
+                border-radius: 14px;
+            }
+
+            .form-actions,
+            .form-actions.three-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .modal-form .form-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+        }
+        
+        .modal-form .form-buttons button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .modal-form .btn-save {
+            background: #5865f2;
+            color: white;
+            border: none;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(88, 101, 242, 0.3);
+        }
+        
+        .modal-form .btn-save:hover {
+            background: #4752c4;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(88, 101, 242, 0.5);
+        }
+        
+        .modal-form .btn-save:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(88, 101, 242, 0.4);
+        }
+        
+        .modal-form .btn-submit {
+            background: #16a34a;
+            color: white;
+            border: none;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+        }
+        
+        .modal-form .btn-submit:hover {
+            background: #15803d;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.5);
+        }
+        
+        .modal-form .btn-submit:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(22, 163, 74, 0.4);
+        }
+        
+        .modal-form .btn-cancel {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .modal-form .btn-cancel:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+        
+        .modal-form .btn-cancel:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            border-radius: 999px;
+        }
+        
+        .form-hint {
+            font-size: 0.85em;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Gold Testing Kanban</h1>
+        <p>Track your gold testing workflow from sample intake to final results</p>
+        <button class="batch-transfer-btn" onclick="batchTransferTested()">Move Tested Completed</button>
+        <button class="refresh-btn" onclick="location.reload()">Refresh</button>
+        <button class="new-sample-btn" onclick="openModalForm()">+ New Sample</button>
+    </div>
+    
+    <div class="board">
+        <div class="column">
+            <div class="column-header pending">
+                <span class="column-title">Ongoing</span>
+                <span class="column-count" id="count-pending">0</span>
+            </div>
+            <div class="cards" data-column="pending" id="pending-cards">
+                <div class="card card-border-pending" draggable="true" data-id="1" data-parent-sequence="1">
+                    <div class="card-details">
+                        <div class="card-detail card-detail-primary">John Smith(9876543210)</div>
+                        <div class="card-detail">02/13/2026</div>
+                        <div class="card-detail">2 samples</div>
+                        <div class="card-detail card-detail-items">Items: Ring, Bracelet</div>
+                        <div class="card-detail">Total Weight: 8.5g</div>
+                        <div class="card-detail card-detail-status">
+                            <span class="status-badge status-awaiting">In Progress</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-border-pending" draggable="true" data-id="2" data-parent-sequence="2">
+                    <div class="card-details">
+                        <div class="card-detail card-detail-primary">Sarah Johnson(9845612378)</div>
+                        <div class="card-detail">02/13/2026</div>
+                        <div class="card-detail">1 sample</div>
+                        <div class="card-detail card-detail-items">Items: Coin</div>
+                        <div class="card-detail">Total Weight: 31.1g</div>
+                        <div class="card-detail card-detail-status">
+                            <span class="status-badge status-awaiting">In Progress</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-form" id="form-pending">
+                <div class="form-group">
+                    <label>Sample ID</label>
+                    <input type="text" id="pending-id" placeholder="GLD-XXX">
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <input type="text" id="pending-type" placeholder="e.g., Ring, Coin, Bar">
+                </div>
+                <div class="form-group">
+                    <label>Weight (g)</label>
+                    <input type="text" id="pending-weight" placeholder="0.0">
+                </div>
+                <div class="form-buttons">
+                    <button class="btn-save" onclick="addCard('pending')">Save</button>
+                    <button class="btn-cancel" onclick="hideForm('pending')">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="column">
+            <div class="column-header testing">
+                <span class="column-title">Tested</span>
+                <span class="column-count" id="count-testing">0</span>
+            </div>
+            <div class="cards" data-column="testing" id="testing-cards">
+                <div class="card card-border-testing" draggable="true" data-id="4" data-parent-sequence="3" data-purity="22K (91.67%)" data-result="pass">
+                    <div class="card-details">
+                        <div class="card-detail card-detail-primary">Michael Brown(9123456789)</div>
+                        <div class="card-detail">02/13/2026</div>
+                        <div class="card-detail">1 sample</div>
+                        <div class="card-detail card-detail-items">Items: Bar</div>
+                        <div class="card-detail">Total Weight: 31.5g</div>
+                        <div class="card-detail">Purity: 22K (91.67%)</div>
+                        <div class="card-detail card-detail-status">
+                            <span class="status-badge status-active">Tested - Ready</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-border-testing" draggable="true" data-id="7" data-parent-sequence="4" data-purity="18K (75%)" data-result="pass">
+                    <div class="card-details">
+                        <div class="card-detail card-detail-primary">Emily Davis(9988776655)</div>
+                        <div class="card-detail">02/13/2026</div>
+                        <div class="card-detail">2 samples</div>
+                        <div class="card-detail card-detail-items">Items: Necklace, Earrings</div>
+                        <div class="card-detail">Total Weight: 15.8g</div>
+                        <div class="card-detail">Purity: 18K (75%)</div>
+                        <div class="card-detail card-detail-status">
+                            <span class="status-badge status-active">Tested - Ready</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-form" id="form-testing">
+                <div class="form-group">
+                    <label for="testing-id">Sample ID</label>
+                    <input type="text" id="testing-id" placeholder="GLD-XXX">
+                </div>
+                <div class="form-group">
+                    <label for="testing-type">Type</label>
+                    <input type="text" id="testing-type" placeholder="e.g., Ring, Coin, Bar">
+                </div>
+                <div class="form-group">
+                    <label for="testing-weight">Weight (g)</label>
+                    <input type="text" id="testing-weight" placeholder="0.0">
+                </div>
+                <div class="form-group">
+                    <label for="testing-purity">Purity (Required for Completion)</label>
+                    <input type="text" id="testing-purity" placeholder="e.g., 22K (91.67%)">
+                </div>
+                <div class="form-group">
+                    <label for="testing-result">Test Result (Required for Completion)</label>
+                    <select id="testing-result" aria-label="Test Result (Required for Completion)">
+                        <option value="">Select result...</option>
+                        <option value="pass">Pass</option>
+                        <option value="fail">Fail</option>
+                    </select>
+                </div>
+                <div class="form-buttons">
+                    <button class="btn-save" onclick="addCard('testing')">Save</button>
+                    <button class="btn-cancel" onclick="hideForm('testing')">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="column">
+            <div class="column-header completed">
+                <span class="column-title">Completed</span>
+                <span class="column-count" id="count-completed">0</span>
+            </div>
+            <div class="cards" data-column="completed" id="completed-cards">
+                <div class="card card-border-completed-pass" draggable="true" data-id="5" data-parent-sequence="5">
+                    <div class="card-details">
+                        <div class="card-detail card-detail-primary">David Wilson(9765432109)</div>
+                        <div class="card-detail">02/13/2026</div>
+                        <div class="card-detail">1 sample</div>
+                        <div class="card-detail card-detail-items">Items: Coin</div>
+                        <div class="card-detail">Total Weight: 33.9g</div>
+                        <div class="card-detail">Purity: 22K (91.67%)</div>
+                        <div class="card-detail card-detail-status">
+                            <span class="status-badge status-pass">Passed</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-border-completed-fail" draggable="true" data-id="6" data-parent-sequence="6">
+                    <div class="card-details">
+                        <div class="card-detail card-detail-primary">Jennifer Martinez(9654321087)</div>
+                        <div class="card-detail">02/13/2026</div>
+                        <div class="card-detail">1 sample</div>
+                        <div class="card-detail card-detail-items">Items: Bar</div>
+                        <div class="card-detail">Total Weight: 50.0g</div>
+                        <div class="card-detail">Purity: 14K (58.3%)</div>
+                        <div class="card-detail card-detail-status">
+                            <span class="status-badge status-fail">Below Standard</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-form" id="form-completed">
+                <div class="form-group">
+                    <label for="completed-id">Sample ID</label>
+                    <input type="text" id="completed-id" placeholder="GLD-XXX">
+                </div>
+                <div class="form-group">
+                    <label for="completed-type">Type</label>
+                    <input type="text" id="completed-type" placeholder="e.g., Ring, Coin, Bar">
+                </div>
+                <div class="form-group">
+                    <label for="completed-weight">Weight (g)</label>
+                    <input type="text" id="completed-weight" placeholder="0.0">
+                </div>
+                <div class="form-group">
+                    <label for="completed-purity">Purity</label>
+                    <input type="text" id="completed-purity" placeholder="e.g., 22K (91.67%)">
+                </div>
+                <div class="form-group">
+                    <label for="completed-status">Status</label>
+                    <select id="completed-status" aria-label="Status">
+                        <option value="pass">Passed</option>
+                        <option value="fail">Below Standard</option>
+                    </select>
+                </div>
+                <div class="form-buttons">
+                    <button class="btn-save" onclick="addCard('completed')">Save</button>
+                    <button class="btn-cancel" onclick="hideForm('completed')">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-form">
+            <div class="modal-header">
+                <h2 class="modal-title">New Sample Entry</h2>
+                <button class="modal-close" type="button" aria-label="Close new sample dialog" title="Close new sample dialog" onclick="closeModalForm()">×</button>
+            </div>
+            
+            <form id="sample-form" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="modal-date">Date <span class="required">*</span></label>
+                    <input type="text" id="modal-date" class="readonly-field" aria-label="Date" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label>Customer Search <span class="required">*</span></label>
+                    <div class="search-wrapper">
+                        <input 
+                            type="text" 
+                            id="customer-search" 
+                            placeholder="Search customer by name or ID..."
+                            autocomplete="off"
+                            oninput="searchCustomers(this.value)"
+                            onfocus="this.select()"
+                        >
+                        <div class="search-results" id="search-results"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Customer Name <span class="required">*</span></label>
+                    <input type="text" id="modal-customer-name" class="readonly-field" placeholder="Select customer from search" readonly required>
+                    <input type="hidden" id="modal-customer-id">
+                </div>
+                
+                <div class="form-group">
+                    <label>Sample Items</label>
+                    <div class="form-row">
+                        <div class="form-group form-group-no-margin">
+                            <input type="text" id="item-type" placeholder="Item type (e.g., Ring, Necklace)">
+                        </div>
+                        <div class="form-group form-group-no-margin">
+                            <input type="number" id="sample-weight" placeholder="Sample Wt (g)" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row form-row-top">
+                        <div class="form-group form-group-no-margin">
+                            <input type="number" id="total-weight" placeholder="Total Wt (g)" step="0.01">
+                        </div>
+                        <div class="form-group form-group-no-margin">
+                            <input type="number" id="net-weight" placeholder="Net Wt (g)" step="0.01">
+                        </div>
+                    </div>
+                    <div class="toggle-wrapper toggle-wrapper-top">
+                        <span class="toggle-label">Returned</span>
+                        <div class="toggle-switch" id="returned-toggle" onclick="toggleReturned()"></div>
+                    </div>
+                    <button type="button" class="add-sample-btn" onclick="addSampleToList()">+ Add Sample Item</button>
+                </div>
+                
+                <div class="sample-list sample-list-hidden" id="sample-list-container">
+                    <div class="sample-list-header">
+                        <span>Sample Items</span>
+                        <span class="sample-count" id="sample-count">0 items</span>
+                    </div>
+                    <div class="sample-list-items" id="sample-list-items">
+                        <div class="empty-list">No samples added yet</div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-save" onclick="saveDraft()">Save</button>
+                    <button type="button" class="btn-cancel" onclick="closeModalForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="purity-modal-overlay">
+        <div class="modal-form modal-form-compact">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Test Results</h2>
+                <button class="modal-close" type="button" aria-label="Close test results dialog" title="Close test results dialog" onclick="closePurityModal()">×</button>
+            </div>
+            
+            <form id="purity-form" onsubmit="return false;">
+                <div class="purity-summary">
+                    <div class="purity-summary-title">
+                        Customer: <span id="purity-customer-name"></span>
+                    </div>
+                    <div class="purity-summary-note">
+                        Sample saved in Ongoing status
+                    </div>
+                </div>
+
+                <div class="purity-samples">
+                    <div class="purity-samples-header">
+                        <span>Sample Items</span>
+                        <span id="purity-sample-count">0 items</span>
+                    </div>
+                    <div class="purity-samples-items" id="purity-samples-items">
+                        <div class="purity-samples-empty">No sample items found for this card</div>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="sequence-input">
+
+                <div class="form-actions three-buttons">
+                    <button type="button" class="btn-save" onclick="savePurityData()">Save</button>
+                    <button type="button" class="btn-submit" onclick="submitPurityData()">Submit</button>
+                    <button type="button" class="btn-cancel" onclick="closePurityModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="payment-modal-overlay">
+        <div class="modal-form modal-form-compact">
+            <div class="modal-header">
+                <h2 class="modal-title">Payment Details</h2>
+                <button class="modal-close" type="button" aria-label="Close payment dialog" title="Close payment dialog" onclick="closePaymentModal()">×</button>
+            </div>
+
+            <form id="payment-form" onsubmit="return false;">
+                <div class="purity-summary">
+                    <div class="payment-summary-head">
+                        <div class="purity-summary-title">
+                            Customer: <span id="payment-customer-name"></span>
+                        </div>
+                        <div class="payment-summary-date">
+                            Date: <span id="payment-date"></span>
+                        </div>
+                    </div>
+                    <div class="purity-summary-note">
+                        Sample Count: <span id="payment-summary-count">0</span>
+                    </div>
+                </div>
+
+                <div class="purity-samples">
+                    <div class="purity-samples-header">
+                        <span>Sample Details</span>
+                        <span id="payment-sample-count">0 items</span>
+                    </div>
+                    <div class="purity-samples-items" id="payment-samples-items">
+                        <div class="purity-samples-empty">No sample items found for this card</div>
+                    </div>
+                </div>
+
+                <div class="payment-section">
+                    <div class="payment-section-title">Payment Details</div>
+                    <div class="payment-row">
+                        <div class="form-group form-group-no-margin">
+                            <label for="payment-amount">Amount</label>
+                            <input type="number" id="payment-amount" placeholder="Enter amount" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="form-group form-group-no-margin">
+                            <label for="payment-mode">Mode</label>
+                            <select id="payment-mode" aria-label="Payment mode" required>
+                                <option value="">Select mode...</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Balance">Balance</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions three-buttons">
+                    <button type="button" class="btn-save" onclick="savePaymentDetails()">Save</button>
+                    <button type="button" class="btn-submit" onclick="submitPaymentDetails()">Submit</button>
+                    <button type="button" class="btn-cancel" onclick="closePaymentModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="completed-modal-overlay">
+        <div class="modal-form modal-form-compact">
+            <div class="modal-header">
+                <h2 class="modal-title">Completed Details</h2>
+                <div class="modal-header-actions">
+                    <button type="button" class="copy-share-btn" onclick="copyCompletedDetails()" aria-label="Copy details" title="Copy details">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                            <path fill-rule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
+                        </svg>
+                        <span class="copy-share-text">Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <form id="completed-form" onsubmit="return false;">
+                <div id="completed-copy-capture">
+                    <div class="purity-summary">
+                        <div class="payment-summary-head">
+                            <div class="purity-summary-title">
+                                Customer: <span id="completed-customer-name"></span>
+                            </div>
+                            <div class="payment-summary-date">
+                                Date: <span id="completed-date"></span>
+                            </div>
+                        </div>
+                        <div class="purity-summary-note">
+                            Sample Count: <span id="completed-summary-count">0</span>
+                        </div>
+                    </div>
+
+                    <div class="purity-samples">
+                        <div class="purity-samples-header">
+                            <span>Sample Details</span>
+                            <span id="completed-sample-count">0 items</span>
+                        </div>
+                        <div class="purity-samples-items" id="completed-samples-items">
+                            <div class="purity-samples-empty">No sample items found for this card</div>
+                        </div>
+                    </div>
+
+                    <div class="payment-section">
+                        <div class="payment-section-title">Payment Details</div>
+                        <div class="payment-row">
+                            <div class="form-group form-group-no-margin">
+                                <label for="completed-payment-amount">Amount</label>
+                                <input type="text" id="completed-payment-amount" class="readonly-field" readonly>
+                            </div>
+                            <div class="form-group form-group-no-margin">
+                                <label for="completed-payment-mode">Mode</label>
+                                <input type="text" id="completed-payment-mode" class="readonly-field" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="batch-controls" id="batch-controls">
+        <span class="selection-count" id="selection-count">0 selected</span>
+        <select id="batch-destination" aria-label="Batch destination">
+            <option value="">Move to...</option>
+            <option value="pending">Ongoing</option>
+            <option value="testing">Tested</option>
+            <option value="completed">Completed</option>
+        </select>
+        <button class="batch-move-btn" onclick="executeBatchMove()">Move Selected</button>
+        <button class="batch-cancel-btn" onclick="cancelBatchMode()">Cancel</button>
+    </div>
+    
+    <script>
+        let draggedCard = null;
+        let cardCounter = 7;
+        let batchMode = false;
+        let selectedCards = new Set();
+        let sampleItems = [];
+        let returnedStatus = false;
+        let parentSequence = 7; // Counter for parent entries (start after existing 6 cards)
+        let childSequenceCounter = 9; // Global counter for all sample items (start after existing 8 items)
+        let testSequenceCounter = 1; // Counter for test sequence numbers (SEQ-001, SEQ-002, etc.)
+        let activePurityCard = null;
+        let activePaymentCard = null;
+        let activeCompletedCard = null;
+        
+        // Sample customer database
+        const customers = [
+            { id: 'C001', name: 'John Smith', phone: '9876543210' },
+            { id: 'C002', name: 'Sarah Johnson', phone: '9845612378' },
+            { id: 'C003', name: 'Michael Brown', phone: '9123456789' },
+            { id: 'C004', name: 'Emily Davis', phone: '9988776655' },
+            { id: 'C005', name: 'David Wilson', phone: '9765432109' },
+            { id: 'C006', name: 'Jennifer Martinez', phone: '9654321087' },
+            { id: 'C007', name: 'Robert Taylor', phone: '9543210987' },
+            { id: 'C008', name: 'Lisa Anderson', phone: '9432109876' },
+            { id: 'C009', name: 'James Thomas', phone: '9321098765' },
+            { id: 'C010', name: 'Maria Garcia', phone: '9210987654' }
+        ];
+        
+        // Initialize drag and drop
+        document.addEventListener('DOMContentLoaded', () => {
+            const seenIds = new Set();
+            let maxId = 0;
+            document.querySelectorAll('.card').forEach(card => {
+                const parsedId = Number(card.dataset.id);
+                if (Number.isFinite(parsedId) && !seenIds.has(parsedId)) {
+                    seenIds.add(parsedId);
+                    maxId = Math.max(maxId, parsedId);
+                    return;
+                }
+
+                maxId += 1;
+                while (seenIds.has(maxId)) {
+                    maxId += 1;
+                }
+                card.dataset.id = String(maxId);
+                seenIds.add(maxId);
+            });
+            cardCounter = maxId + 1;
+            updateAllCounts();
+            setupDragAndDrop();
+            setupSampleWeightAutoCalc();
+            updateReturnedToggleState();
+            normalizeAllCards();
+        });
+        
+        function setupDragAndDrop() {
+            const cards = document.querySelectorAll('.card');
+            const columns = document.querySelectorAll('.cards');
+            
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                
+                const parentColumn = card.closest('.cards');
+                if (parentColumn && parentColumn.id === 'pending-cards') {
+                    card.addEventListener('click', handlePendingCardClick);
+                    card.style.cursor = 'pointer';
+                } else if (parentColumn && parentColumn.id === 'testing-cards') {
+                    card.addEventListener('click', handleTestingCardClick);
+                    card.style.cursor = 'pointer';
+                } else if (parentColumn && parentColumn.id === 'completed-cards') {
+                    card.addEventListener('click', handleCompletedCardClick);
+                    card.style.cursor = 'pointer';
+                }
+            });
+            
+            columns.forEach(column => {
+                column.addEventListener('dragover', handleDragOver);
+                column.addEventListener('drop', handleDrop);
+                column.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+        
+        function handleDragStart(e) {
+            draggedCard = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.cards').forEach(col => col.classList.remove('drag-over'));
+        }
+        
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add('drag-over');
+            return false;
+        }
+        
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+        
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            this.classList.remove('drag-over');
+            
+            if (draggedCard !== this) {
+                const destination = this.dataset.column;
+                if (destination === 'completed') {
+                    const amount = Number(draggedCard.dataset.paymentAmount || '');
+                    const mode = (draggedCard.dataset.paymentMode || '').trim();
+                    if (!Number.isFinite(amount) || amount <= 0 || !mode) {
+                        alert('Add payment details in Tested status before moving to Completed.');
+                        return false;
+                    }
+                }
+                this.appendChild(draggedCard);
+                updateCardStyle(draggedCard, destination);
+                renderCardByStatus(draggedCard, destination);
+                updateAllCounts();
+            }
+            
+            return false;
+        }
+        
+        function updateCardStyle(card, column) {
+            const colors = {
+                'pending': '#f59e0b',
+                'testing': '#8b5cf6',
+                'completed': '#10b981'
+            };
+            card.style.borderLeftColor = colors[column];
+            
+            // Update status badge if needed
+            const badge = card.querySelector('.status-badge');
+            if (badge) {
+                badge.className = 'status-badge';
+                if (column === 'pending') {
+                    badge.classList.add('status-awaiting');
+                    badge.textContent = 'In Progress';
+                } else if (column === 'testing') {
+                    badge.classList.add('status-active');
+                    badge.textContent = 'Tested';
+                }
+            }
+        }
+        
+        function updateAllCounts() {
+            ['pending', 'testing', 'completed'].forEach(col => {
+                const count = document.querySelectorAll(`#${col}-cards .card`).length;
+                document.getElementById(`count-${col}`).textContent = count;
+            });
+        }
+        
+        function showForm(column) {
+            document.getElementById(`form-${column}`).classList.add('active');
+        }
+        
+        function hideForm(column) {
+            document.getElementById(`form-${column}`).classList.remove('active');
+            // Clear form
+            document.getElementById(`${column}-id`).value = '';
+            document.getElementById(`${column}-type`).value = '';
+            document.getElementById(`${column}-weight`).value = '';
+            if (column === 'testing') {
+                if (document.getElementById(`${column}-purity`)) {
+                    document.getElementById(`${column}-purity`).value = '';
+                }
+                if (document.getElementById(`${column}-result`)) {
+                    document.getElementById(`${column}-result`).value = '';
+                }
+            }
+            if (column === 'completed') {
+                document.getElementById(`${column}-purity`).value = '';
+            }
+        }
+        
+        function addCard(column) {
+            const id = document.getElementById(`${column}-id`).value;
+            const type = document.getElementById(`${column}-type`).value;
+            const weight = document.getElementById(`${column}-weight`).value;
+            
+            if (!id || !type || !weight) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.draggable = true;
+            card.dataset.id = cardCounter++;
+            card.dataset.customerName = `Sample #${id}`;
+            card.dataset.date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            card.dataset.sampleCount = '1';
+            card.dataset.samples = JSON.stringify([{ childSequence: 1, itemType: type, sampleWeight: Number(weight) || 0, totalWeight: Number(weight) || 0, netWeight: 0, returned: false }]);
+            renderCardByStatus(card, column);
+            updateCardStyle(card, column);
+            
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            if (column === 'pending') {
+                card.addEventListener('click', handlePendingCardClick);
+                card.style.cursor = 'pointer';
+            } else if (column === 'testing') {
+                card.addEventListener('click', handleTestingCardClick);
+                card.style.cursor = 'pointer';
+            }
+            
+            document.getElementById(`${column}-cards`).appendChild(card);
+            hideForm(column);
+            updateAllCounts();
+        }
+        
+        function toggleBatchMode() {
+            batchMode = !batchMode;
+            const btn = document.querySelector('.batch-transfer-btn');
+            const board = document.querySelector('body');
+            const controls = document.getElementById('batch-controls');
+            
+            if (batchMode) {
+                btn.classList.add('active');
+                board.classList.add('batch-mode');
+                controls.classList.add('active');
+                
+                // Add click handlers to cards
+                document.querySelectorAll('.card').forEach(card => {
+                    card.addEventListener('click', toggleCardSelection);
+                    card.style.cursor = 'pointer';
+                });
+            } else {
+                btn.classList.remove('active');
+                board.classList.remove('batch-mode');
+                controls.classList.remove('active');
+                selectedCards.clear();
+                
+                // Remove selection styling
+                document.querySelectorAll('.card').forEach(card => {
+                    card.classList.remove('selected');
+                    card.removeEventListener('click', toggleCardSelection);
+                    card.style.cursor = 'move';
+                });
+                
+                updateSelectionCount();
+            }
+        }
+        
+        function toggleCardSelection(e) {
+            if (!batchMode) return;
+            
+            e.stopPropagation();
+            const card = e.currentTarget;
+            const cardId = card.dataset.id;
+            
+            if (selectedCards.has(cardId)) {
+                selectedCards.delete(cardId);
+                card.classList.remove('selected');
+            } else {
+                selectedCards.add(cardId);
+                card.classList.add('selected');
+            }
+            
+            updateSelectionCount();
+        }
+        
+        function updateSelectionCount() {
+            const count = selectedCards.size;
+            document.getElementById('selection-count').textContent = 
+                count === 1 ? '1 selected' : `${count} selected`;
+        }
+        
+        function executeBatchMove() {
+            const destination = document.getElementById('batch-destination').value;
+            
+            if (!destination) {
+                alert('Please select a destination column');
+                return;
+            }
+            
+            if (selectedCards.size === 0) {
+                alert('Please select at least one card');
+                return;
+            }
+            
+            const targetColumn = document.getElementById(`${destination}-cards`);
+            
+            selectedCards.forEach(cardId => {
+                const card = document.querySelector(`[data-id="${cardId}"]`);
+                if (card) {
+                    targetColumn.appendChild(card);
+                    updateCardStyle(card, destination);
+                    card.classList.remove('selected');
+                }
+            });
+            
+            selectedCards.clear();
+            updateAllCounts();
+            updateSelectionCount();
+            cancelBatchMode();
+        }
+        
+        function cancelBatchMode() {
+            batchMode = false;
+            toggleBatchMode();
+        }
+        
+        function openModalForm() {
+            // Set current date
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit' 
+            });
+            document.getElementById('modal-date').value = dateStr;
+            
+            // Reset form
+            sampleItems = [];
+            returnedStatus = false;
+            document.getElementById('returned-toggle').classList.remove('active');
+            updateReturnedToggleState();
+            updateSampleList();
+            
+            document.getElementById('modal-overlay').classList.add('active');
+            document.getElementById('customer-search').focus();
+        }
+        
+        function closeModalForm() {
+            document.getElementById('modal-overlay').classList.remove('active');
+            document.getElementById('sample-form').reset();
+            document.getElementById('search-results').classList.remove('active');
+            document.getElementById('customer-search').value = '';
+            document.getElementById('modal-customer-name').value = '';
+            document.getElementById('modal-customer-id').value = '';
+            sampleItems = [];
+            returnedStatus = false;
+            document.getElementById('returned-toggle').classList.remove('active');
+            clearSampleFields();
+            updateReturnedToggleState();
+            updateSampleList();
+        }
+        
+        function searchCustomers(query) {
+            const resultsDiv = document.getElementById('search-results');
+            
+            if (!query || query.length < 2) {
+                resultsDiv.classList.remove('active');
+                return;
+            }
+            
+            const matches = customers.filter(c => 
+                c.name.toLowerCase().includes(query.toLowerCase()) ||
+                c.id.toLowerCase().includes(query.toLowerCase()) ||
+                c.phone.includes(query)
+            );
+            
+            if (matches.length === 0) {
+                resultsDiv.innerHTML = '<div class="search-result-item">No customers found</div>';
+                resultsDiv.classList.add('active');
+                return;
+            }
+            
+            resultsDiv.innerHTML = matches.map(customer => `
+                <div class="search-result-item" onclick="selectCustomer('${customer.id}', '${customer.name}', '${customer.phone}')">
+                    <div class="customer-name">${customer.name}(${customer.phone})</div>
+                    <div class="customer-id">ID: ${customer.id}</div>
+                </div>
+            `).join('');
+            
+            resultsDiv.classList.add('active');
+        }
+        
+        function selectCustomer(id, name, phone) {
+            document.getElementById('modal-customer-id').value = id;
+            document.getElementById('modal-customer-name').value = `${name}(${phone})`;
+            document.getElementById('customer-search').value = `${name}(${phone})`;
+            document.getElementById('search-results').classList.remove('active');
+        }
+        
+        function toggleReturned() {
+            const toggle = document.getElementById('returned-toggle');
+            if (toggle.classList.contains('disabled')) return;
+
+            returnedStatus = !returnedStatus;
+            if (returnedStatus) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+
+        function setupSampleWeightAutoCalc() {
+            ['sample-weight', 'total-weight', 'net-weight'].forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (!field) return;
+                field.addEventListener('input', () => {
+                    handleWeightFieldInput(fieldId);
+                });
+            });
+        }
+
+        function handlePendingCardClick(e) {
+            const card = e.currentTarget;
+            const parentColumn = card.closest('.cards');
+            if (!parentColumn || parentColumn.id !== 'pending-cards') return;
+            if (card.classList.contains('dragging')) return;
+            const customerName = card.dataset.customerName || card.querySelector('.card-detail-primary')?.textContent || 'Customer';
+            openPurityModal(card, customerName);
+        }
+
+        function handleTestingCardClick(e) {
+            const card = e.currentTarget;
+            const parentColumn = card.closest('.cards');
+            if (!parentColumn || parentColumn.id !== 'testing-cards') return;
+            if (card.classList.contains('dragging')) return;
+            openPaymentModal(card);
+        }
+
+        function handleCompletedCardClick(e) {
+            const card = e.currentTarget;
+            const parentColumn = card.closest('.cards');
+            if (!parentColumn || parentColumn.id !== 'completed-cards') return;
+            if (card.classList.contains('dragging')) return;
+            openCompletedModal(card);
+        }
+
+        function parseWeight(value) {
+            if (value === '' || value === null || value === undefined) return null;
+            const num = parseFloat(value);
+            return Number.isFinite(num) ? num : null;
+        }
+
+        function setWeightFieldValue(fieldId, value) {
+            const field = document.getElementById(fieldId);
+            if (!field) return;
+            field.value = Number.isFinite(value) ? value.toFixed(2) : '';
+        }
+
+        function handleWeightFieldInput(changedField) {
+            const sampleInput = document.getElementById('sample-weight');
+            const totalInput = document.getElementById('total-weight');
+            const netInput = document.getElementById('net-weight');
+
+            const sample = parseWeight(sampleInput.value);
+            const total = parseWeight(totalInput.value);
+            const net = parseWeight(netInput.value);
+
+            if (sample !== null && net === null && total === null) {
+                setWeightFieldValue('net-weight', 0);
+                setWeightFieldValue('total-weight', sample);
+            } else if (sample !== null && net !== null) {
+                setWeightFieldValue('total-weight', sample + net);
+            } else if (sample !== null && total !== null && net === null) {
+                setWeightFieldValue('net-weight', Math.max(0, total - sample));
+            } else if (total !== null && net !== null && sample === null) {
+                setWeightFieldValue('sample-weight', Math.max(0, total - net));
+            }
+
+            updateReturnedToggleState();
+        }
+
+        function updateReturnedToggleState() {
+            const toggle = document.getElementById('returned-toggle');
+            const netValue = parseWeight(document.getElementById('net-weight').value);
+            const canEnableReturned = netValue !== null && netValue > 0;
+
+            returnedStatus = canEnableReturned;
+            toggle.classList.toggle('active', canEnableReturned);
+            toggle.classList.remove('disabled');
+        }
+        
+        function addSampleToList() {
+            const itemType = document.getElementById('item-type').value;
+            let sampleWeight = parseWeight(document.getElementById('sample-weight').value);
+            let totalWeight = parseWeight(document.getElementById('total-weight').value);
+            let netWeight = parseWeight(document.getElementById('net-weight').value);
+
+            if (sampleWeight !== null && netWeight === null && totalWeight === null) {
+                netWeight = 0;
+                totalWeight = sampleWeight;
+                setWeightFieldValue('net-weight', netWeight);
+                setWeightFieldValue('total-weight', totalWeight);
+            } else if (sampleWeight !== null && netWeight !== null) {
+                totalWeight = sampleWeight + netWeight;
+                setWeightFieldValue('total-weight', totalWeight);
+            } else if (sampleWeight !== null && totalWeight !== null && netWeight === null) {
+                netWeight = Math.max(0, totalWeight - sampleWeight);
+                setWeightFieldValue('net-weight', netWeight);
+            } else if (totalWeight !== null && netWeight !== null && sampleWeight === null) {
+                sampleWeight = Math.max(0, totalWeight - netWeight);
+                setWeightFieldValue('sample-weight', sampleWeight);
+            }
+            
+            if (!itemType || sampleWeight === null) {
+                alert('Please enter at least Item Type and Sample Weight');
+                return;
+            }
+            
+            const sample = {
+                id: Date.now(),
+                childSequence: childSequenceCounter++, // Assign child sequence
+                itemType,
+                sampleWeight,
+                totalWeight: totalWeight !== null ? totalWeight : 0,
+                netWeight: netWeight !== null ? netWeight : 0,
+                returned: returnedStatus
+            };
+            
+            sampleItems.push(sample);
+            updateSampleList();
+            clearSampleFields();
+        }
+        
+        function clearSampleFields() {
+            document.getElementById('item-type').value = '';
+            document.getElementById('sample-weight').value = '';
+            document.getElementById('total-weight').value = '';
+            document.getElementById('net-weight').value = '';
+            returnedStatus = false;
+            document.getElementById('returned-toggle').classList.remove('active');
+            updateReturnedToggleState();
+        }
+        
+        function removeSampleItem(id) {
+            sampleItems = sampleItems.filter(s => s.id !== id);
+            updateSampleList();
+            updateReturnedToggleState();
+        }
+        
+        function updateSampleList() {
+            const container = document.getElementById('sample-list-container');
+            const itemsDiv = document.getElementById('sample-list-items');
+            const countSpan = document.getElementById('sample-count');
+            
+            if (sampleItems.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            countSpan.textContent = `${sampleItems.length} item${sampleItems.length !== 1 ? 's' : ''}`;
+            
+            itemsDiv.innerHTML = sampleItems.map(sample => `
+                <div class="sample-item">
+                    <div class="sample-info">
+                        <div class="sample-item-type">
+                            <span>#${sample.childSequence} - ${sample.itemType}</span>
+                            <span class="return-tag ${sample.returned ? 'returned' : 'not-returned'}">
+                                ${sample.returned ? 'Returned' : 'Not Returned'}
+                            </span>
+                        </div>
+                        <div class="sample-item-weights">
+                            Sample: ${sample.sampleWeight}g | Total: ${sample.totalWeight}g | Net: ${sample.netWeight}g
+                        </div>
+                    </div>
+                    <button class="sample-remove-btn" onclick="removeSampleItem(${sample.id})">Remove</button>
+                </div>
+            `).join('');
+        }
+        
+        function saveDraft() {
+            const customerName = document.getElementById('modal-customer-name').value;
+            const customerId = document.getElementById('modal-customer-id').value;
+            
+            if (!customerName || sampleItems.length === 0) {
+                alert('Please select a customer and add at least one sample item');
+                return;
+            }
+            
+            // Create card in Ongoing status
+            const cardId = createCard('pending', customerName, customerId);
+            
+            // Close main modal - DO NOT open purity modal
+            closeModalForm();
+            
+            alert('Sample saved in Ongoing status. Click on the card to add test details and submit.');
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderPuritySamples(card) {
+            const sampleItemsContainer = document.getElementById('purity-samples-items');
+            const sampleCount = document.getElementById('purity-sample-count');
+            const rawSamples = card ? card.dataset.samples : '';
+            let parsedSamples = [];
+
+            if (rawSamples) {
+                try {
+                    parsedSamples = JSON.parse(rawSamples);
+                } catch (e) {
+                    parsedSamples = [];
+                }
+            }
+
+            if (!Array.isArray(parsedSamples) || parsedSamples.length === 0) {
+                sampleItemsContainer.innerHTML = '<div class="purity-samples-empty">No sample items found for this card</div>';
+                sampleCount.textContent = '0 items';
+                return;
+            }
+
+            sampleCount.textContent = `${parsedSamples.length} item${parsedSamples.length !== 1 ? 's' : ''}`;
+            const rows = parsedSamples.map(sample => {
+                const childSeq = sample.childSequence || '-';
+                const itemType = escapeHtml(sample.itemType || '-');
+                const returned = sample.returned ? 'Yes' : 'No';
+                const sampleWeight = Number.isFinite(sample.sampleWeight) ? sample.sampleWeight : (sample.sampleWeight || 0);
+                const totalWeight = Number.isFinite(sample.totalWeight) ? sample.totalWeight : (sample.totalWeight || 0);
+                const netWeight = Number.isFinite(sample.netWeight) ? sample.netWeight : (sample.netWeight || 0);
+                const puritySplit = splitKaratAndPurity(sample.purity, sample.kt || sample.karat);
+                const purityValue = puritySplit.purityPercent.replace('%', '').trim();
+                const purity = escapeHtml(purityValue);
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(childSeq)}</td>
+                        <td>${itemType}</td>
+                        <td>${escapeHtml(sampleWeight)}g</td>
+                        <td>${escapeHtml(totalWeight)}g</td>
+                        <td>${escapeHtml(netWeight)}g</td>
+                        <td>${returned}</td>
+                        <td>
+                            <input type="number" class="sample-purity-input" data-child-seq="${escapeHtml(childSeq)}" placeholder="0 to 100" min="0" max="100" step="0.01" value="${purity}">
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            sampleItemsContainer.innerHTML = `
+                <table class="purity-samples-table">
+                    <thead>
+                        <tr>
+                            <th>Seq No</th>
+                            <th>Item Name</th>
+                            <th>Sample Wt</th>
+                            <th>Total Wt</th>
+                            <th>Net Wt</th>
+                            <th>Returned</th>
+                            <th>Purity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function parseCardSamples(card) {
+            try {
+                const parsed = JSON.parse(card.dataset.samples || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function bootstrapCardDataFromLegacyMarkup(card) {
+            if (card.dataset.customerName && card.dataset.date && (card.dataset.samples || card.dataset.sampleSummary)) {
+                return;
+            }
+
+            const detailTexts = Array.from(card.querySelectorAll('.card-detail'))
+                .map(el => el.textContent.trim())
+                .filter(Boolean);
+
+            const primary = card.querySelector('.card-detail-primary')?.textContent?.trim() || '';
+            const dateText = detailTexts.find(text => /^\d{2}\/\d{2}\/\d{4}$/.test(text)) || '';
+            const sampleCountText = detailTexts.find(text => /\d+\s+sample/i.test(text)) || '';
+            const itemsText = detailTexts.find(text => text.startsWith('Items:')) || '';
+            const totalText = detailTexts.find(text => text.startsWith('Total Weight:')) || '';
+            const purityText = detailTexts.find(text => text.startsWith('Purity:')) || '';
+
+            if (primary && !card.dataset.customerName) card.dataset.customerName = primary;
+            if (dateText && !card.dataset.date) card.dataset.date = dateText;
+
+            const countMatch = sampleCountText.match(/\d+/);
+            const sampleCount = countMatch ? Number(countMatch[0]) : 0;
+            if (!card.dataset.sampleCount && sampleCount > 0) {
+                card.dataset.sampleCount = String(sampleCount);
+            }
+
+            if (!card.dataset.purity && purityText) {
+                card.dataset.purity = purityText.replace('Purity:', '').trim();
+            }
+
+            const existingSamples = parseCardSamples(card);
+            if (existingSamples.length > 0) return;
+
+            const items = itemsText
+                .replace('Items:', '')
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+            const totalMatch = totalText.match(/([\d.]+)\s*g/i);
+            const totalWeight = totalMatch ? Number(totalMatch[1]) || 0 : 0;
+
+            if (items.length === 0 && sampleCount === 0) return;
+
+            const generatedCount = sampleCount > 0 ? sampleCount : items.length;
+            const perItemTotal = generatedCount > 0 ? Number((totalWeight / generatedCount).toFixed(2)) : 0;
+            const samples = Array.from({ length: generatedCount }, (_, i) => ({
+                childSequence: i + 1,
+                itemType: items[i] || `Sample ${i + 1}`,
+                sampleWeight: 0,
+                totalWeight: perItemTotal,
+                netWeight: 0,
+                returned: false,
+                purity: card.dataset.purity || ''
+            }));
+
+            card.dataset.samples = JSON.stringify(samples);
+            card.dataset.sampleSummary = formatSampleRows(samples);
+            if (!card.dataset.sampleCount) {
+                card.dataset.sampleCount = String(samples.length);
+            }
+        }
+
+        function parseSamplesFromSummary(summary) {
+            if (!summary) return [];
+            const matches = [...summary.matchAll(/#(\d+)\s+([^(|]+)\s+\(([\d.]+)g\/([\d.]+)g\/([\d.]+)g\/([YN])\)/g)];
+            if (matches.length === 0) return [];
+            return matches.map(m => ({
+                childSequence: Number(m[1]),
+                itemType: m[2].trim(),
+                sampleWeight: Number(m[3]) || 0,
+                totalWeight: Number(m[4]) || 0,
+                netWeight: Number(m[5]) || 0,
+                returned: m[6] === 'Y',
+                purity: ''
+            }));
+        }
+
+        function fallbackSamplesFromCard(card) {
+            const fromSummary = parseSamplesFromSummary(card.dataset.sampleSummary || '');
+            if (fromSummary.length > 0) return fromSummary;
+
+            const detailTexts = Array.from(card.querySelectorAll('.card-detail'))
+                .map(el => el.textContent.trim());
+            const itemsLine = detailTexts.find(text => text.startsWith('Items:')) || '';
+            const totalLine = detailTexts.find(text => text.startsWith('Total Weight:')) || '';
+            const purityLine = detailTexts.find(text => text.startsWith('Purity:')) || '';
+
+            const totalMatch = totalLine.match(/([\d.]+)\s*g/i);
+            const totalWeight = totalMatch ? Number(totalMatch[1]) || 0 : 0;
+            const purity = purityLine ? purityLine.replace('Purity:', '').trim() : '';
+            const items = itemsLine
+                .replace('Items:', '')
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+
+            if (items.length === 0) return [];
+            const perItemTotal = totalWeight > 0 ? Number((totalWeight / items.length).toFixed(2)) : 0;
+            return items.map((item, idx) => ({
+                childSequence: idx + 1,
+                itemType: item,
+                sampleWeight: 0,
+                totalWeight: perItemTotal,
+                netWeight: 0,
+                returned: false,
+                purity
+            }));
+        }
+
+        function getSamplesForDisplay(card) {
+            const parsed = parseCardSamples(card);
+            if (parsed.length > 0) return parsed;
+            return fallbackSamplesFromCard(card);
+        }
+
+        function collectPerSamplePurity(card) {
+            const purityInputs = Array.from(document.querySelectorAll('#purity-samples-items .sample-purity-input'));
+            if (purityInputs.length === 0) {
+                alert('No sample rows found for purity.');
+                return null;
+            }
+
+            const emptyInput = purityInputs.find(input => !input.value.trim());
+            if (emptyInput) {
+                emptyInput.focus();
+                alert('Please enter purity for each sample.');
+                return null;
+            }
+
+            function formatPercent(value) {
+                return `${Number(value.toFixed(2)).toString()}%`;
+            }
+
+            function parsePurityPercent(value) {
+                const cleaned = String(value).trim().replace('%', '');
+                if (cleaned === '') return null;
+                const num = Number(cleaned);
+                if (!Number.isFinite(num)) return null;
+                if (num < 0 || num > 100) return null;
+                return Number(num.toFixed(2));
+            }
+
+            const samples = parseCardSamples(card);
+            const purityBySeq = {};
+            purityInputs.forEach(input => {
+                const parsed = parsePurityPercent(input.value);
+                if (parsed === null) {
+                    input.dataset.invalidPurity = '1';
+                } else {
+                    input.dataset.invalidPurity = '';
+                    purityBySeq[String(input.dataset.childSeq)] = formatPercent(parsed);
+                }
+            });
+
+            const invalidInput = purityInputs.find(input => input.dataset.invalidPurity === '1');
+            if (invalidInput) {
+                invalidInput.focus();
+                alert('Purity must be a number between 0 and 100.');
+                return null;
+            }
+
+            const updatedSamples = samples.map(sample => {
+                const seqKey = String(sample.childSequence || '');
+                return {
+                    ...sample,
+                    purity: purityBySeq[seqKey] || ''
+                };
+            });
+
+            const puritySummary = updatedSamples
+                .map(sample => `#${sample.childSequence}: ${sample.purity}`)
+                .join(', ');
+
+            return { updatedSamples, puritySummary };
+        }
+
+        function formatSampleRows(samples) {
+            return samples.map(sample => {
+                const returnedText = sample.returned ? 'Y' : 'N';
+                return `#${sample.childSequence} ${sample.itemType} (${sample.sampleWeight}g/${sample.totalWeight}g/${sample.netWeight}g/${returnedText})`;
+            }).join(' | ');
+        }
+
+        function upsertCardDetail(cardDetails, statusDetail, prefix, value) {
+            let row = Array.from(cardDetails.children).find(el => el.textContent.startsWith(prefix));
+            const text = `${prefix} ${value}`;
+            if (row) {
+                row.textContent = text;
+                return;
+            }
+
+            row = document.createElement('div');
+            row.className = 'card-detail';
+            row.textContent = text;
+            cardDetails.insertBefore(row, statusDetail);
+        }
+
+        function inferSampleCount(card) {
+            if (card.dataset.sampleCount) return card.dataset.sampleCount;
+            const fromSamples = parseCardSamples(card).length;
+            if (fromSamples > 0) return String(fromSamples);
+            const fromSummary = parseSamplesFromSummary(card.dataset.sampleSummary || '').length;
+            if (fromSummary > 0) return String(fromSummary);
+
+            const countText = Array.from(card.querySelectorAll('.card-detail, .tested-section-line'))
+                .map(el => el.textContent.trim())
+                .find(text => /\d+\s+sample/i.test(text) || /Sample Count:\s*\d+/i.test(text)) || '';
+            const match = countText.match(/\d+/);
+            return match ? match[0] : '0';
+        }
+
+        function getCardStatus(card) {
+            return card.closest('.cards')?.dataset.column || 'pending';
+        }
+
+        function extractCustomerName(card) {
+            if (card.dataset.customerName) return card.dataset.customerName;
+            const primary = card.querySelector('.card-detail-primary')?.textContent?.trim();
+            if (primary) return primary;
+            const customerLine = Array.from(card.querySelectorAll('.tested-section-line, .purity-summary-title, .card-detail'))
+                .map(el => el.textContent.trim())
+                .find(text => text.startsWith('Customer:'));
+            if (customerLine) return customerLine.replace('Customer:', '').trim();
+            return '-';
+        }
+
+        function extractDateText(card) {
+            if (card.dataset.date) return card.dataset.date;
+            const exactDate = Array.from(card.querySelectorAll('.card-detail, .tested-section-line'))
+                .map(el => el.textContent.trim())
+                .find(text => /^\d{2}\/\d{2}\/\d{4}$/.test(text));
+            if (exactDate) return exactDate;
+            const dateLine = Array.from(card.querySelectorAll('.card-detail, .tested-section-line'))
+                .map(el => el.textContent.trim())
+                .find(text => /^Date:\s*/.test(text));
+            if (dateLine) return dateLine.replace(/^Date:\s*/i, '').trim() || '-';
+            return '-';
+        }
+
+        function hasValidPurityValue(purityText) {
+            const parsed = splitKaratAndPurity(purityText);
+            if (!parsed.purityPercent) return false;
+            const value = Number(parsed.purityPercent.replace('%', ''));
+            return Number.isFinite(value) && value >= 0 && value <= 100;
+        }
+
+        function splitKaratAndPurity(rawPurity, rawKt) {
+            const text = String(rawPurity || '').trim();
+            const ktSource = String(rawKt || '').trim();
+
+            const ktFromSource = ktSource.match(/(\d+(?:\.\d+)?)\s*K\b/i);
+            const ktFromText = text.match(/(\d+(?:\.\d+)?)\s*K\b/i);
+            const ktValue = ktFromSource ? ktFromSource[1] : (ktFromText ? ktFromText[1] : '');
+            const kt = ktValue ? `${Number(ktValue).toString()}K` : '';
+
+            const pctFromText = text.match(/(\d+(?:\.\d+)?)\s*%/);
+            let percentNum = null;
+            if (pctFromText) {
+                percentNum = Number(pctFromText[1]);
+            } else if (text && !/[a-zA-Z]/.test(text)) {
+                const maybeNum = Number(text.replace('%', '').trim());
+                if (Number.isFinite(maybeNum)) percentNum = maybeNum;
+            }
+
+            const purityPercent = Number.isFinite(percentNum)
+                ? `${Number(percentNum.toFixed(2)).toString()}%`
+                : '';
+
+            return { kt, purityPercent };
+        }
+
+        function calculateKtFromPurityPercent(purityPercent) {
+            const numericPurity = Number(String(purityPercent || '').replace('%', '').trim());
+            if (!Number.isFinite(numericPurity) || numericPurity < 0 || numericPurity > 100) {
+                return '';
+            }
+            const derivedKt = Math.round((numericPurity * 24) / 100);
+            return `${derivedKt}K`;
+        }
+
+        function getCompletedKaratAndPurity(sample) {
+            const split = splitKaratAndPurity(sample.purity, sample.kt || sample.karat);
+            const computedKt = split.kt || calculateKtFromPurityPercent(split.purityPercent);
+            return {
+                kt: computedKt || '',
+                purityPercent: split.purityPercent || ''
+            };
+        }
+
+        function isTestedCardReady(card) {
+            if (getCardStatus(card) !== 'testing') return false;
+
+            const paymentAmount = Number(card.dataset.paymentAmount || '');
+            const paymentMode = (card.dataset.paymentMode || '').trim();
+            const samples = getSamplesForDisplay(card);
+
+            if (!Number.isFinite(paymentAmount) || paymentAmount <= 0 || !paymentMode) {
+                return false;
+            }
+            if (!Array.isArray(samples) || samples.length === 0) {
+                return false;
+            }
+
+            return samples.every(sample => hasValidPurityValue(sample.purity));
+        }
+
+        function renderCompactCard(card) {
+            const customerName = extractCustomerName(card);
+            const dateText = extractDateText(card);
+            const sampleCount = card.dataset.sampleCount || inferSampleCount(card);
+            const testedReady = isTestedCardReady(card);
+
+            card.dataset.customerName = customerName;
+            card.dataset.date = dateText;
+            card.dataset.sampleCount = sampleCount;
+            card.classList.toggle('is-tested-ready', testedReady);
+
+            card.innerHTML = `
+                <div class="card-details">
+                    <div class="card-compact-header">
+                        <div class="card-detail card-detail-primary">${escapeHtml(customerName)}</div>
+                        <div class="card-compact-date">${escapeHtml(dateText)}</div>
+                    </div>
+                    <div class="card-detail">${escapeHtml(sampleCount)} sample${sampleCount === '1' ? '' : 's'}</div>
+                </div>
+            `;
+        }
+
+        function renderTestedCardSections(card) {
+            const customerName = card.dataset.customerName || '-';
+            const dateText = card.dataset.date || '-';
+            const sampleCount = card.dataset.sampleCount || inferSampleCount(card);
+            const sampleSummary = card.dataset.sampleSummary || formatSampleRows(parseCardSamples(card)) || '-';
+            const puritySummary = card.dataset.purity || '-';
+            const paymentAmount = card.dataset.paymentAmount || '-';
+            const paymentMode = card.dataset.paymentMode || '-';
+
+            card.innerHTML = `
+                <div class="card-details">
+                    <div class="tested-sections">
+                        <div class="tested-section">
+                            <div class="tested-section-title">Customer</div>
+                            <div class="tested-section-line">${escapeHtml(customerName)}</div>
+                            <div class="tested-section-line">Date: ${escapeHtml(dateText)}</div>
+                            <div class="tested-section-line">Sample Count: ${escapeHtml(sampleCount)}</div>
+                        </div>
+                        <div class="tested-section">
+                            <div class="tested-section-title">Sample Details</div>
+                            <div class="tested-section-line">${escapeHtml(sampleSummary)}</div>
+                            <div class="tested-section-line">Purity: ${escapeHtml(puritySummary)}</div>
+                        </div>
+                        <div class="tested-section">
+                            <div class="tested-section-title">Payment Details</div>
+                            <div class="tested-section-line">Amount: ${escapeHtml(paymentAmount)}</div>
+                            <div class="tested-section-line">Mode: ${escapeHtml(paymentMode)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCardByStatus(card, status) {
+            renderCompactCard(card);
+        }
+
+        function normalizeAllCards() {
+            document.querySelectorAll('.card').forEach(card => {
+                bootstrapCardDataFromLegacyMarkup(card);
+                renderCardByStatus(card, getCardStatus(card));
+            });
+        }
+        
+        function openPurityModal(cardOrId, customerName) {
+            // Generate auto sequence number
+            const sequenceNumber = `SEQ-${String(testSequenceCounter).padStart(3, '0')}`;
+            const selectedCard = cardOrId instanceof Element
+                ? cardOrId
+                : document.querySelector(`.card[data-id="${cardOrId}"]`);
+            if (!selectedCard) return;
+            activePurityCard = selectedCard;
+            const cardId = selectedCard.dataset.id || '';
+            const resolvedCustomerName = customerName || selectedCard.dataset.customerName || 'Customer';
+             
+            document.getElementById('purity-customer-name').textContent = resolvedCustomerName;
+            document.getElementById('sequence-input').value = sequenceNumber;
+            document.getElementById('purity-form').dataset.cardId = cardId;
+            renderPuritySamples(selectedCard);
+            document.getElementById('purity-modal-overlay').classList.add('active');
+        }
+        
+        function closePurityModal() {
+            document.getElementById('purity-modal-overlay').classList.remove('active');
+            activePurityCard = null;
+            document.getElementById('sequence-input').value = '';
+            document.getElementById('purity-form').dataset.cardId = '';
+            document.getElementById('purity-samples-items').innerHTML = '<div class="purity-samples-empty">No sample items found for this card</div>';
+            document.getElementById('purity-sample-count').textContent = '0 items';
+        }
+
+        function openPaymentModal(cardOrId) {
+            const card = cardOrId instanceof Element
+                ? cardOrId
+                : document.querySelector(`.card[data-id="${cardOrId}"]`);
+            if (!card) return;
+            activePaymentCard = card;
+            const cardId = card.dataset.id || '';
+            const samples = getSamplesForDisplay(card);
+            document.getElementById('payment-form').dataset.cardId = cardId;
+            document.getElementById('payment-customer-name').textContent = card.dataset.customerName || '-';
+            document.getElementById('payment-date').textContent = card.dataset.date || '-';
+            document.getElementById('payment-summary-count').textContent = String(samples.length || 0);
+            renderPaymentSamples(card);
+            document.getElementById('payment-amount').value = card.dataset.paymentAmount || '';
+            document.getElementById('payment-mode').value = card.dataset.paymentMode || '';
+            document.getElementById('payment-modal-overlay').classList.add('active');
+            document.getElementById('payment-amount').focus();
+        }
+
+        function closePaymentModal() {
+            document.getElementById('payment-modal-overlay').classList.remove('active');
+            activePaymentCard = null;
+            document.getElementById('payment-form').dataset.cardId = '';
+            document.getElementById('payment-customer-name').textContent = '';
+            document.getElementById('payment-date').textContent = '';
+            document.getElementById('payment-summary-count').textContent = '0';
+            document.getElementById('payment-samples-items').innerHTML = '<div class="purity-samples-empty">No sample items found for this card</div>';
+            document.getElementById('payment-sample-count').textContent = '0 items';
+            document.getElementById('payment-amount').value = '';
+            document.getElementById('payment-mode').value = '';
+        }
+
+        function renderPaymentSamples(card) {
+            const samplesContainer = document.getElementById('payment-samples-items');
+            const countNode = document.getElementById('payment-sample-count');
+            const samples = getSamplesForDisplay(card);
+
+            if (!Array.isArray(samples) || samples.length === 0) {
+                samplesContainer.innerHTML = '<div class="purity-samples-empty">No sample items found for this card</div>';
+                countNode.textContent = '0 items';
+                return;
+            }
+
+            countNode.textContent = `${samples.length} item${samples.length !== 1 ? 's' : ''}`;
+            const rows = samples.map(sample => `
+                <tr>
+                    <td>${escapeHtml(sample.childSequence || '-')}</td>
+                    <td>${escapeHtml(sample.itemType || '-')}</td>
+                    <td>${escapeHtml(sample.sampleWeight ?? 0)}g</td>
+                    <td>${escapeHtml(sample.totalWeight ?? 0)}g</td>
+                    <td>${escapeHtml(sample.netWeight ?? 0)}g</td>
+                    <td>${sample.returned ? 'Yes' : 'No'}</td>
+                    <td>${escapeHtml(splitKaratAndPurity(sample.purity, sample.kt || sample.karat).kt || '-')}</td>
+                    <td>${escapeHtml(splitKaratAndPurity(sample.purity, sample.kt || sample.karat).purityPercent || '-')}</td>
+                </tr>
+            `).join('');
+
+            samplesContainer.innerHTML = `
+                <table class="purity-samples-table">
+                    <thead>
+                        <tr>
+                            <th>Seq No</th>
+                            <th>Item Name</th>
+                            <th>Sample Wt</th>
+                            <th>Total Wt</th>
+                            <th>Net Wt</th>
+                            <th>Returned</th>
+                            <th>KT</th>
+                            <th>Purity (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function formatCompletedWeight(sample) {
+            const net = Number(sample?.netWeight ?? 0);
+            const sampleWt = Number(sample?.sampleWeight ?? 0);
+            if (Number.isFinite(net) && Number.isFinite(sampleWt) && net > 0) {
+                return `${net}g / ${sampleWt}g`;
+            }
+            return `${sampleWt}g`;
+        }
+
+        function printCompletedSample(sampleIndex) {
+            const cardId = document.getElementById('completed-form').dataset.cardId;
+            const card = activeCompletedCard || (cardId ? document.querySelector(`.card[data-id="${cardId}"]`) : null);
+            if (!card) return;
+
+            const samples = getSamplesForDisplay(card);
+            const sample = samples[sampleIndex];
+            if (!sample) return;
+
+            const customerName = extractCustomerName(card);
+            const puritySplit = getCompletedKaratAndPurity(sample);
+            const weightValue = formatCompletedWeight(sample);
+
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (!printWindow) return;
+
+            const printHtml = `
+                <!doctype html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Sample Print</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
+                        .print-card { max-width: 460px; border: 1px solid #d1d5db; border-radius: 10px; padding: 16px; }
+                        .value-row { margin-bottom: 10px; font-size: 16px; }
+                        .purity-box {
+                            display: inline-block;
+                            border: 2px solid #111827;
+                            border-radius: 8px;
+                            padding: 8px 14px;
+                            font-weight: 800;
+                            font-size: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-card">
+                        <div class="value-row">${escapeHtml(sample.childSequence || '-')}</div>
+                        <div class="value-row">${escapeHtml(customerName || '-')}</div>
+                        <div class="value-row">${escapeHtml(weightValue)}</div>
+                        <div class="purity-box">${escapeHtml(puritySplit.purityPercent || '0')}</div>
+                    </div>
+                    <script>
+                        window.onload = function () {
+                            setTimeout(function () {
+                                window.print();
+                                window.onafterprint = function () { window.close(); };
+                            }, 100);
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            printWindow.document.open();
+            printWindow.document.write(printHtml);
+            printWindow.document.close();
+        }
+
+        function renderCompletedSamples(card) {
+            const samplesContainer = document.getElementById('completed-samples-items');
+            const countNode = document.getElementById('completed-sample-count');
+            const samples = getSamplesForDisplay(card);
+
+            if (!Array.isArray(samples) || samples.length === 0) {
+                samplesContainer.innerHTML = '<div class="purity-samples-empty">No sample items found for this card</div>';
+                countNode.textContent = '0 items';
+                return;
+            }
+
+            countNode.textContent = `${samples.length} item${samples.length !== 1 ? 's' : ''}`;
+            const rows = samples.map((sample, index) => {
+                const puritySplit = getCompletedKaratAndPurity(sample);
+                return `
+                <tr>
+                    <td>${escapeHtml(sample.childSequence || '-')}</td>
+                    <td>${escapeHtml(sample.itemType || '-')}</td>
+                    <td>${escapeHtml(sample.sampleWeight ?? 0)}g</td>
+                    <td>${escapeHtml(sample.totalWeight ?? 0)}g</td>
+                    <td>${escapeHtml(sample.netWeight ?? 0)}g</td>
+                    <td>${sample.returned ? 'Yes' : 'No'}</td>
+                    <td>${escapeHtml(puritySplit.kt || '-')}</td>
+                    <td>${escapeHtml(puritySplit.purityPercent || '-')}</td>
+                    <td><button type="button" class="sample-print-btn" onclick="printCompletedSample(${index})">Print</button></td>
+                </tr>
+            `;
+            }).join('');
+
+            samplesContainer.innerHTML = `
+                <table class="purity-samples-table">
+                    <thead>
+                        <tr>
+                            <th>Seq No</th>
+                            <th>Item Name</th>
+                            <th>Sample Wt</th>
+                            <th>Total Wt</th>
+                            <th>Net Wt</th>
+                            <th>Returned</th>
+                            <th>KT</th>
+                            <th>Purity (%)</th>
+                            <th>Print</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function openCompletedModal(cardOrId) {
+            const card = cardOrId instanceof Element
+                ? cardOrId
+                : document.querySelector(`.card[data-id="${cardOrId}"]`);
+            if (!card) return;
+            activeCompletedCard = card;
+            const cardId = card.dataset.id || '';
+            const samples = getSamplesForDisplay(card);
+            document.getElementById('completed-form').dataset.cardId = cardId;
+            document.getElementById('completed-customer-name').textContent = extractCustomerName(card);
+            document.getElementById('completed-date').textContent = extractDateText(card);
+            document.getElementById('completed-summary-count').textContent = String(samples.length || inferSampleCount(card));
+            document.getElementById('completed-payment-amount').value = card.dataset.paymentAmount || 'Not provided';
+            document.getElementById('completed-payment-mode').value = card.dataset.paymentMode || 'Not provided';
+            renderCompletedSamples(card);
+            document.getElementById('completed-modal-overlay').classList.add('active');
+        }
+
+        function closeCompletedModal() {
+            document.getElementById('completed-modal-overlay').classList.remove('active');
+            activeCompletedCard = null;
+            document.getElementById('completed-form').dataset.cardId = '';
+            document.getElementById('completed-customer-name').textContent = '';
+            document.getElementById('completed-date').textContent = '';
+            document.getElementById('completed-summary-count').textContent = '0';
+            document.getElementById('completed-samples-items').innerHTML = '<div class="purity-samples-empty">No sample items found for this card</div>';
+            document.getElementById('completed-sample-count').textContent = '0 items';
+            document.getElementById('completed-payment-amount').value = '';
+            document.getElementById('completed-payment-mode').value = '';
+        }
+
+        function removePrintColumnFromClone(cloneRoot) {
+            if (!cloneRoot) return;
+            cloneRoot.querySelectorAll('.sample-print-btn').forEach(btn => {
+                const cell = btn.closest('td,th');
+                if (cell) {
+                    cell.remove();
+                } else {
+                    btn.remove();
+                }
+            });
+
+            const table = cloneRoot.querySelector('.purity-samples-table');
+            if (!table) return;
+
+            const headerCells = Array.from(table.querySelectorAll('thead th'));
+            const printColIndex = headerCells.findIndex(th => th.textContent.trim().toLowerCase() === 'print');
+            if (printColIndex < 0) return;
+
+            headerCells[printColIndex]?.remove();
+            table.querySelectorAll('tbody tr').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells[printColIndex]) {
+                    cells[printColIndex].remove();
+                }
+            });
+        }
+
+        async function copyElementAsImage(element, transformClone) {
+            const rect = element.getBoundingClientRect();
+            const clone = element.cloneNode(true);
+            if (typeof transformClone === 'function') {
+                transformClone(clone);
+            }
+            clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+            clone.style.margin = '0';
+
+            const svg = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(rect.width)}" height="${Math.ceil(rect.height)}">
+                    <foreignObject width="100%" height="100%">
+                        ${new XMLSerializer().serializeToString(clone)}
+                    </foreignObject>
+                </svg>
+            `;
+
+            const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            try {
+                const img = new Image();
+                img.decoding = 'sync';
+                img.src = url;
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.ceil(rect.width);
+                canvas.height = Math.ceil(rect.height);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (!blob) throw new Error('Failed to build PNG blob');
+                return blob;
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        async function copyCompletedDetails() {
+            const cardId = document.getElementById('completed-form').dataset.cardId;
+            const card = activeCompletedCard || (cardId ? document.querySelector(`.card[data-id="${cardId}"]`) : null);
+            if (!card) {
+                return;
+            }
+
+            try {
+                const customerName = extractCustomerName(card);
+                const samples = getSamplesForDisplay(card);
+                const lines = [
+                    'Completed Details',
+                    `Customer: ${customerName || '-'}`,
+                    ''
+                ];
+
+                samples.forEach((sample, index) => {
+                    const puritySplit = getCompletedKaratAndPurity(sample);
+                    lines.push(
+                        `${index + 1}. ${sample.childSequence || '-'} | ${formatCompletedWeight(sample)} | ${(puritySplit.purityPercent || '0')}`
+                    );
+                });
+
+                const text = lines.join('\n');
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.setAttribute('readonly', '');
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                }
+            } catch (_err) {
+                alert('Unable to copy right now. Please try again.');
+            }
+        }
+
+        function savePaymentDetails() {
+            const cardId = document.getElementById('payment-form').dataset.cardId;
+            const paymentAmount = document.getElementById('payment-amount').value.trim();
+            const paymentMode = document.getElementById('payment-mode').value;
+            const paymentAmountNumber = Number(paymentAmount);
+
+            if (!cardId) {
+                alert('No tested card selected.');
+                return;
+            }
+            if (!paymentAmount || !paymentMode) {
+                alert('Please enter payment amount and select payment mode.');
+                return;
+            }
+            if (!Number.isFinite(paymentAmountNumber) || paymentAmountNumber <= 0) {
+                alert('Payment amount must be greater than 0.');
+                document.getElementById('payment-amount').focus();
+                return;
+            }
+
+            const card = activePaymentCard || document.querySelector(`.card[data-id="${cardId}"]`);
+            if (!card) {
+                alert('Selected tested card not found.');
+                return;
+            }
+
+            card.dataset.paymentAmount = paymentAmountNumber.toFixed(2);
+            card.dataset.paymentMode = paymentMode;
+            renderCardByStatus(card, getCardStatus(card));
+
+            closePaymentModal();
+            alert('Payment details saved in Tested status.');
+        }
+
+        function submitPaymentDetails() {
+            const cardId = document.getElementById('payment-form').dataset.cardId;
+            const paymentAmount = document.getElementById('payment-amount').value.trim();
+            const paymentMode = document.getElementById('payment-mode').value;
+            const paymentAmountNumber = Number(paymentAmount);
+
+            if (!cardId) {
+                alert('No tested card selected.');
+                return;
+            }
+            if (!paymentAmount || !paymentMode) {
+                alert('Please enter payment amount and select payment mode.');
+                return;
+            }
+            if (!Number.isFinite(paymentAmountNumber) || paymentAmountNumber <= 0) {
+                alert('Payment amount must be greater than 0.');
+                document.getElementById('payment-amount').focus();
+                return;
+            }
+
+            const card = activePaymentCard || document.querySelector(`.card[data-id="${cardId}"]`);
+            if (!card) {
+                alert('Selected tested card not found.');
+                return;
+            }
+
+            card.dataset.paymentAmount = paymentAmountNumber.toFixed(2);
+            card.dataset.paymentMode = paymentMode;
+
+            const completedColumn = document.getElementById('completed-cards');
+            card.style.borderLeftColor = '#10b981';
+            completedColumn.appendChild(card);
+            renderCardByStatus(card, 'completed');
+            card.addEventListener('click', handleCompletedCardClick);
+            card.style.cursor = 'pointer';
+
+            updateAllCounts();
+            closePaymentModal();
+            alert('Payment submitted. Card moved to Completed status.');
+        }
+        
+        function savePurityData() {
+            const sequence = document.getElementById('sequence-input').value;
+            const cardId = document.getElementById('purity-form').dataset.cardId;
+
+            // Find the saved card
+            const savedCard = activePurityCard || document.querySelector(`.card[data-id="${cardId}"]`);
+            if (!savedCard) {
+                alert('Error: Card not found');
+                return;
+            }
+
+            const purityData = collectPerSamplePurity(savedCard);
+            if (!purityData) return;
+            const { updatedSamples, puritySummary } = purityData;
+            const sampleSummary = formatSampleRows(updatedSamples);
+            
+            // Increment sequence counter
+            testSequenceCounter++;
+            
+            // Update card data but KEEP IT IN SAME STATE (Ongoing)
+            savedCard.dataset.sequence = sequence;
+            savedCard.dataset.samples = JSON.stringify(updatedSamples);
+            savedCard.dataset.sampleSummary = sampleSummary;
+            savedCard.dataset.purity = puritySummary;
+            
+            savedCard.dataset.sampleCount = String(updatedSamples.length);
+            renderCardByStatus(savedCard, getCardStatus(savedCard));
+            
+            closePurityModal();
+            alert('Test result details saved. Card remains in Ongoing status.');
+        }
+        
+        function submitPurityData() {
+            // 1. Retrieve all field values
+            const sequenceInput = document.getElementById('sequence-input');
+            const cardId = document.getElementById('purity-form').dataset.cardId;
+            
+            // Clean whitespace from text inputs
+            const sequenceValue = sequenceInput.value.trim();
+
+            // 2. Validate Card ID (System Integrity Check)
+            if (!cardId) {
+                alert('System Error: No valid card selected. Please close this window and try again.');
+                return;
+            }
+
+            // 3. Locate the Card in the DOM
+            const savedCard = activePurityCard || document.querySelector(`.card[data-id="${cardId}"]`);
+            if (!savedCard) {
+                alert('Error: The original card could not be found in the Ongoing list.');
+                return;
+            }
+
+            const purityData = collectPerSamplePurity(savedCard);
+            if (!purityData) return;
+            const { updatedSamples, puritySummary } = purityData;
+            const sampleSummary = formatSampleRows(updatedSamples);
+
+            // --- ALL VALIDATIONS PASSED: EXECUTE MOVE ---
+            
+            // Increment sequence counter
+            testSequenceCounter++;
+
+            // Move to Testing Column
+            const testingColumn = document.getElementById('testing-cards');
+            testingColumn.appendChild(savedCard);
+            
+            // Update Visuals (Border Color & Data Attributes)
+            savedCard.style.borderLeftColor = '#8b5cf6'; // Purple for Tested
+            savedCard.dataset.sequence = sequenceValue;
+            savedCard.dataset.samples = JSON.stringify(updatedSamples);
+            savedCard.dataset.sampleSummary = sampleSummary;
+            savedCard.dataset.purity = puritySummary;
+            savedCard.dataset.sampleCount = String(updatedSamples.length);
+            renderCardByStatus(savedCard, 'testing');
+            
+            savedCard.addEventListener('click', handleTestingCardClick);
+            savedCard.style.cursor = 'pointer';
+            
+            // Finalize
+            updateAllCounts();
+            closePurityModal();
+            alert('Success: Sample validated and moved to Tested status.');
+        }
+        
+        function createCard(status, customerName, customerId, purity = '', result = '') {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.draggable = true;
+            const newCardId = cardCounter++;
+            const parentSeq = parentSequence++; // Assign parent sequence
+            
+            card.dataset.id = newCardId;
+            card.dataset.parentSequence = parentSeq;
+            card.dataset.customerId = customerId;
+            card.dataset.customerName = customerName;
+            card.dataset.samples = JSON.stringify(sampleItems);
+            
+            if (purity) card.dataset.purity = purity;
+            if (result) card.dataset.result = result;
+            
+            const colors = {
+                'pending': '#f59e0b',
+                'testing': '#8b5cf6',
+                'completed': '#10b981'
+            };
+            card.style.borderLeftColor = colors[status];
+            
+            const totalSampleWeight = sampleItems.reduce((sum, s) => sum + s.sampleWeight, 0).toFixed(2);
+            const itemCount = sampleItems.length;
+            const itemTypes = [...new Set(sampleItems.map(s => s.itemType))].join(', ');
+            
+            // Get current date
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit' 
+            });
+            card.dataset.date = dateStr;
+            card.dataset.sampleCount = String(itemCount);
+            card.dataset.sampleSummary = `${itemCount} sample${itemCount !== 1 ? 's' : ''} | Items: ${itemTypes} | Total Weight: ${totalSampleWeight}g`;
+            
+            renderCardByStatus(card, status);
+            
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            
+            // Add click event to open purity modal (only for Ongoing cards)
+            if (status === 'pending') {
+                card.addEventListener('click', handlePendingCardClick);
+                card.style.cursor = 'pointer';
+            } else if (status === 'testing') {
+                card.addEventListener('click', handleTestingCardClick);
+                card.style.cursor = 'pointer';
+            } else if (status === 'completed') {
+                card.addEventListener('click', handleCompletedCardClick);
+                card.style.cursor = 'pointer';
+            }
+            
+            const columnMap = {
+                'pending': 'pending-cards',
+                'testing': 'testing-cards',
+                'completed': 'completed-cards'
+            };
+            
+            document.getElementById(columnMap[status]).appendChild(card);
+            updateAllCounts();
+            
+            // Return the card ID so we can reference it later
+            return newCardId;
+        }
+        
+        function toggleTestFields() {
+            // Keep for compatibility
+        }
+        
+        function submitSampleForm(e) {
+            // Replaced by new functions
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('modal-overlay').addEventListener('click', (e) => {
+                if (e.target.id === 'modal-overlay') {
+                    closeModalForm();
+                }
+            });
+            
+            document.getElementById('purity-modal-overlay').addEventListener('click', (e) => {
+                if (e.target.id === 'purity-modal-overlay') {
+                    closePurityModal();
+                }
+            });
+
+            document.getElementById('payment-modal-overlay').addEventListener('click', (e) => {
+                if (e.target.id === 'payment-modal-overlay') {
+                    closePaymentModal();
+                }
+            });
+
+            document.getElementById('completed-modal-overlay').addEventListener('click', (e) => {
+                if (e.target.id === 'completed-modal-overlay') {
+                    closeCompletedModal();
+                }
+            });
+        });
+        
+        function batchTransferTested() {
+            const testedCards = document.querySelectorAll('#testing-cards .card');
+            
+            if (testedCards.length === 0) {
+                alert('No samples in Tested status to transfer');
+                return;
+            }
+            
+            // Filter only eligible cards (those with payment details)
+            const eligibleCards = Array.from(testedCards).filter(card => {
+                const amount = Number(card.dataset.paymentAmount || '');
+                return Number.isFinite(amount) && amount > 0 && !!card.dataset.paymentMode;
+            });
+            
+            if (eligibleCards.length === 0) {
+                alert('No eligible samples ready for completion. Please add payment details to tested samples.');
+                return;
+            }
+            
+            const confirmed = confirm(`Transfer ${eligibleCards.length} eligible tested sample(s) to Completed?\n(${testedCards.length - eligibleCards.length} sample(s) pending details will remain in Tested)`);
+            
+            if (!confirmed) return;
+            
+            const completedColumn = document.getElementById('completed-cards');
+            
+            eligibleCards.forEach(card => {
+                const paymentAmount = card.dataset.paymentAmount || '';
+                const paymentMode = card.dataset.paymentMode || '';
+                
+                // Update to completed styling (green border for all)
+                card.style.borderLeftColor = '#10b981';
+                
+                renderCardByStatus(card, 'completed');
+                
+                // Move to completed column
+                completedColumn.appendChild(card);
+                card.addEventListener('click', handleCompletedCardClick);
+                card.style.cursor = 'pointer';
+            });
+            
+            updateAllCounts();
+            
+            // Show summary
+            if (testedCards.length - eligibleCards.length > 0) {
+                alert(`${eligibleCards.length} sample(s) moved to Completed\n${testedCards.length - eligibleCards.length} sample(s) remain in Tested (pending details)`);
+            }
+        }
+    </script>
+</body>
+</html>

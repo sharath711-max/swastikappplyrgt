@@ -1,0 +1,38 @@
+update_customer_lastmodified:
+CREATE TRIGGER update_customer_lastmodified AFTER UPDATE ON customer BEGIN UPDATE customer SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_globals_lastmodified:
+CREATE TRIGGER update_globals_lastmodified AFTER UPDATE ON globals BEGIN UPDATE globals SET lastmodified = CURRENT_TIMESTAMP WHERE key = NEW.key; END
+---
+update_users_lastmodified:
+CREATE TRIGGER update_users_lastmodified AFTER UPDATE ON users BEGIN UPDATE users SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_gt_lastmodified:
+CREATE TRIGGER update_gt_lastmodified AFTER UPDATE ON gold_test BEGIN UPDATE gold_test SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_st_lastmodified:
+CREATE TRIGGER update_st_lastmodified AFTER UPDATE ON silver_test BEGIN UPDATE silver_test SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_gc_lastmodified:
+CREATE TRIGGER update_gc_lastmodified AFTER UPDATE ON gold_certificate BEGIN UPDATE gold_certificate SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_sc_lastmodified:
+CREATE TRIGGER update_sc_lastmodified AFTER UPDATE ON silver_certificate BEGIN UPDATE silver_certificate SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_pc_lastmodified:
+CREATE TRIGGER update_pc_lastmodified AFTER UPDATE ON photo_certificate BEGIN UPDATE photo_certificate SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_gti_lastmodified:
+CREATE TRIGGER update_gti_lastmodified AFTER UPDATE ON gold_test_item BEGIN UPDATE gold_test_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_sti_lastmodified:
+CREATE TRIGGER update_sti_lastmodified AFTER UPDATE ON silver_test_item BEGIN UPDATE silver_test_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_gci_lastmodified:
+CREATE TRIGGER update_gci_lastmodified AFTER UPDATE ON gold_certificate_item BEGIN UPDATE gold_certificate_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_sci_lastmodified:
+CREATE TRIGGER update_sci_lastmodified AFTER UPDATE ON silver_certificate_item BEGIN UPDATE silver_certificate_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END
+---
+update_pci_lastmodified:
+CREATE TRIGGER update_pci_lastmodified AFTER UPDATE ON photo_certificate_item BEGIN UPDATE photo_certificate_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END

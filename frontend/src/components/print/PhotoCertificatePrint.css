@@ -1,0 +1,98 @@
+/* src/components/print/PhotoCertificatePrint.css */
+
+/* Hide everything by default on screen to focus on overlay */
+.pc-certificate-container {
+    width: 210mm;
+    height: 297mm;
+    position: relative;
+    background: #fff;
+    margin: 0 auto;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #000;
+}
+
+@media print {
+
+    /* Hide the main application UI components */
+    #root,
+    .print-toolbar,
+    .no-print {
+        display: none !important;
+    }
+
+    .pc-certificate-container {
+        background: transparent !important;
+        /* Overlay onto physical paper */
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .print-field {
+        position: absolute;
+        white-space: nowrap;
+        font-size: 14pt;
+        font-weight: bold;
+    }
+
+    /* Absolute Y/X coordinates for Swastik Stationery overlay */
+    .pos-date {
+        top: 40mm;
+        left: 160mm;
+    }
+
+    .pos-name {
+        top: 52mm;
+        left: 160mm;
+    }
+
+    .pos-refcode {
+        top: 64mm;
+        left: 160mm;
+    }
+
+    .pos-article {
+        top: 76mm;
+        left: 160mm;
+    }
+
+    .pos-weight {
+        top: 88mm;
+        left: 160mm;
+    }
+
+    .pos-result-kt {
+        top: 100mm;
+        left: 160mm;
+    }
+
+    .pos-result-pct {
+        top: 112mm;
+        left: 160mm;
+    }
+
+    .pos-verified {
+        top: 124mm;
+        left: 160mm;
+    }
+
+    /* The Jewel Photo Placeholder */
+    .pos-jewel-photo {
+        position: absolute;
+        top: 150mm;
+        left: 20mm;
+        width: 170mm;
+        height: 100mm;
+        object-fit: contain;
+    }
+}
+
+/* Screen Preview Styling */
+.print-field {
+    position: absolute;
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+.pc-certificate-container img {
+    position: absolute;
+}

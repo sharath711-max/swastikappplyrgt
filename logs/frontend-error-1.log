@@ -1,0 +1,35 @@
+2026-02-09 06:17:02 +00:00: Error: getaddrinfo ENOTFOUND -l
+2026-02-09 06:17:02 +00:00:     at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+2026-02-09 06:17:02 +00:00:   errno: -3008,
+2026-02-09 06:17:02 +00:00:   code: 'ENOTFOUND',
+2026-02-09 06:17:02 +00:00:   syscall: 'getaddrinfo',
+2026-02-09 06:17:02 +00:00:   hostname: '-l'
+2026-02-09 06:17:02 +00:00: }
+2026-02-09 06:17:02 +00:00: Error: getaddrinfo ENOTFOUND -l
+2026-02-09 06:17:02 +00:00:     at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+2026-02-09 06:17:02 +00:00:   errno: -3008,
+2026-02-09 06:17:02 +00:00:   code: 'ENOTFOUND',
+2026-02-09 06:17:02 +00:00:   syscall: 'getaddrinfo',
+2026-02-09 06:17:02 +00:00:   hostname: '-l'
+2026-02-09 06:17:02 +00:00: }
+2026-02-09 06:17:03 +00:00: Error: getaddrinfo ENOTFOUND -l
+2026-02-09 06:17:03 +00:00:     at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+2026-02-09 06:17:03 +00:00:   errno: -3008,
+2026-02-09 06:17:03 +00:00:   code: 'ENOTFOUND',
+2026-02-09 06:17:03 +00:00:   syscall: 'getaddrinfo',
+2026-02-09 06:17:03 +00:00:   hostname: '-l'
+2026-02-09 06:17:03 +00:00: }
+2026-02-09 06:17:03 +00:00: Error: getaddrinfo ENOTFOUND -l
+2026-02-09 06:17:03 +00:00:     at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+2026-02-09 06:17:03 +00:00:   errno: -3008,
+2026-02-09 06:17:03 +00:00:   code: 'ENOTFOUND',
+2026-02-09 06:17:03 +00:00:   syscall: 'getaddrinfo',
+2026-02-09 06:17:03 +00:00:   hostname: '-l'
+2026-02-09 06:17:03 +00:00: }
+2026-02-09 06:17:03 +00:00: Error: getaddrinfo ENOTFOUND -l
+2026-02-09 06:17:03 +00:00:     at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+2026-02-09 06:17:03 +00:00:   errno: -3008,
+2026-02-09 06:17:03 +00:00:   code: 'ENOTFOUND',
+2026-02-09 06:17:03 +00:00:   syscall: 'getaddrinfo',
+2026-02-09 06:17:03 +00:00:   hostname: '-l'
+2026-02-09 06:17:03 +00:00: }

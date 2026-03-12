@@ -1,0 +1,754 @@
+/* Salesforce-inspired Design System */
+:root {
+    --primary: #0176d3;
+    --primary-dark: #0b5cab;
+    --secondary: #1b96ff;
+    --success: #04844b;
+    --warning: #fe9339;
+    --danger: #cf0e0e;
+    --info: #1b96ff;
+
+    --bg-light: #f3f2f2;
+    --bg-surface: #ffffff;
+    --bg-sidebar: #ffffff;
+
+    --text-primary: #181818;
+    --text-secondary: #706e6b;
+    --text-muted: #969492;
+
+    --border-color: #dddbda;
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --shadow-card: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
+
+    --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+    /* Layout */
+    --header-height: 60px;
+    --sidebar-width: 260px;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-light);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+}
+
+/* Button Overrides */
+.btn {
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 0 1rem;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--border-color);
+    background: white;
+}
+
+.btn-outline-primary:hover {
+    background-color: #faffbd;
+    border-color: var(--primary);
+}
+
+/* Card Styles */
+.card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 1rem;
+}
+
+.card-header {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+/* Table Styles - Salesforce Lists */
+.table {
+    margin-bottom: 0;
+    font-size: 13px;
+}
+
+.table thead th {
+    background-color: #fafaf9;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+}
+
+.table tbody td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    color: var(--text-primary);
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f3f3f3;
+}
+
+/* Form Controls */
+.form-control,
+.form-select {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 13px;
+    padding: 6px 12px;
+    box-shadow: none;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 3px #0176d3;
+}
+
+.form-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+
+/* Badges */
+.badge {
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+/* Navigation & Sidebar Enhancements */
+.sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    height: 100vh;
+    position: fixed;
+    width: var(--sidebar-width);
+    top: var(--header-height);
+    left: 0;
+    padding-top: 1rem;
+    z-index: 100;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 14px;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-link:hover {
+    background-color: var(--bg-light);
+    text-decoration: none;
+    color: var(--primary);
+}
+
+.sidebar-link.active {
+    background-color: #f3f3f3;
+    border-left-color: var(--primary);
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.sidebar-icon {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+}
+
+/* Layout Container adjustments */
+.main-content {
+    margin-left: var(--sidebar-width);
+    margin-top: var(--header-height);
+    padding: 1.5rem;
+}
+
+/* Auth Pages */
+.auth-container {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #b0c4df;
+    background-image: url('https://www.salesforce.com/content/dam/web/en_us/www/images/home/backgrounds/home-hero-background.jpg');
+    background-size: cover;
+}
+
+.auth-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 380px;
+}
+
+.auth-logo {
+    color: var(--primary);
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Advanced Salesforce Components */
+
+/* 1. Lightning Alerts */
+.slds-alert {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    border: 1px solid transparent;
+}
+
+.slds-alert_error {
+    background-color: #faf3f3;
+    border-color: #ea001e;
+    color: #181818;
+}
+
+.slds-alert_warning {
+    background-color: #fff9e9;
+    border-color: #fe9339;
+    color: #181818;
+}
+
+.slds-alert_success {
+    background-color: #f3fcf3;
+    border-color: #45c65a;
+    color: #181818;
+}
+
+/* 2. Salesforce Badge Variants */
+.slds-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.slds-badge_success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.slds-badge_warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.slds-badge_danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.slds-badge_info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.slds-badge_light {
+    background: #f8f9fa;
+    color: #212529;
+}
+
+.slds-badge_dark {
+    background: #343a40;
+    color: white;
+}
+
+/* 3. Salesforce Path/Progress Indicator */
+.slds-path {
+    display: flex;
+    margin: 20px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.slds-path__item {
+    flex: 1;
+    padding: 12px 16px;
+    text-align: center;
+    background: #f8f9fa;
+    border-right: 1px solid var(--border-color);
+    position: relative;
+    cursor: default;
+    font-weight: 500;
+}
+
+.slds-path__item:last-child {
+    border-right: none;
+}
+
+.slds-path__item.complete {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.slds-path__item.current {
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+}
+
+.slds-path__item.current:after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--primary);
+}
+
+/* 4. Salesforce Data Tables Enhanced */
+.slds-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.slds-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fafaf9;
+}
+
+.row-selected {
+    background-color: rgba(1, 118, 211, 0.08) !important;
+}
+
+/* 5. Salesforce Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlide 0.3s ease;
+}
+
+.modal-header {
+    padding: 1rem;
+    border-bottom: 2px solid var(--primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.max-w-md {
+    max-width: 480px;
+}
+
+.max-w-2xl {
+    max-width: 672px;
+}
+
+.max-w-4xl {
+    max-width: 896px;
+}
+
+/* 6. Salesforce Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.slds-toast {
+    background: white;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-width: 300px;
+    animation: slideIn 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.slds-toast_info {
+    border-left-color: var(--info);
+}
+
+.slds-toast_success {
+    border-left-color: var(--success);
+}
+
+.slds-toast_warning {
+    border-left-color: var(--warning);
+}
+
+.slds-toast_error {
+    border-left-color: var(--danger);
+}
+
+/* 7. Loading Spinner */
+.slds-spinner_container {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.slds-spinner {
+    width: 32px;
+    height: 32px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* 8. Kanban Board */
+.slds-kanban {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+}
+
+.slds-kanban__lane {
+    flex: 0 0 300px;
+    background: var(--bg-light);
+    border-radius: 4px;
+    padding: 12px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.slds-kanban__lane-header {
+    font-weight: 700;
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+
+.slds-kanban__card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: grab;
+    transition: box-shadow 0.2s;
+}
+
+.slds-kanban__card:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 9. Interactive Effects */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlide {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Quick Actions Grid */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.quick-action-btn:hover {
+    background: var(--bg-light);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quick-action-btn i,
+.quick-action-btn svg {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--primary);
+}
+
+.quick-action-btn span {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Activity Timeline */
+.activity-timeline {
+    position: relative;
+    padding-left: 20px;
+}
+
+.activity-timeline:before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-color);
+}
+
+.activity-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding-left: 16px;
+}
+
+.activity-item:before {
+    content: '';
+    position: absolute;
+    left: -19px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid white;
+}
+
+.activity-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+.activity-content {
+    font-size: 13px;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.stat-icon.gold {
+    background: #fff8e1;
+    color: #ffb300;
+}
+
+.stat-icon.silver {
+    background: #f3f3f3;
+    color: #7a7a7a;
+}
+
+.stat-icon.revenue {
+    background: #e3f2fd;
+    color: #2196f3;
+}
+
+.stat-icon.certificate {
+    background: #e8f5e9;
+    color: #43a047;
+}
+
+.stat-icon.warning {
+    background: #fff3e0;
+    color: #fb8c00;
+}
+
+.stat-icon.primary {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.stat-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.stat-info p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+/* Utilities */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.bg-light {
+    background-color: var(--bg-light) !important;
+}
+
+.p-4 {
+    padding: 1.5rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+.d-none {
+    display: none !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}

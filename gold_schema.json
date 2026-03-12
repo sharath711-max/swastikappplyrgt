@@ -1,0 +1,16 @@
+[
+  "id",
+  "item_number",
+  "gold_certificate_id",
+  "certificate_number",
+  "name",
+  "item_type",
+  "gross_weight",
+  "test_weight",
+  "net_weight",
+  "purity",
+  "returned",
+  "created",
+  "lastmodified",
+  "deletedon"
+]

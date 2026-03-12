@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Test Query</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 2rem;
+        }
+        input, button {
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gold Test Data</h1>
+    <div>
+        <label for="jsonFileInput">Select gold_test.json:</label>
+        <input type="file" id="jsonFileInput" accept=".json">
+        <button onclick="copyTableData()">Copy to Clipboard</button>
+    </div>
+    <hr style="margin-top: 1rem;">
+    <h2>Results</h2>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Mode of Payment</th>
+                <th>Total</th>
+                <th>Customer ID</th>
+                <th>Name</th>
+                <th>Item</th>
+                <th>Total Weight</th>
+                <th>Test Weight</th>
+                <th>Purity</th>
+                <th>Returned</th>
+                <th>Certificate Required</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        let jsonData = [];
+        document.getElementById('jsonFileInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        jsonData = JSON.parse(e.target.result);
+                        renderTable(jsonData);
+                    } catch (error) {
+                        alert('Error parsing JSON file.');
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            data.forEach(item => {
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(item.data);
+                } catch (e) {
+                    const row = tableBody.insertRow();
+                    row.insertCell(0).innerText = item.id;
+                    row.insertCell(1).innerText = item.created;
+                    row.insertCell(2).innerText = item.status;
+                    row.insertCell(3).innerText = item.mode_of_payment;
+                    row.insertCell(4).innerText = item.total;
+                    row.insertCell(5).innerText = item.customer_id;
+                    const cell = row.insertCell(6);
+                    cell.colSpan = 7;
+                    cell.innerText = item.data;
+                    return;
+                }
+
+                if (Array.isArray(parsedData)) {
+                    const numItems = parsedData.length;
+                    parsedData.forEach((dataItem, index) => {
+                        const row = tableBody.insertRow();
+                        if (index === 0) {
+                            const idCell = row.insertCell(0);
+                            idCell.innerText = item.id;
+                            if (numItems > 1) idCell.rowSpan = numItems;
+
+                            const createdCell = row.insertCell(1);
+                            createdCell.innerText = item.created;
+                            if (numItems > 1) createdCell.rowSpan = numItems;
+
+                            const statusCell = row.insertCell(2);
+                            statusCell.innerText = item.status;
+                            if (numItems > 1) statusCell.rowSpan = numItems;
+                            
+                            const modeOfPaymentCell = row.insertCell(3);
+                            modeOfPaymentCell.innerText = item.mode_of_payment;
+                            if (numItems > 1) modeOfPaymentCell.rowSpan = numItems;
+
+                            const totalCell = row.insertCell(4);
+                            totalCell.innerText = item.total;
+                            if (numItems > 1) totalCell.rowSpan = numItems;
+
+                            const customerIdCell = row.insertCell(5);
+                            customerIdCell.innerText = item.customer_id;
+                            if (numItems > 1) customerIdCell.rowSpan = numItems;
+                        }
+                        
+                        row.insertCell().innerText = dataItem.name || '';
+                        row.insertCell().innerText = dataItem.item || '';
+                        row.insertCell().innerText = dataItem.total_weight || '';
+                        row.insertCell().innerText = dataItem.test_weight || '';
+                        row.insertCell().innerText = dataItem.purity || '';
+                        row.insertCell().innerText = dataItem.returned ? 'Yes' : 'No';
+                        row.insertCell().innerText = dataItem.certificate_required ? 'Yes' : 'No';
+                    });
+                }
+            });
+        }
+
+        function copyTableData() {
+            if (jsonData.length === 0) {
+                alert('Please load the JSON file first.');
+                return;
+            }
+
+            const headers = [
+                "ID", "Created", "Status", "Mode of Payment", "Total", "Customer ID",
+                "Name", "Item", "Total Weight", "Test Weight", "Purity", "Returned", "Certificate Required"
+            ];
+            let dataString = headers.join('\t') + '\n';
+
+            jsonData.forEach(item => {
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(item.data);
+                } catch(e) {
+                    parsedData = [{}];
+                }
+
+                if (Array.isArray(parsedData)) {
+                    parsedData.forEach(dataItem => {
+                        const rowData = [
+                            item.id,
+                            item.created,
+                            item.status,
+                            item.mode_of_payment,
+                            item.total,
+                            item.customer_id,
+                            dataItem.name || '',
+                            dataItem.item || '',
+                            dataItem.total_weight || '',
+                            dataItem.test_weight || '',
+                            dataItem.purity || '',
+                            dataItem.returned ? 'Yes' : 'No',
+                            dataItem.certificate_required ? 'Yes' : 'No'
+                        ];
+                        dataString += rowData.join('\t') + '\n';
+                    });
+                }
+            });
+
+            navigator.clipboard.writeText(dataString).then(() => {
+                alert('Table data copied to clipboard!');
+            }, (err) => {
+                alert('Failed to copy data.');
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

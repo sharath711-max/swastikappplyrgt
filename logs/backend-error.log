@@ -1,0 +1,600 @@
+2026-02-09 06:17:03 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:03 +00:00: Require stack:
+2026-02-09 06:17:03 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:03 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:03 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:03 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:03 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:03 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:03 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:03 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:03 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:03 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:03 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:03 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:03 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:03 +00:00:   requireStack: [
+2026-02-09 06:17:03 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:03 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:03 +00:00:   ]
+2026-02-09 06:17:03 +00:00: }
+2026-02-09 06:17:03 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:03 +00:00: Require stack:
+2026-02-09 06:17:03 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:03 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:03 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:03 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:03 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:03 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:03 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:03 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:03 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:03 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:03 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:03 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:03 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:03 +00:00:   requireStack: [
+2026-02-09 06:17:03 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:03 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:03 +00:00:   ]
+2026-02-09 06:17:03 +00:00: }
+2026-02-09 06:17:03 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:03 +00:00: Require stack:
+2026-02-09 06:17:03 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:03 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:03 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:03 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:03 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:03 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:03 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:03 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:03 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:03 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:03 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:03 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:03 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:03 +00:00:   requireStack: [
+2026-02-09 06:17:03 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:03 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:03 +00:00:   ]
+2026-02-09 06:17:03 +00:00: }
+2026-02-09 06:17:04 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:04 +00:00: Require stack:
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:04 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:04 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:04 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:04 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:04 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:04 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:04 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:04 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:04 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:04 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:04 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:04 +00:00:   requireStack: [
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:04 +00:00:   ]
+2026-02-09 06:17:04 +00:00: }
+2026-02-09 06:17:04 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:04 +00:00: Require stack:
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:04 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:04 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:04 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:04 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:04 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:04 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:04 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:04 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:04 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:04 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:04 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:04 +00:00:   requireStack: [
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:04 +00:00:   ]
+2026-02-09 06:17:04 +00:00: }
+2026-02-09 06:17:04 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:04 +00:00: Require stack:
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:04 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:04 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:04 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:04 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:04 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:04 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:04 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:04 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:04 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:04 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:04 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:04 +00:00:   requireStack: [
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:04 +00:00:   ]
+2026-02-09 06:17:04 +00:00: }
+2026-02-09 06:17:04 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:04 +00:00: Require stack:
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:04 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:04 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:04 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:04 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:04 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:04 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:04 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:04 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:04 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:04 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:04 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:04 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:04 +00:00:   requireStack: [
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:04 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:04 +00:00:   ]
+2026-02-09 06:17:04 +00:00: }
+2026-02-09 06:17:05 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:05 +00:00: Require stack:
+2026-02-09 06:17:05 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:05 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:05 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:05 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:05 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:05 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:05 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:05 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:05 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:05 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:05 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:05 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:05 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:05 +00:00:   requireStack: [
+2026-02-09 06:17:05 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:05 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:05 +00:00:   ]
+2026-02-09 06:17:05 +00:00: }
+2026-02-09 06:17:05 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:05 +00:00: Require stack:
+2026-02-09 06:17:05 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:05 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:05 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:05 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:05 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:05 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:05 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:05 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:05 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:05 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:05 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:05 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:05 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:05 +00:00:   requireStack: [
+2026-02-09 06:17:05 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:05 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:05 +00:00:   ]
+2026-02-09 06:17:05 +00:00: }
+2026-02-09 06:17:05 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:17:05 +00:00: Require stack:
+2026-02-09 06:17:05 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:17:05 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:17:05 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:17:05 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:17:05 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:17:05 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:17:05 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:17:05 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:17:05 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:17:05 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:17:05 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:17:05 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:17:05 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:17:05 +00:00:   requireStack: [
+2026-02-09 06:17:05 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:17:05 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:17:05 +00:00:   ]
+2026-02-09 06:17:05 +00:00: }
+2026-02-09 06:18:01 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:01 +00:00: Require stack:
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:01 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:01 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:01 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:01 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:01 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:01 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:01 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:01 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:01 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:01 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:01 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:01 +00:00:   requireStack: [
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:01 +00:00:   ]
+2026-02-09 06:18:01 +00:00: }
+2026-02-09 06:18:01 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:01 +00:00: Require stack:
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:01 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:01 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:01 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:01 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:01 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:01 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:01 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:01 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:01 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:01 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:01 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:01 +00:00:   requireStack: [
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:01 +00:00:   ]
+2026-02-09 06:18:01 +00:00: }
+2026-02-09 06:18:01 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:01 +00:00: Require stack:
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:01 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:01 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:01 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:01 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:01 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:01 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:01 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:01 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:01 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:01 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:01 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:01 +00:00:   requireStack: [
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:01 +00:00:   ]
+2026-02-09 06:18:01 +00:00: }
+2026-02-09 06:18:01 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:01 +00:00: Require stack:
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:01 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:01 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:01 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:01 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:01 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:01 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:01 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:01 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:01 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:01 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:01 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:01 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:01 +00:00:   requireStack: [
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:01 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:01 +00:00:   ]
+2026-02-09 06:18:01 +00:00: }
+2026-02-09 06:18:02 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:02 +00:00: Require stack:
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:02 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:02 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:02 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:02 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:02 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:02 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:02 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:02 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:02 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:02 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:02 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:02 +00:00:   requireStack: [
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:02 +00:00:   ]
+2026-02-09 06:18:02 +00:00: }
+2026-02-09 06:18:02 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:02 +00:00: Require stack:
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:02 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:02 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:02 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:02 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:02 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:02 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:02 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:02 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:02 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:02 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:02 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:02 +00:00:   requireStack: [
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:02 +00:00:   ]
+2026-02-09 06:18:02 +00:00: }
+2026-02-09 06:18:02 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:02 +00:00: Require stack:
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:02 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:02 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:02 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:02 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:02 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:02 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:02 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:02 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:02 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:02 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:02 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:02 +00:00:   requireStack: [
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:02 +00:00:   ]
+2026-02-09 06:18:02 +00:00: }
+2026-02-09 06:18:02 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:02 +00:00: Require stack:
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:02 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:02 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:02 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:02 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:02 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:02 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:02 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:02 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:02 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:02 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:02 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:02 +00:00:   requireStack: [
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:02 +00:00:   ]
+2026-02-09 06:18:02 +00:00: }
+2026-02-09 06:18:02 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:02 +00:00: Require stack:
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:02 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:02 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:02 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:02 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:02 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:02 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:02 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:02 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:02 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:02 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:02 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:02 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:02 +00:00:   requireStack: [
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:02 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:02 +00:00:   ]
+2026-02-09 06:18:02 +00:00: }
+2026-02-09 06:18:03 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:18:03 +00:00: Require stack:
+2026-02-09 06:18:03 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:18:03 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:18:03 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:18:03 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:18:03 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:18:03 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:18:03 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:18:03 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:18:03 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:18:03 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:18:03 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:18:03 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:18:03 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:18:03 +00:00:   requireStack: [
+2026-02-09 06:18:03 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:18:03 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:18:03 +00:00:   ]
+2026-02-09 06:18:03 +00:00: }
+2026-02-09 06:20:32 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:32 +00:00: Require stack:
+2026-02-09 06:20:32 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:32 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:32 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:32 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:32 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:32 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:32 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:32 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:32 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:32 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:32 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:32 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:32 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:32 +00:00:   requireStack: [
+2026-02-09 06:20:32 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:32 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:32 +00:00:   ]
+2026-02-09 06:20:32 +00:00: }
+2026-02-09 06:20:33 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:33 +00:00: Require stack:
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:33 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:33 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:33 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:33 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:33 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:33 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:33 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:33 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:33 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:33 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:33 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:33 +00:00:   requireStack: [
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:33 +00:00:   ]
+2026-02-09 06:20:33 +00:00: }
+2026-02-09 06:20:33 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:33 +00:00: Require stack:
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:33 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:33 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:33 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:33 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:33 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:33 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:33 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:33 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:33 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:33 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:33 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:33 +00:00:   requireStack: [
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:33 +00:00:   ]
+2026-02-09 06:20:33 +00:00: }
+2026-02-09 06:20:33 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:33 +00:00: Require stack:
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:33 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:33 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:33 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:33 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:33 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:33 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:33 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:33 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:33 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:33 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:33 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:33 +00:00:   requireStack: [
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:33 +00:00:   ]
+2026-02-09 06:20:33 +00:00: }
+2026-02-09 06:20:33 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:33 +00:00: Require stack:
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:33 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:33 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:33 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:33 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:33 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:33 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:33 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:33 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:33 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:33 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:33 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:33 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:33 +00:00:   requireStack: [
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:33 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:33 +00:00:   ]
+2026-02-09 06:20:33 +00:00: }
+2026-02-09 06:20:34 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:34 +00:00: Require stack:
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:34 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:34 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:34 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:34 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:34 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:34 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:34 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:34 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:34 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:34 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:34 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:34 +00:00:   requireStack: [
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:34 +00:00:   ]
+2026-02-09 06:20:34 +00:00: }
+2026-02-09 06:20:34 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:34 +00:00: Require stack:
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:34 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:34 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:34 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:34 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:34 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:34 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:34 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:34 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:34 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:34 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:34 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:34 +00:00:   requireStack: [
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:34 +00:00:   ]
+2026-02-09 06:20:34 +00:00: }
+2026-02-09 06:20:34 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:34 +00:00: Require stack:
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:34 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:34 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:34 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:34 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:34 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:34 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:34 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:34 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:34 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:34 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:34 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:34 +00:00:   requireStack: [
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:34 +00:00:   ]
+2026-02-09 06:20:34 +00:00: }
+2026-02-09 06:20:34 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:34 +00:00: Require stack:
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:34 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:34 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:34 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:34 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:34 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:34 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:34 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:34 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:34 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:34 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:34 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:34 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:34 +00:00:   requireStack: [
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:34 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:34 +00:00:   ]
+2026-02-09 06:20:34 +00:00: }
+2026-02-09 06:20:35 +00:00: Error: Cannot find module '../repositories/GoldCertificateItemRepository'
+2026-02-09 06:20:35 +00:00: Require stack:
+2026-02-09 06:20:35 +00:00: - /workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js
+2026-02-09 06:20:35 +00:00: - /workspaces/swastiklab/backend/app.js
+2026-02-09 06:20:35 +00:00:     at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+2026-02-09 06:20:35 +00:00:     at Hook._require.Module.require (/usr/local/share/nvm/versions/node/v24.11.1/lib/node_modules/pm2/node_modules/require-in-the-middle/index.js:81:25)
+2026-02-09 06:20:35 +00:00:     at require (node:internal/modules/helpers:152:16)
+2026-02-09 06:20:35 +00:00:     at Object.<anonymous> (/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js:3:39)
+2026-02-09 06:20:35 +00:00:     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+2026-02-09 06:20:35 +00:00:     at Object..js (node:internal/modules/cjs/loader:1893:10)
+2026-02-09 06:20:35 +00:00:     at Module.load (node:internal/modules/cjs/loader:1481:32)
+2026-02-09 06:20:35 +00:00:     at Module._load (node:internal/modules/cjs/loader:1300:12)
+2026-02-09 06:20:35 +00:00:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-02-09 06:20:35 +00:00:     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+2026-02-09 06:20:35 +00:00:   code: 'MODULE_NOT_FOUND',
+2026-02-09 06:20:35 +00:00:   requireStack: [
+2026-02-09 06:20:35 +00:00:     '/workspaces/swastiklab/backend/routes/goldCertificateItemRoutes.js',
+2026-02-09 06:20:35 +00:00:     '/workspaces/swastiklab/backend/app.js'
+2026-02-09 06:20:35 +00:00:   ]
+2026-02-09 06:20:35 +00:00: }

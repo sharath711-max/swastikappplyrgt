@@ -100,6 +100,8 @@ const LoginPage = () => {
                             <FaUser className="input-icon" />
                             <input
                                 type="text"
+                                name="username"
+                                data-cy="input-username"
                                 className={`form-input ${fieldErrors.username ? 'is-invalid' : ''}`}
                                 placeholder="Enter laboratory ID"
                                 value={username}
@@ -116,6 +118,8 @@ const LoginPage = () => {
                             <FaLock className="input-icon" />
                             <input
                                 type="password"
+                                name="password"
+                                data-cy="input-password"
                                 className={`form-input ${fieldErrors.password ? 'is-invalid' : ''}`}
                                 placeholder="Enter secure password"
                                 value={password}

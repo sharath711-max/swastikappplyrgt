@@ -241,6 +241,8 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
                             size="lg"
                             type="number"
                             step="0.01"
+                            name="amount_received"
+                            data-cy="input-amount"
                             value={paymentAmount}
                             onChange={(e) => setPaymentAmount(e.target.value)}
                             onBlur={normalizeAmountOnBlur}
@@ -251,6 +253,8 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
                         <Form.Label className="small fw-bold text-muted uppercase">Payment Mode</Form.Label>
                         <Form.Select
                             size="lg"
+                            name="payment_mode"
+                            data-cy="select-payment"
                             value={modeOfPayment}
                             onChange={(e) => setModeOfPayment(e.target.value)}
                             style={{ borderRadius: '12px', fontWeight: 700, border: '2px solid #e2e8f0' }}
@@ -272,6 +276,7 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
                         </Button>
                         <Button
                             variant="success"
+                            data-cy="btn-confirm-payment"
                             onClick={handleSubmit}
                             disabled={loading || submitting || saving || !itemsValid}
                             className="px-5 py-2 fw-bold"

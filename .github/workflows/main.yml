@@ -53,3 +53,26 @@ jobs:
           name: frontend-component-coverage
           path: frontend/coverage
           if-no-files-found: ignore
+
+  deploy-production:
+    name: Zero-Downtime PM2 Deployment
+    needs: ui-component-coverage
+    runs-on: self-hosted
+    
+    steps:
+      - name: Execute Live Server Update
+        run: |
+          cd "C:\Users\pc\OneDrive\Desktop\Utility\swastik-gold-silver-lab"
+          git pull origin main
+          
+          echo "Updating Backend Dependencies..."
+          cd backend
+          npm install
+          
+          echo "Updating Frontend Dependencies..."
+          cd ../frontend
+          npm install
+          
+          echo "Executing Zero-Downtime PM2 Reload..."
+          cd ..
+          pm2 reload ecosystem.config.js --update-env

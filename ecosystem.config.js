@@ -29,6 +29,15 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       // Monitoring
       pmx: true
+    },
+    {
+      name: 'swastik-db-archiver',
+      script: './backend/scripts/auto_archive.js',
+      instances: 1,
+      exec_mode: 'fork',
+      cron_restart: '0 3 1 * *',
+      autorestart: false,
+      watch: false
     }
   ],
 

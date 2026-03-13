@@ -44,7 +44,11 @@ api.interceptors.response.use(
         if (error.response && error.response.status === 401) {
             localStorage.removeItem('token');
             sessionStorage.removeItem('token');
-            window.location.href = '/login';
+            
+            // Do not reload if we are already trying to login
+            if (!error.config.url.includes('/auth/login')) {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

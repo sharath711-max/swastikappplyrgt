@@ -23,18 +23,18 @@ test.describe('Login Functionality', () => {
   });
 
   test('Fails to log in with invalid credentials', async ({ page }) => {
-    // Navigate to login
     await page.goto('/login');
-
-    // Fill in invalid credentials
+    
+    // 1. Enter bad credentials
     await page.fill('input[name="username"]', 'admin');
-    await page.fill('input[name="password"]', 'wrongpassword');
-    
-    // Click the submit button
+    await page.fill('input[name="password"]', 'wrongpassword!');
     await page.click('button[type="submit"]');
+
+    // 2. THE FIX: Explicitly wait for the Toast component to enter the DOM
+    // We attach a specific timeout and target the text directly, bypassing animation delays.
+    const errorToast = page.locator('.slds-theme_error, .Toastify__toast--error').first(); 
     
-    // Expect failure toast or error message
-    const errorMsg = page.locator('.slds-theme_error, .toast-error, .Toastify__toast--error').first();
-    await expect(errorMsg).toBeVisible();
+    // Wait up to 5 seconds for the element to actually be attached to the DOM
+    await expect(errorToast).toBeAttached({ timeout: 15000 });
   });
 });

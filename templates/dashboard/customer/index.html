@@ -1,0 +1,239 @@
+<!-- File Path: templates/dashboard/customer/index.html -->
+{% extends 'dashboard/templates/table.html' %}
+
+{% set table = {
+	'title': 'customer', 'source': url_for('api.customer.datatable'),
+	'total_columns': 5, 'no_export': [4],
+} %}
+
+{% block content %}
+	<div class="row mb-2 mb-xl-3">
+		<div class="col-auto d-sm-block">
+			<h3>Customers</h3>
+		</div>
+	</div>
+
+	<div class="card card-body">
+		<div class="d-flex justify-content-between align-items-center mb-2">
+			<button class="addAction btn btn-success">
+				<i class="uil-plus me-2"></i>
+				Add User
+			</button>
+			<div class="text-sm-end" id="{{ table.title }}ButtonContainer"></div>
+		</div>
+		<table id="{{ table.title }}Table" class="table table-striped" style="width:100%">
+			{% if table.get('sum', None) %}
+				<tfoot>
+					<tr>
+						{%- for _ in range(table.total_columns) -%}
+							<th>{{- "Total" if loop.first else '' -}}</th>
+						{%- endfor -%}
+					</tr>
+				</tfoot>
+			{% endif %}
+		</table>
+	</div>
+
+	<div id="addEditModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 class="add modal-title">Add Customer</h3>
+					<h3 class="edit modal-title">Edit Customer</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body p-3">
+					<form id="addEditForm" autocomplete="off" novalidate>
+						<div class="row">
+							<div class="col-lg-6">
+								<div class="input-group input-group-lg mb-3">
+									<span class="input-group-text fw-bold">Name</span>
+									<input class="form-control" name="name" type="text" required>
+								</div>
+							</div>
+							<div class="col-lg-6">
+								<div class="input-group input-group-lg mb-3">
+									<span class="input-group-text fw-bold">Phone</span>
+									<span class="input-group-text">+91</span>
+									<input class="form-control" name="phone" type="integer" data-mask="0000000000" minlength="10">
+								</div>
+							</div>
+							<div class="col-lg-6">
+								<div class="input-group input-group-lg mb-3">
+									<span class="input-group-text fw-bold">Initial Balance</span>
+									<input class="form-control" name="balance" type="number" value="0">
+								</div>
+							</div>
+							<div class="input-group input-group-lg mb-3">
+								<span class="input-group-text fw-bold">Notes</span>
+								<textarea class="form-control" type="text" name="notes"></textarea>
+							</div>
+						</div>
+						<div class="d-flex justify-content-end">
+							<button id="submitBtn" type="submit" class="btn btn-primary m-1">
+								<div id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status"></div>
+								Submit
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock content %}
+
+{% block body %}
+	{{ super() }}
+
+	{# Datatable #}
+	<script type="application/javascript" defer>
+        const {{ table.title }}Table = $("#{{ table.title }}Table").DataTable({
+            columns: [
+                {
+                    title: 'Name', data: 'name', render: (data, type, row, meta) =>
+                        `<a href="/dashboard/customer/${row.id}">${data}</a>`
+                },
+                {
+                    title: 'Phone', data: 'phone', render: (data, type, row, meta) =>
+                        data ? `<a href="tel:+91${data}">+91 ${data}</a>` : '-'
+                },
+                {title: 'Balance', data: 'balance', render: data => `₹${data.toLocaleString('en-IN')}`},
+                {title: 'Notes', data: 'notes'},
+                {
+                    title: 'Actions', orderable: false, render: (data, type, row, meta) => {
+                        return `<div class="d-flex justify-content-start align-items-center">
+							<a class="mx-1 editAction" href="#" title="Edit">
+								<i class="uil-pen text-primary fs-3"></i>
+							</a>
+							<a class="mx-1 toggleAction ${row.disabled ? 'd-none' : ''}" href="#" title="Disable">
+								<i class="uil-user-times text-danger fs-3"></i>
+							</a>
+							<a class="mx-1 toggleAction ${row.disabled ? '' : 'd-none'}" href="#" title="Enable">
+								<i class="uil-user-check text-success fs-3"></i>
+							</a>
+						</div>`}
+                },
+            ],
+            ajax: {
+                url: '{{ table.source }}', type: 'POST', contentType: 'application/json', data: (data) => JSON.stringify(data)},
+            serverSide: true,
+            ordering: true,
+	        createdRow: (row, data, dataIndex, cells) => $(row).attr('data-uid', data.id),
+            rowsGroup: {{ table.get('merged', 'null') }},
+            sum: {{ table.get('sum', '[]') }}
+        });
+	</script>
+
+	{# Add/Edit #}
+	<script type="application/javascript" defer>
+        let modal = $("#addEditModal");
+        let form = $("#addEditForm");
+        let submitBtn = $("#submitBtn");
+        let submitSpinner = $("#submitSpinner");
+        let editUid = null;
+
+        function initializeSpecialInputs() {
+            $('[type=singleDate]').daterangepicker({
+                startDate: new Date(),
+                singleDatePicker: true,
+                showDropdowns: true,
+                autoUpdateInput: true,
+                locale: {
+                    format: 'Do MMM YYYY'
+                }
+            });
+        }
+
+        initializeSpecialInputs();
+
+        $(document).on('click', '.addAction', function () {
+            $('.add').removeClass('d-none');
+            $('.edit').addClass('d-none');
+            editUid = null;
+            modal.modal('show');
+        });
+
+        $(document).on('click', '.editAction', function () {
+            editUid = $(this).closest('tr').data('uid');
+            $('.add').addClass('d-none');
+            $('.edit').removeClass('d-none');
+
+            $.ajax({
+                type: 'GET',
+                url: `{{ url_for('api.customer.customer') }}${editUid}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                if (response.data.created) {
+                    response.data.created = moment(response.data.created).format('Do MMM YYYY');
+                }
+                $.each(response.data, function (k, v) {
+                    form.find('[name=' + k + ']').val(v);
+                });
+                modal.modal('show');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.description);
+            });
+        });
+
+        $(document).on('click', '.toggleAction', function () {
+            let toggleUid = $(this).closest('tr').data('uid');
+            $.ajax({
+                type: 'PUT',
+                url: `/api/customer/${toggleUid}/toggle/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                {{ table.title }}Table.ajax.reload();
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.description);
+            });
+        });
+
+        form.on('submit', function (e) {
+            e.preventDefault();
+
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            let invalids = $(this).find('*:invalid');
+            if (invalids.length > 0) {
+                invalids.addClass('is-invalid')[0].reportValidity();
+                return;
+            }
+
+            submitBtn.prop('disabled', true);
+            submitSpinner.removeClass('d-none');
+
+            let data = {};
+            $.each($(this).find(':input'), function (i, e) {
+                if ($(e).val()) {
+                    data[$(e).attr('name')] = $(e).fval();
+                }
+            });
+
+            $.ajax({
+                data: JSON.stringify(data),
+                type: (editUid == null) ? 'POST' : 'PUT',
+                url: (editUid == null) ? `{{ url_for('api.customer.customer') }}` : `{{ url_for('api.customer.customer') }}${editUid}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                location.reload();
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.description);
+                submitBtn.prop('disabled', false);
+                submitSpinner.addClass('d-none');
+            });
+        });
+
+        modal.on('shown.bs.modal', function () {
+            form.find(':input').first().focus();
+        })
+
+        modal.on('hide.bs.modal', function () {
+            form.trigger('reset').find(':input').removeClass('is-invalid');
+            initializeSpecialInputs();
+            submitBtn.prop('disabled', false);
+            submitSpinner.addClass('d-none');
+        });
+	</script>
+{% endblock %}

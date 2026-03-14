@@ -45,12 +45,13 @@ class GoldCertificateRepository {
                     INSERT INTO gold_certificate_item (
                         id, gold_certificate_id, item_number, item_type,
                         gross_weight, test_weight, net_weight, purity,
-                        returned, created, certificate_number, name
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        fine_weight, item_total, returned, created, certificate_number, name
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
                     itemId, certId, itemNumber, item.item_type || 'Item',
                     calculated.gross_weight, calculated.test_weight, calculated.net_weight, calculated.purity,
-                    calculated.is_returned ? 1 : 0, timestamp, item.certificate_number || `A${String(itemSeq - 1).padStart(2, '0')}`, item.name || ''
+                    calculated.fine_weight, calculated.item_total, calculated.is_returned ? 1 : 0,
+                    timestamp, item.certificate_number || `A${String(itemSeq - 1).padStart(2, '0')}`, item.name || ''
                 );
 
                 insertedItems.push({
@@ -185,6 +186,8 @@ class GoldCertificateRepository {
                 test_weight: calculated.test_weight,
                 net_weight: calculated.net_weight,
                 purity: calculated.purity,
+                fine_weight: calculated.fine_weight,
+                item_total: calculated.item_total,
                 returned: calculated.is_returned ? 1 : 0,
                 certificate_number: mergedInput.certificate_number
             };

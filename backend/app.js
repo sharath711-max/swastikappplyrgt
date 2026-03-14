@@ -1,15 +1,34 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { initDb } = require('./db/db');
 const logger = require('./utils/logger'); // Import Logger
+const { getAllowedCorsOrigins } = require('./config/env');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
+
+const isAllowedCorsOrigin = (origin) => !origin || allowedCorsOrigins.has(origin);
 
 // Middleware
-app.use(cors());
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+
+    if (origin && !allowedCorsOrigins.has(origin)) {
+        return res.status(403).json({ error: 'CORS origin not allowed.' });
+    }
+
+    return next();
+});
+
+app.use(cors({
+    origin(origin, callback) {
+        callback(null, isAllowedCorsOrigin(origin));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'X-Request-Id']
+}));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -42,6 +61,7 @@ try {
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/public/documents', require('./routes/publicDocumentRoutes'));
 app.use('/api/public/verify', require('./routes/verifyRoutes'));
 app.use('/api/customers', require('./routes/customerRoutes'));
 app.use('/api/certificates/:id', require('./routes/certificateItemRoutes'));

@@ -40,8 +40,8 @@ class PhotoCertificateRepository {
                     INSERT INTO photo_certificate_item (
                         id, item_number, photo_certificate_id, certificate_number,
                         name, item_type, gross_weight, test_weight, net_weight, 
-                        purity, returned, media_path, created
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        purity, fine_weight, item_total, returned, media_path, created
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
                     itemId,
                     itemNumber,
@@ -53,6 +53,8 @@ class PhotoCertificateRepository {
                     item.test_weight || 0,
                     item.net_weight || item.gross_weight || item.weight || 0,
                     item.purity || null,
+                    item.fine_weight || 0,
+                    item.item_total || 0,
                     item.returned ? 1 : 0,
                     item.media_path || null,
                     timestamp

@@ -13,6 +13,7 @@ import WorkflowBoard from './pages/WorkflowBoard';
 import ListViewsPage from './pages/ListViewsPage';
 import PrintView from './pages/PrintView';
 import GoldTest from './pages/GoldTest';
+import SilverTest from './pages/SilverTest';
 import WeightLoss from './pages/WeightLoss';
 import CashInHand from './pages/CashInHand';
 import UserManagement from './pages/UserManagement';
@@ -87,6 +88,13 @@ function App() {
                             <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
                                 <AppShell>
                                     <GoldTest />
+                                </AppShell>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/silver-test" element={
+                            <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
+                                <AppShell>
+                                    <SilverTest />
                                 </AppShell>
                             </ProtectedRoute>
                         } />

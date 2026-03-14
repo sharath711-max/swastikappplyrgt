@@ -1,9 +1,16 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db, genId, now } = require('../db/db');
-const { JWT_SECRET } = require('../middleware/authMiddleware');
+const { getJwtSecret } = require('../config/env');
+
+const JWT_SECRET = getJwtSecret();
 
 class AuthService {
+    isBootstrapRegistrationOpen() {
+        const row = db.prepare('SELECT COUNT(*) AS count FROM users').get();
+        return Number(row?.count || 0) === 0;
+    }
+
     async register(username, password, role = 'staff') {
         const hashedPassword = await bcrypt.hash(password, 10);
         const id = genId('USR');

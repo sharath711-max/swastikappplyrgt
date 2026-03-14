@@ -37,6 +37,17 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/gold-tests/stats/summary
+router.get('/stats/summary', async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        const stats = await goldTestService.getSummaryStats(start_date, end_date);
+        res.json({ success: true, data: stats });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // GET /api/gold-tests/:id
 router.get('/:id', async (req, res) => {
     try {
@@ -99,16 +110,5 @@ router.put('/:id/items/:itemId',
             res.status(400).json({ success: false, error: error.message });
         }
     });
-
-// GET /api/gold-tests/stats/summary
-router.get('/stats/summary', async (req, res) => {
-    try {
-        const { start_date, end_date } = req.query;
-        const stats = await goldTestService.getSummaryStats(start_date, end_date);
-        res.json({ success: true, data: stats });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
 
 module.exports = router;

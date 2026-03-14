@@ -1,0 +1,430 @@
+<!-- File Path: templates/dashboard/gold_test/bills.html -->
+{% extends 'dashboard/templates/table.html' %}
+
+{% set table = {
+	'title': 'gold_test', 'source': url_for('api.gold_test.bills'),
+	'total_columns': 8, 'no_export': [7], 'merged': [0,1,2,5,6,7], 'sum': [6],
+} %}
+
+{% block content %}
+	<div class="d-flex justify-content-between align-items-center mb-2">
+		<h2 class="m-0">{{ title }}</h2>
+		<form id="dateRangeFilterForm" style="width: 35%">
+			<div class="input-group">
+				<input class="dateRange form-control" value="" type="rangeDate">
+				<button class="btn btn-secondary" type="submit">
+					<i class="uil-search me-2"></i>Filter
+				</button>
+			</div>
+		</form>
+	</div>
+
+	<div class="card card-body">
+		<div class="d-flex justify-content-end align-items-center mb-2">
+			<div class="text-sm-end" id="{{ table.title }}TableButtonContainer"></div>
+		</div>
+		<table id="{{ table.title }}Table" class="table" style="width:100%">
+			{% if table.get('sum', None) %}
+				<tfoot>
+					<tr>
+						{%- for _ in range(table.total_columns) -%}
+							<th>{{- "Total" if loop.first else '' -}}</th>
+						{%- endfor -%}
+					</tr>
+				</tfoot>
+			{% endif %}
+		</table>
+	</div>
+
+	<div id="editModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-xxl" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 id="paymentModalTitle" class="modal-title">Edit</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<form id="editBillForm">
+						<div class="row billDetails">
+							<div class="col-lg-4">
+								<div class="input-group input-group-lg mb-3">
+									<span class="input-group-text fw-bold">Date</span>
+									<input id="dateTimePicker" class="form-control" type="singleDateTime" name="created">
+								</div>
+							</div>
+							<div class="col-lg-4">
+								<div class="input-group input-group-lg mb-3">
+									<span class="input-group-text fw-bold">Customer</span>
+									<select id="customerSelect" class="form-select" type="integer" name="customer_id" required>
+										<option value="" selected disabled></option>
+										{% for customer in Customer.all() if not customer.disabled %}
+											<option value="{{ customer.id }}">
+												{{ customer.name }}{{ ' (+91 '+ customer.phone +')' if customer.phone else '' }}
+											</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							<div class="col-lg-4">
+								<div class="input-group input-group-lg mb-3">
+									<span class="input-group-text fw-bold">Mode Of Payment</span>
+									<select id="modeOfPaymentSelect" class="form-select" type="text" name="mode_of_payment" required>
+										<option value="" selected disabled></option>
+										{% for mode in ['cash','upi','balance'] %}
+											<option value="{{ mode }}">
+												{{ mode|upper }}
+											</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						<table class="table table-striped">
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Item Type</th>
+									<th>Total Weight (g)</th>
+									<th>Sample Weight (g)</th>
+									<th>Purity (%)</th>
+									<th>Certificate Required?</th>
+								</tr>
+							</thead>
+							<tbody id="editModalTableBody">
+							</tbody>
+						</table>
+						<div class="d-flex justify-content-end">
+							<button id="submitBtn" class="btn btn-danger" type="submit">
+								<div id="submitSpinner" class="spinner-border spinner-border-sm text-light me-3 d-none" role="status"></div>
+								Submit
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="toGoldCertificateModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-xxl" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 id="paymentModalTitle" class="modal-title">Payment & Delivery</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<form id="toGoldCertificateForm">
+						<table class="table table-striped">
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Item Type</th>
+									<th>Total Weight (g)</th>
+									<th>Sample Weight (g)</th>
+									<th>Purity (%)</th>
+									<th>Certificate Required?</th>
+								</tr>
+							</thead>
+							<tbody id="toGoldCertificateModalTableBody">
+							</tbody>
+						</table>
+						<div class="d-flex justify-content-end">
+							<button id="toGoldCertificateSubmitBtn" class="btn btn-danger" type="submit">
+								<div id="toGoldCertificateSubmitSpinner" class="spinner-border spinner-border-sm text-light me-3 d-none" role="status"></div>
+								Submit
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock content %}
+
+{% block body %}
+	{{ super() }}
+
+	{# Datatable #}
+	<script type="application/javascript" defer>
+        let rangeDate = $('.dateRange');
+        rangeDate.on('apply.daterangepicker', function (ev, picker) {
+            $(this).val(picker.startDate.format('Do MMM YYYY') + ' - ' + picker.endDate.format('Do MMM YYYY'))
+        }).val("").daterangepicker({showDropdowns: true, autoUpdateInput: false});
+
+        const {{ table.title }}Table = $("#{{ table.title }}Table").DataTable({
+            columns: [
+                {title: 'Created', data: 'created', render: dataTableRenderDate},
+                {title: 'Invoice #', data: 'bill_number'},
+                {title: 'Customer', data: 'customer', render: (data) => `<a href="/dashboard/customer/${data.id}">${data.name}</a>`},
+                {title: 'Name', data: null, render: (data, type, row, meta) => row.nested.name},
+                {
+                    title: 'Weight-purity', data: null, render: (data, type, row, meta) => {
+                        return `${row.nested.total_weight}g/${row.nested.test_weight}g - ${row.nested.purity}%`;
+                    }
+                },
+                {title: 'Mode of Payment', data: 'mode_of_payment', render: (data) => data.toUpperCase()},
+                {title: 'Total', data: 'total', render: (data) => `₹${data}`},
+                {
+                    title: 'Actions', data: null, orderable: false, searchable: false, render: (data, type, row, meta) =>
+                        `<div class="d-flex justify-content-start align-items-center">
+			            <a class="editAction mx-1 " href="#" title="Edit">
+			              <i class="uil-pen fs-4"></i>
+			            </a>
+			            <a class="receiptAction mx-1 receiptBtn" href="#" title="Receipt">
+			              <i class="uil-invoice fs-4"></i>
+			            </a>
+			            <a class="certificateAction mx-1 certificateBtn" href="#" title="Certificate">
+			              <i class="uil-file-bookmark-alt fs-4"></i>
+			            </a>
+			            <a class="To Gold CertificateAction mx-1 toGoldCertificateAction" href="#" title="To Gold Certificate">
+			              <i class="uil-gold fs-4"></i>
+			            </a>
+			        </div>`
+                },
+            ],
+            ajax: {
+                url: '{{ table.source }}', type: 'POST', contentType: 'application/json',
+                data: (data) => {
+                    data['date_range'] = rangeDate.fval() == null ? null : {
+                        start: rangeDate.data('daterangepicker').startDate.valueOf() / 1000,
+                        end: rangeDate.data('daterangepicker').endDate.valueOf() / 1000
+                    }
+                    return JSON.stringify(data);
+                },
+                dataSrc: function (data) {
+                    let new_data = [];
+                    $.each(data.data, function (i, e) {
+                        $.each(e.data, function (j, o) {
+                            let x = Object.assign({}, e)
+                            x['nested'] = o;
+                            new_data.push(x);
+                        });
+                    });
+                    return new_data;
+                },
+            },
+            serverSide: true,
+            createdRow: (row, data, dataIndex, cells) => $(row).attr('data-uid', data.id),
+            ordering: false,
+            rowsGroup: {{ table.get('merged', 'null') }},
+            sum: {{ table.get('sum', '[]') }}
+        });
+	</script>
+
+	{# Date Filter #}
+	<script type="application/javascript" defer>
+        $("#dateRangeFilterForm").on('submit', function (e) {
+            e.preventDefault();
+            {{ table.title }}Table.ajax.reload();
+        });
+	</script>
+
+	{# Edit #}
+	<script type="application/javascript">
+        let editModal = $('#editModal');
+        let dateTimePicker = $('#dateTimePicker');
+        let customerSelect = $('#customerSelect');
+        let modeOfPaymentSelect = $('#modeOfPaymentSelect');
+        let submitBtn = $('#submitBtn');
+        let submitSpinner = $('#submitSpinner');
+        let editUid = null;
+
+        function initializeSpecialInputs() {
+            dateTimePicker.daterangepicker({
+                startDate: new Date(),
+                singleDatePicker: true,
+                timePicker: true,
+                showDropdowns: true,
+                autoUpdateInput: true,
+                parentEl: editModal,
+                locale: {format: 'Do MMM YYYY, hh:mm A'}
+            });
+
+            customerSelect.select2({
+                theme: "bootstrap5",
+                placeholder: "Select...",
+                dropdownParent: editModal,
+            });
+        }
+
+        initializeSpecialInputs();
+
+        $(document).on('click', '.editAction', function () {
+            editUid = parseInt($(this).closest('tr').attr('data-uid'));
+            $.ajax({
+                type: 'GET',
+                url: `{{ url_for('api.gold_test.crud') }}${editUid}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                let date = moment(response.data.created).format('Do MMM YYYY, hh:mm A');
+                dateTimePicker.data('daterangepicker').setStartDate(date);
+                dateTimePicker.data('daterangepicker').setEndDate(date);
+                customerSelect.val(response.data.customer.id).trigger('change');
+                modeOfPaymentSelect.val(response.data.mode_of_payment);
+                $("#editModalTableBody").empty();
+                $.each(response.data.data, function (i, data) {
+                    $('#editModalTableBody').append(`<tr class="sampleDetails">
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='name' placeholder="Name" maxlength="32" value="${data.name ? data.name : ""}">
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='item' placeholder="Item type" maxlength="32" value="${data.item}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="total_weight" placeholder="Total weight" min="0" step="0.01" value="${data.total_weight}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="test_weight" placeholder="Test weight" min="0" step="0.01" value="${data.test_weight}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="purity" placeholder="Purity" type="number" min="0" max="100" step="any" value="${data.purity ? data.purity : 0}" required>
+								<span class="input-group-text">%</span>
+							</div>
+						</td>
+						<td>
+							<div class="input-group d-flex justify-content-center w-100">
+								<input class="form-check-input" name="returned" ${data.returned ? 'checked' : ''} type="checkbox">
+							</div>
+						</td>
+					</tr>`);
+                });
+                editModal.modal('show');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+
+        $('#editBillForm').on('submit', function (e) {
+            e.preventDefault();
+
+            submitBtn.prop('disabled', true);
+            submitSpinner.removeClass('d-none');
+            let data = {data: [], sid: ''};
+            $.each($(this).find('.billDetails :input'), function (i, e) {
+                if ($(e).attr('name')) {
+                    data[$(e).attr('name')] = $(e).fval();
+                }
+            });
+            $.each(editModal.find('.sampleDetails'), function (i, e) {
+                let sampleData = {};
+                $.each($(e).find(':input'), function (i, e) {
+                    if ($(e).attr('name')) {
+                        sampleData[$(e).attr('name')] = $(e).fval();
+                    }
+                });
+                data.data.push(sampleData);
+            });
+            $.ajax({
+                data: JSON.stringify(data),
+                type: 'PUT',
+                url: `/api/gold-test/${editUid}/save/`,
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                location.reload();
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+            submitBtn.prop('disabled', false);
+            submitSpinner.addClass('d-none');
+        });
+	</script>
+
+	{# Prints #}
+	<script type="application/javascript">
+        $(document).on('click', '.receiptBtn', function (e) {
+            e.stopPropagation();
+            let url = `/dashboard/gold-test/${$(this).closest('tr').data('uid')}/receipt/`;
+            window.open(url, '_blank', 'location=yes,height=750,width=400,scrollbars=yes,status=yes');
+        });
+
+        $(document).on('click', '.certificateBtn', function (e) {
+            e.stopPropagation();
+            let url = `/dashboard/gold-test/${$(this).closest('tr').data('uid')}/certificate/`;
+            window.open(url, '_blank', 'location=yes,height=750,width=600,scrollbars=yes,status=yes');
+        });
+	</script>
+
+	{# To Gold Test #}
+	<script type="application/javascript">
+        let toGoldCertificateModal = $("#toGoldCertificateModal");
+        let toGoldCertificateSubmitBtn = $('#toGoldCertificateSubmitBtn');
+        let toGoldCertificateSubmitSpinner = $('#toGoldCertificateSubmitSpinner');
+        let toGoldCertificateTestId = null;
+
+        $(document).on('click', '.toGoldCertificateAction', function () {
+            toGoldCertificateTestId = parseInt($(this).closest('tr').attr('data-uid'));
+            $.ajax({
+                type: 'GET',
+                url: `{{ url_for('api.gold_test.crud') }}${toGoldCertificateTestId}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                toGoldCertificateModal.modal('show');
+                $("#toGoldCertificateModalTableBody").empty();
+                $.each(response.data.data, function (i, data) {
+                    $('#toGoldCertificateModalTableBody').append(`<tr class="sampleDetails">
+						<td>${data.name ? data.name : ""}</td>
+						<td>${data.item}</td>
+						<td>${data.total_weight}</td>
+						<td>${data.test_weight}</td>
+						<td>${data.purity}</td>
+						<td>
+							<div class="input-group d-flex justify-content-center w-100">
+								<input class="form-check-input" name="certificate_required" ${data.certificate_required ? 'checked' : ''} type="checkbox">
+							</div>
+						</td>
+					</tr>`);
+                });
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+
+        $(document).on('submit', '#toGoldCertificateForm', function (e) {
+            e.preventDefault();
+
+            let data = {indices: [], sid: socket.id};
+            $.each(toGoldCertificateModal.find('[name=certificate_required]'), function (i, e) {
+                if ($(e).fval()) {
+                    data.indices.push(i);
+                }
+            });
+
+            $.ajax({
+                data: JSON.stringify(data),
+                type: 'PUT',
+                url: `/api/gold-test/${toGoldCertificateTestId}/to-gold-certificate/`,
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                location.reload();
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+            toGoldCertificateSubmitBtn.prop('disabled', false);
+            toGoldCertificateSubmitSpinner.addClass('d-none');
+        });
+	</script>
+
+	{# Sockets #}
+	<script type="application/javascript">
+        let socket = io.connect(window.location.protocol + '//' + document.domain + ':' + location.port);
+        socket.emit('join', {'room': 'gold_test_bills'});
+
+        socket.on('show_certificate', function (data) {
+            let url = `/dashboard/gold-certificate/${data.data}/certificate/`;
+            window.open(url, "_blank", "location=yes,height=750,width=600,scrollbars=yes,status=yes");
+        });
+	</script>
+{% endblock %}

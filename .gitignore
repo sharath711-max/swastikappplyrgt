@@ -55,6 +55,7 @@ frontend/coverage/
 
 # Temp files
 tmp/
+backend/tmp/delivery-pdfs/
 
 # Logs and Data Dumps
 logs/

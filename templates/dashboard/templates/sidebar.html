@@ -1,0 +1,102 @@
+<!-- File Path: templates/dashboard/templates/sidebar.html -->
+<nav id="sidebar" class="sidebar">
+	<div class="sidebar-content js-simplebar">
+		<a class="sidebar-brand" href="{{ url_for('dashboard.index') }}">
+			<img src="{{ url_for('static', filename='media/logo.png') }}" class="w-25 h-auto" alt="logo">
+			<p>Swastik</p>
+		</a>
+
+		<ul class="sidebar-nav">
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.index') }}">
+					<i class="uil-home-alt align-middle fs-2"></i>
+					<span class="align-middle">Dashboard</span>
+				</a>
+			</li>
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.gold_test.index') }}">
+					<i class="uil-gold align-middle fs-2"></i>
+					<span class="align-middle">Gold Testing</span>
+				</a>
+			</li>
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.gold_certificate.index') }}">
+					<i class="uil-file-check-alt align-middle fs-2"></i>
+					<span class="align-middle">Gold Certificate</span>
+				</a>
+			</li>
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.silver_certificate.index') }}">
+					<i class="uil-file-check-alt align-middle fs-2"></i>
+					<span class="align-middle">Silver Certificate</span>
+				</a>
+			</li>
+			{#<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.metal_certificate.index') }}">
+					<i class="uil uil-vertical-distribute-bottom align-middle fs-2"></i>
+					<span class="align-middle">Metal Certificate</span>
+				</a>
+			</li>#}
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.photo_certificate.index') }}">
+					<i class="uil-scenery align-middle fs-2"></i>
+					<span class="align-middle">Photo Certificate</span>
+				</a>
+			</li>
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.customer.index') }}">
+					<i class="uil-users-alt align-middle fs-2"></i>
+					<span class="align-middle">Customers</span>
+				</a>
+			</li>
+			{#<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.metal') }}">
+					<i class="uil uil-vertical-distribute-bottom fs-2"></i>
+					<span class="align-middle">Metals</span>
+				</a>
+			</li>#}
+			<li class="sidebar-item">
+				<a data-bs-target="#bills" data-bs-toggle="collapse" class="sidebar-link collapsed">
+					<i class="uil-money-bill align-middle fs-2"></i>
+					<span class="align-middle">Bills</span>
+				</a>
+				<ul id="bills" class="sidebar-dropdown list-unstyled collapse " data-bs-parent="#sidebar">
+					<a class="sidebar-link collapsed" href="{{ url_for('dashboard.gold_test.bills') }}">
+						<span class="align-middle">Gold Testing</span>
+					</a>
+					<a class="sidebar-link collapsed" href="{{ url_for('dashboard.gold_certificate.bills') }}">
+						<span class="align-middle">Gold Certificate</span>
+					</a>
+					<a class="sidebar-link collapsed" href="{{ url_for('dashboard.silver_certificate.bills') }}">
+						<span class="align-middle">Silver Certificate</span>
+					</a>
+					{#<a class="sidebar-link collapsed" href="{{ url_for('dashboard.metal_certificate.bills') }}">
+						<span class="align-middle">Metal Certificate</span>
+					</a>#}
+					<a class="sidebar-link collapsed" href="{{ url_for('dashboard.photo_certificate.bills') }}">
+						<span class="align-middle">Photo Certificate</span>
+					</a>
+				</ul>
+			</li>
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="#" data-bs-toggle="modal" data-bs-target="#cashInHandModal">
+					<i class=" uil-wallet fs-2"></i>
+					<span class="align-middle">Cash In Hand</span>
+				</a>
+			</li>
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed" href="{{ url_for('dashboard.weight_loss') }}">
+					<i class=" uil-balance-scale align-middle fs-2"></i>
+					<span class="align-middle">Weight Loss</span>
+				</a>
+			</li>
+			<hr>
+			<li class="sidebar-item">
+				<a class="sidebar-link collapsed backup">
+					<i class="uil-cloud-upload align-middle fs-2"></i>
+					<span class="align-middle">Backup</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</nav>

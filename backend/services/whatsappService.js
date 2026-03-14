@@ -1,4 +1,3 @@
-const axios = require('axios');
 const logger = require('../utils/logger'); // Assuming a logger exists, or we use console
 
 /**
@@ -22,11 +21,21 @@ class WhatsAppService {
         this.twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
     }
 
+    formatPhoneNumber(phoneNumber) {
+        const digits = String(phoneNumber || '').replace(/\D/g, '');
+
+        if (digits.length === 10) return `+91${digits}`;
+        if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+        if (String(phoneNumber || '').startsWith('+')) return phoneNumber;
+
+        return digits ? `+${digits}` : '';
+    }
+
     /**
      * Send a notification when a test is finalized (Moved to DONE)
      */
     async notifyTestCompleted(customerName, customerPhone, testType, autoNumber, totalAmount) {
-        if (!customerPhone || customerPhone.length < 10) {
+        if (!this.formatPhoneNumber(customerPhone)) {
             console.warn(`[WhatsApp] Invalid phone number for ${customerName}`);
             return false;
         }
@@ -46,7 +55,7 @@ class WhatsAppService {
      * Send a digital receipt / certificate link
      */
     async sendDigitalReceipt(customerName, customerPhone, autoNumber, pdfUrl) {
-        if (!customerPhone || customerPhone.length < 10) return false;
+        if (!this.formatPhoneNumber(customerPhone)) return false;
 
         const message = `*Swastik Lab Digital Receipt*\n\n` +
             `Hello ${customerName}, here is the digital copy of your certificate *(Ref: ${autoNumber})*.\n\n` +
@@ -56,12 +65,60 @@ class WhatsAppService {
         return this.sendMessage(customerPhone, message);
     }
 
+    async sendCompletedPacket({
+        customerName,
+        customerPhone,
+        documentLabel,
+        autoNumber,
+        totalAmount,
+        paymentMode,
+        pdfUrl,
+        verifyUrl,
+        expiresAt
+    }) {
+        if (!this.formatPhoneNumber(customerPhone)) {
+            logger.warn(`[WhatsApp] Invalid phone number for ${customerName || autoNumber}`);
+            return false;
+        }
+
+        const amount = Number(totalAmount || 0).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        const expiry = expiresAt
+            ? new Date(expiresAt).toLocaleString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            })
+            : 'soon';
+
+        const message = `*SWASTIK GOLD AND SILVER LAB*\n\n` +
+            `Digital Receipt Ready\n` +
+            `Hello ${customerName}, your ${documentLabel} is complete.\n\n` +
+            `Reference: ${autoNumber}\n` +
+            `Amount: Rs. ${amount}\n` +
+            `Payment: ${paymentMode || 'Pending'}\n\n` +
+            `Secure PDF: ${pdfUrl}\n` +
+            `Verify online: ${verifyUrl}\n\n` +
+            `For your privacy, this delivery link expires on ${expiry}.`;
+
+        return this.sendMessage(customerPhone, message);
+    }
+
     /**
      * Core router that directs the message to the configured provider
      */
     async sendMessage(phoneNumber, text) {
-        // Ensure phone number starts with country code, default to India +91 if 10 digits
-        const formattedPhone = (phoneNumber.length === 10) ? `+91${phoneNumber}` : phoneNumber;
+        const formattedPhone = this.formatPhoneNumber(phoneNumber);
+
+        if (!formattedPhone) {
+            logger.warn('[WhatsApp] Unable to send message because phone formatting failed.');
+            return false;
+        }
 
         console.log(`[WhatsApp] Attempting to send message to ${formattedPhone} via ${this.provider}...`);
 
@@ -89,6 +146,7 @@ class WhatsAppService {
     // --- Private Provider Implementations ---
 
     async _sendUltraMsg(phone, text) {
+        const axios = require('axios');
         // UltraMsg requires just phone without '+'
         const to = phone.replace('+', '');
         const url = `https://api.ultramsg.com/${this.ultraMsgInstanceId}/messages/chat`;

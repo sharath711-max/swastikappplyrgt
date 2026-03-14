@@ -3,8 +3,24 @@ const router = express.Router();
 const authService = require('../services/authService');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ error: 'Access denied: Admins only' });
+    }
+};
+
+const requireAdminOrBootstrap = (req, res, next) => {
+    if (authService.isBootstrapRegistrationOpen()) {
+        return next();
+    }
+
+    return authMiddleware(req, res, () => isAdmin(req, res, next));
+};
+
 // POST /api/auth/register (Initial setup or admin only)
-router.post('/register', async (req, res) => {
+router.post('/register', requireAdminOrBootstrap, async (req, res) => {
     try {
         const { username, password, role } = req.body;
         const user = await authService.register(username, password, role);
@@ -45,15 +61,6 @@ router.post('/change-password', authMiddleware, async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 });
-
-// Admin Middleware
-const isAdmin = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
-        next();
-    } else {
-        res.status(403).json({ error: 'Access denied: Admins only' });
-    }
-};
 
 // GET /api/auth/users
 router.get('/users', authMiddleware, isAdmin, async (req, res) => {

@@ -27,8 +27,12 @@ router.patch('/:type/:id/status', async (req, res) => {
     try {
         const { type, id } = req.params;
         const { status } = req.body;
-        await workflowService.updateStatus(type, id, status);
-        res.json({ success: true, message: 'Status updated' });
+        const result = await workflowService.updateStatus(type, id, status);
+        res.json({
+            success: true,
+            message: result.delivery?.message || 'Status updated',
+            data: result
+        });
     } catch (error) {
         handleError(res, error);
     }

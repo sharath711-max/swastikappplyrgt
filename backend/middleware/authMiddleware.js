@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { db } = require('../db/db');
+const { getJwtSecret } = require('../config/env');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'swastik_secret_key_123';
+const JWT_SECRET = getJwtSecret();
 
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;

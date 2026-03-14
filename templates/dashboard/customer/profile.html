@@ -1,0 +1,367 @@
+<!-- File Path: templates/dashboard/customer/profile.html -->
+{% extends 'dashboard/templates/table.html' %}
+
+{% set customer = Customer.get(uid) %}
+
+{% block content %}
+	<div class="container-fluid p-0">
+		<h1 class="mb-3">{{ customer.name|title }}</h1>
+		<div class="row">
+			<div class="col-md-4 col-xl-3">
+				<div class="card mb-3">
+					<div class="card-body">
+						<h4 class="font-weight-bold">Details</h4>
+						<hr class="my-0">
+						<table>
+							<tbody>
+								<tr>
+									<td class="p-2" title="Phone">
+										<i class="uil-phone-alt fs-2"></i>
+									</td>
+									<td>
+										<a href={{ 'tel:'~customer.phone if customer.phone else '#' }}>{{ customer.phone if customer.phone else '-' }}</a>
+									</td>
+								</tr>
+								<tr>
+									<td class="p-2" title="Balance">
+										<i class="uil-money-bill fs-2"></i>
+									</td>
+									<td>{{ customer.balance }}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+				<div class="card">
+					<div class="card-body">
+						<h4 class="font-weight-bold">Notes</h4>
+						<hr class="my-0">
+						<p>{{ customer.notes if customer.notes }}</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-md-8 col-xl-9">
+				<ul class="nav nav-tabs mb-3" role="tablist">
+					<li class="nav-item" role="presentation">
+						<button class="nav-link active" data-bs-toggle="tab" data-bs-target="#goldTestingHistoryTab" type="button" role="tab">
+							Gold Testing
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" data-bs-toggle="tab" data-bs-target="#goldCertificateHistoryTab" type="button" role="tab">
+							Gold Certificate
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" data-bs-toggle="tab" data-bs-target="#silverCertificateHistoryTab" type="button" role="tab">
+							Silver Certificate
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" data-bs-toggle="tab" data-bs-target="#photoCertificateHistoryTab" type="button" role="tab">
+							Photo Certificate
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" data-bs-toggle="tab" data-bs-target="#balanceHistoryTab" type="button" role="tab">
+							Balance
+						</button>
+					</li>
+				</ul>
+				<div class="tab-content">
+					<div class="tab-pane fade show active" id="goldTestingHistoryTab" role="tabpanel">
+						<div class="card" style="padding-bottom: 1rem">
+							<div class="card-header pb-0">
+								<h4 class="font-weight-bold">Gold Testing History</h4>
+							</div>
+							<div class="card-body h-100">
+								<div class="accordion" id="goldTestingHistory">
+									{% for test in customer.gold_tests[::-1] %}
+										<div class="accordion-item">
+											<h2 class="accordion-header">
+												<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#goldTest{{ test.id }}">
+													#{{ test.bill_number }} ({{ test.created.strftime("%d %b, %Y - %I:%M %p") }})
+													{% set badge_class = {'ongoing': 'primary', 'tested': 'warning', 'completed': 'success'} %}
+													<span class="badge bg-{{ badge_class[test.status] }} mx-3">{{ test.status }}</span>
+												</button>
+											</h2>
+											<div id="goldTest{{ test.id }}" class="accordion-collapse collapse" aria-labelledby="heading" data-bs-parent="#goldTestingHistory">
+												<div class="accordion-body">
+													<table class="table table-sm m-0">
+														<thead>
+															<tr>
+																<th>Name</th>
+																<th>Item</th>
+																<th>Sample Details</th>
+																<th>Mode Of Payment</th>
+																<th>Total</th>
+															</tr>
+														</thead>
+														<tbody>
+															{% for data in test.data %}
+																<tr>
+																	<td>{{ data.name if data.name else test.customer.name }}</td>
+																	<td>{{ data.item|upper }}</td>
+																	<td>{{ data.total_weight }}/{{ data.test_weight }} - {{ data.purity }}%</td>
+																	<td>{{ test.mode_of_payment|upper }}</td>
+																	<td>{{ test.grand_total }}</td>
+																</tr>
+															{% endfor %}
+														</tbody>
+													</table>
+												</div>
+											</div>
+										</div>
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="tab-pane fade" id="goldCertificateHistoryTab" role="tabpanel">
+						<div class="card" style="padding-bottom: 1rem">
+							<div class="card-header pb-0">
+								<h4 class="font-weight-bold">Gold Certificate History</h4>
+							</div>
+							<div class="card-body h-100">
+								<div class="accordion" id="goldCertificateHistory">
+									{% for test in customer.gold_certificates[::-1] %}
+										<div class="accordion-item">
+											<h2 class="accordion-header">
+												<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#goldCertificate{{ test.id }}">
+													#{{ test.bill_number }} ({{ test.created.strftime("%d %b, %Y - %I:%M %p") }})
+													{% set badge_class = {'ongoing': 'primary', 'tested': 'warning', 'completed': 'success'} %}
+													<span class="badge bg-{{ badge_class[test.status] }} mx-3">{{ test.status }}</span>
+												</button>
+											</h2>
+											<div id="goldCertificate{{ test.id }}" class="accordion-collapse collapse" aria-labelledby="heading" data-bs-parent="#goldCertificateHistory">
+												<div class="accordion-body">
+													<table class="table table-sm m-0">
+														<thead>
+															<tr>
+																<th>Item</th>
+																<th>Name</th>
+																<th>Sample Details</th>
+																<th>GST</th>
+																<th>Mode Of Payment</th>
+																<th>Total</th>
+															</tr>
+														</thead>
+														<tbody>
+															{% for data in test.data %}
+																<tr>
+																	<td>{{ data.name if data.name else test.customer.name }}</td>
+																	<td>{{ data.item|upper }}</td>
+																	<td>{{ data.total_weight }}/{{ data.test_weight }} - {{ data.purity }}%</td>
+																	<td>{{ 'Yes' if test.gst else 'No' }}</td>
+																	<td>{{ test.mode_of_payment|upper }}</td>
+																	<td>{{ test.grand_total }}</td>
+																</tr>
+															{% endfor %}
+														</tbody>
+													</table>
+												</div>
+											</div>
+										</div>
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="tab-pane fade" id="silverCertificateHistoryTab" role="tabpanel">
+						<div class="card" style="padding-bottom: 1rem">
+							<div class="card-header pb-0">
+								<h4 class="font-weight-bold">Silver Certificate History</h4>
+							</div>
+							<div class="card-body h-100">
+								<div class="accordion" id="silverCertificateHistory">
+									{% for test in customer.silver_certificates[::-1] %}
+										<div class="accordion-item">
+											<h2 class="accordion-header">
+												<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#silverCertificate{{ test.id }}">
+													#{{ test.bill_number }} ({{ test.created.strftime("%d %b, %Y - %I:%M %p") }})
+													{% set badge_class = {'ongoing': 'primary', 'tested': 'warning', 'completed': 'success'} %}
+													<span class="badge bg-{{ badge_class[test.status] }} mx-3">{{ test.status }}</span>
+												</button>
+											</h2>
+											<div id="silverCertificate{{ test.id }}" class="accordion-collapse collapse" aria-labelledby="heading" data-bs-parent="#silverCertificateHistory">
+												<div class="accordion-body">
+													<table class="table table-sm m-0">
+														<thead>
+															<tr>
+																<th>Name</th>
+																<th>Item</th>
+																<th>Sample Details</th>
+																<th>GST</th>
+																<th>Mode Of Payment</th>
+																<th>Total</th>
+															</tr>
+														</thead>
+														<tbody>
+															{% for data in test.data %}
+																<tr>
+																	<td>{{ data.name if data.name else test.customer.name }}</td>
+																	<td>{{ data.item|upper }}</td>
+																	<td>{{ data.total_weight }}/{{ data.test_weight }} - {{ data.purity }}%</td>
+																	<td>{{ 'Yes' if test.gst else 'No' }}</td>
+																	<td>{{ test.mode_of_payment|upper }}</td>
+																	<td>{{ test.grand_total }}</td>
+																</tr>
+															{% endfor %}
+														</tbody>
+													</table>
+												</div>
+											</div>
+										</div>
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="tab-pane fade" id="photoCertificateHistoryTab" role="tabpanel">
+						<div class="card" style="padding-bottom: 1rem">
+							<div class="card-header pb-0">
+								<h4 class="font-weight-bold">Photo Certificate History</h4>
+							</div>
+							<div class="card-body h-100">
+								<div class="accordion" id="photoCertificateHistory">
+									{% for test in customer.photo_certificates[::-1] %}
+										<div class="accordion-item">
+											<h2 class="accordion-header">
+												<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#photoCertificate{{ test.id }}">
+													#{{ test.bill_number }} ({{ test.created.strftime("%d %b, %Y - %I:%M %p") }})
+													{% set badge_class = {'ongoing': 'primary', 'tested': 'warning', 'completed': 'success'} %}
+													<span class="badge bg-{{ badge_class[test.status] }} mx-3">{{ test.status }}</span>
+												</button>
+											</h2>
+											<div id="photoCertificate{{ test.id }}" class="accordion-collapse collapse" aria-labelledby="heading" data-bs-parent="#photoCertificateHistory">
+												<div class="accordion-body">
+													<table class="table table-sm m-0">
+														<thead>
+															<tr>
+																<th>Photo</th>
+																<th>Name</th>
+																<th>Item</th>
+																<th>Sample Details</th>
+																<th>GST</th>
+																<th>Mode Of Payment</th>
+																<th>Total</th>
+															</tr>
+														</thead>
+														<tbody>
+															{% for data in test.data %}
+																<tr>
+																	<td><img src="/static/uploads/{{ test.media[0] }}" style="height: 50px; width: 50px; object-fit: cover; border-radius: 3px"> </td>
+																	<td>{{ data.name if data.name else test.customer.name }}</td>
+																	<td>{{ data.item|upper }}</td>
+																	<td>{{ data.total_weight }}/{{ data.test_weight }} - {{ data.purity }}%</td>
+																	<td>{{ 'Yes' if test.gst else 'No' }}</td>
+																	<td>{{ test.mode_of_payment|upper }}</td>
+																	<td>{{ test.grand_total }}</td>
+																</tr>
+															{% endfor %}
+														</tbody>
+													</table>
+												</div>
+											</div>
+										</div>
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="tab-pane fade" id="balanceHistoryTab" role="tabpanel">
+						<div class="card">
+							<div class="card-body">
+								<div class="d-flex justify-content-between align-items-center mb-1">
+									<div class="d-flex">
+									</div>
+									<div class="text-sm-end" id="button_container"></div>
+								</div>
+								<table id="table" class="table table-striped" style="width:100%">
+									<thead>
+										<tr>
+											<th class="w-25">Date</th>
+											<th>Mode of payment</th>
+											<th>Amount</th>
+											<th>Previous Balance</th>
+										</tr>
+									</thead>
+									<tbody>
+										{% for ch in customer.credit_history %}
+											<tr>
+												<td>{{ ch.created.strftime("%d %b, %Y - %I:%M %p") }}</td>
+												<td>{{ ch.mode_of_payment.replace('_', ' ')|title }}</td>
+												<td>{{ '- ' ~ ' ₹' ~ ch.amount if ch.type=='credit' else '+ ' ~ ' ₹' ~ ch.amount }}</td>
+												<td>₹ {{ ch.previous_balance }}</td>
+											</tr>
+										{% endfor %}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock content %}
+
+{% block body %}
+	{{ super() }}
+	<script type="application/javascript" defer>
+        const table = $("#table").DataTable({
+            language: {
+                paginate: {
+                    previous: "<i class='uil-angle-left'>",
+                    next: "<i class='uil-angle-right'>"
+                },
+                info: "Showing " + name + " _START_ to _END_ of _TOTAL_",
+                lengthMenu: 'Display <select class=\'form-select form-select-sm ms-1 me-1\'><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="-1">All</option></select> ' + name,
+            },
+            pageLength: 20,
+            drawCallback: function () {
+                $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
+            },
+            columnDefs: [],
+            fixedHeader: true,
+            order: [[0, 'asc']],
+            ordering: true,
+            buttons: [
+                {
+                    extend: 'copyHtml5',
+                    title: 'Balance History',
+                    exportOptions: {
+                        modifier: {search: 'applied', order: 'applied', page: 'current'}
+                    }
+                },
+                {
+                    extend: 'excelHtml5',
+                    title: 'Balance History',
+                    exportOptions: {
+                        modifier: {search: 'applied', order: 'applied', page: 'current'}
+                    }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    title: 'Balance History',
+                    exportOptions: {
+                        modifier: {search: 'applied', order: 'applied', page: 'current'}
+                    }
+                },
+            ],
+            responsive: true,
+            saveState: true,
+        });
+        table.buttons().container().appendTo("#button_container");
+        const copy_button = $('.buttons-copy');
+        const export_button = $('.buttons-excel');
+        const pdf_button = $('.buttons-pdf');
+        copy_button.removeClass('btn-secondary').addClass('btn-light mb-2 me-1');
+        copy_button.html('<i class="uil-pathfinder"></i> Copy');
+        export_button.removeClass('btn-secondary').addClass('btn-light mb-2 me-1');
+        export_button.html('<i class="uil-export"></i> Export');
+        pdf_button.removeClass('btn-secondary').addClass('btn-light mb-2 me-1');
+        pdf_button.html('<i class="uil-file-alt"></i> PDF');
+	</script>
+{% endblock %}

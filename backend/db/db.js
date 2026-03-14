@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+require('../config/env');
 const { generateId } = require('../utils/idUtils');
 
 const isPkg = typeof process.pkg !== 'undefined';
@@ -14,11 +15,38 @@ const db = new Database(DB_PATH, {
 // Enable WAL mode for performance
 db.pragma('journal_mode = WAL');
 
+function columnExists(tableName, columnName) {
+    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
+    return columns.some((column) => column.name === columnName);
+}
+
+function ensureColumn(tableName, columnName, definition) {
+    if (!columnExists(tableName, columnName)) {
+        db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`).run();
+    }
+}
+
+function applyPostInitMigrations() {
+    ensureColumn('gold_certificate', 'total_net_weight', 'REAL DEFAULT 0');
+    ensureColumn('gold_certificate', 'total_fine_weight', 'REAL DEFAULT 0');
+    ensureColumn('silver_certificate', 'total_net_weight', 'REAL DEFAULT 0');
+
+    ensureColumn('gold_certificate_item', 'fine_weight', 'REAL DEFAULT 0');
+    ensureColumn('gold_certificate_item', 'item_total', 'REAL DEFAULT 0');
+
+    ensureColumn('silver_certificate_item', 'fine_weight', 'REAL DEFAULT 0');
+    ensureColumn('silver_certificate_item', 'item_total', 'REAL DEFAULT 0');
+
+    ensureColumn('photo_certificate_item', 'fine_weight', 'REAL DEFAULT 0');
+    ensureColumn('photo_certificate_item', 'item_total', 'REAL DEFAULT 0');
+}
+
 // Initialize database with schema
 function initDb() {
     try {
         const sql = fs.readFileSync(INIT_SQL_PATH, 'utf8');
         db.exec(sql);
+        applyPostInitMigrations();
         console.log('✅ Database initialized successfully');
     } catch (error) {
         console.error('❌ Failed to initialize database:', error);

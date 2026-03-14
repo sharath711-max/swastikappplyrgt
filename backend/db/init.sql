@@ -126,6 +126,8 @@ CREATE TABLE IF NOT EXISTS gold_certificate (
   status TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
 
   total REAL DEFAULT 0,
+  total_net_weight REAL DEFAULT 0,
+  total_fine_weight REAL DEFAULT 0,
   gst INTEGER DEFAULT 0,              -- 0 / 1
   total_tax REAL DEFAULT 0,
   gst_bill_number TEXT,
@@ -146,6 +148,7 @@ CREATE TABLE IF NOT EXISTS silver_certificate (
   status TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
 
   total REAL DEFAULT 0,
+  total_net_weight REAL DEFAULT 0,
   gst INTEGER DEFAULT 0,
   total_tax REAL DEFAULT 0,
   gst_bill_number TEXT,
@@ -190,6 +193,8 @@ CREATE TABLE IF NOT EXISTS gold_certificate_item (
   test_weight REAL NOT NULL,
   net_weight REAL NOT NULL,
   purity REAL,
+  fine_weight REAL DEFAULT 0,
+  item_total REAL DEFAULT 0,
   returned INTEGER DEFAULT 0,
 
   created DATETIME NOT NULL,
@@ -211,6 +216,8 @@ CREATE TABLE IF NOT EXISTS silver_certificate_item (
   test_weight REAL NOT NULL,
   net_weight REAL NOT NULL,
   purity REAL,
+  fine_weight REAL DEFAULT 0,
+  item_total REAL DEFAULT 0,
   returned INTEGER DEFAULT 0,
   created DATETIME NOT NULL,
   lastmodified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -230,6 +237,8 @@ CREATE TABLE IF NOT EXISTS photo_certificate_item (
   test_weight REAL,
   net_weight REAL,
   purity REAL,
+  fine_weight REAL DEFAULT 0,
+  item_total REAL DEFAULT 0,
   returned INTEGER DEFAULT 0,
   media_path TEXT,
   created DATETIME NOT NULL,

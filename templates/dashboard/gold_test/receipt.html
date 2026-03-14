@@ -1,0 +1,224 @@
+<!-- File Path: templates/dashboard/gold_test/receipt.html -->
+{% set test = GoldTest.get(uid) %}
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/bootstrap-4.3.1.min.css') }}">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('dashboard.static', filename='css/gold_test/receipt.css') }}">
+		<title>Receipt</title>
+	</head>
+	<body>
+		<div class="position-relative" style="padding: 2mm; width: 100mm; background: #ffffff">
+			<div style="min-height: 100px">
+				<div style="height: 120px; width: 120px; margin: 0 auto;">
+					<img src="{{ url_for('static', filename='media/logo.png') }}" style="object-fit: cover; height: 100%">
+				</div>
+			</div>
+
+			<div style="min-height: 80px; border-bottom: 1px solid #000000">
+				<div class="info">
+					<p>
+						<span style="font-size: 1.4rem">Swastik Assayers</span><br><br>
+						#11,Appurayappa 'A' lane <br>
+						Nagarthpet Cross, Bengaluru - 560002<br>
+						Phone: 080-41643366/Centrex: 2366<br>
+					</p>
+				</div>
+			</div>
+
+			<table class="mb-3">
+				<tr class="table-title" style="border-bottom: unset">
+					<td class="item">
+						<h2>
+							Invoice No: <span>{{ test.bill_number }}</span>
+						</h2>
+					</td>
+					<td style="width: 22mm"></td>
+					<td class="text-right pe-2" colspan="3">
+						<h2>Customer:
+							<span>{{ test.customer.name }} {{ '(+91' ~ test.customer.phone ~ ')' if test.customer.phone }}</span>
+						</h2>
+					</td>
+				</tr>
+				<tr class="table-title">
+					<td class="item">
+						<h2>
+							Date: <span>{{ test.created.strftime('%d-%m-%y') }}</span>
+						</h2>
+					</td>
+					<td style="width: 22mm"></td>
+					<td class="text-right pe-2" colspan="3">
+						<h2>
+							Time: <span>{{ test.created.strftime('%I:%M %p') }}</span>
+						</h2>
+					</td>
+				</tr>
+				<tr class="table-title" style="border-bottom:none">
+					<td class="item">
+						<h2>Gold Testing</h2>
+					</td>
+				</tr>
+			</table>
+			<div style="min-height: 50px">
+				<table class="w-100" style="border-collapse: collapse">
+					<tr class="table-title">
+						<td class="item">
+							<h2>Sl No</h2>
+						</td>
+						<td class="item text-center">
+							<h2>Item</h2>
+						</td>
+						<td class="item text-center">
+							<h2>Total Wt</h2>
+						</td>
+						<td class="item text-center">
+							<h2>Spl Wt</h2>
+						</td>
+						<td class="item text-right pe-2">
+							<h2>Amount</h2>
+						</td>
+					</tr>
+					{% for data in test.data %}
+						<tr>
+							<td class="table-item">
+								{{ loop.index }}
+							</td>
+							<td class="table-item text-center">
+								{{ data.item|upper }}
+							</td>
+							<td class="table-item text-center" {% if data.returned %}style="text-decoration: line-through" {% endif %}>
+								{{ data.total_weight|round0(3) }}g
+							</td>
+							<td class="table-item text-center">
+								{% if data.test_weight %}
+									{{ data.test_weight|round0(3) }}g
+								{% else %}
+									-
+								{% endif %}
+							</td>
+							<td class="table-item text-right pe-2">
+								₹ {{ data.total }}
+							</td>
+						</tr>
+					{% endfor %}
+
+					<tr class="table-item" style="border-top: 2px solid #000;border-bottom: 2px solid #000;">
+						<td style="padding-top: 1rem" colspan="3">
+							<h2>Grand Total</h2>
+						</td>
+						<td style="padding-top: 1rem"></td>
+						<td class="item text-right pe-2" style="padding-top: 1rem; font-size: 1.2rem;">
+							<h2>₹ {{ test.grand_total }}</h2>
+						</td>
+					</tr>
+				</table>
+				<div style="margin-top: 5mm; text-align: center">
+					<p class="legal">
+						<strong>Thank you for your business!</strong>
+					</p>
+				</div>
+			</div>
+		</div>
+
+		{% for data in test.data %}
+			<div class="page-break"></div>
+			<div class="position-relative" style="padding: 2mm; width: 100mm; background: #ffffff">
+				<div class="info">
+					<p>
+						<span style="font-size: 1.4rem">Swastik Assayers</span>
+					</p>
+				</div>
+				<table class="mb-3">
+					<tr class="table-title" style="border-bottom: unset">
+						<td class="item">
+							<h2>Invoice No: <span>{{ test.bill_number }}</span></h2>
+						</td>
+						<td style="width: 22mm"></td>
+						<td class="text-right pe-2">
+							<h2>Customer:
+								<span>{{ data.name if data.name else test.customer.name }}</span>
+							</h2>
+						</td>
+					</tr>
+					<tr class="table-title">
+						<td class="item">
+							<h2>
+								Date: <span>{{ test.created.strftime('%d-%m-%y') }}</span>
+							</h2>
+						</td>
+						<td style="width: 22mm"></td>
+						<td class="text-right pe-2">
+							<h2>
+								Time: <span>{{ test.created.strftime('%I:%M %p') }}</span>
+							</h2>
+						</td>
+					</tr>
+					<tr class="table-title" style="border-bottom:none">
+						<td class="item"><h2>Gold Testing</h2></td>
+					</tr>
+				</table>
+				<div style="min-height: 50px">
+					<div id="table">
+						<table style="border-bottom: 2px solid black">
+							<tr class="table-title">
+								<td class="item">
+									<h2>Sl No</h2>
+								</td>
+								<td class="item text-center">
+									<h2>Item</h2>
+								</td>
+								<td class="item text-center">
+									<h2>Total Wt</h2>
+								</td>
+								<td class="item text-right pe-2">
+									<h2>Spl Wt</h2>
+								</td>
+							</tr>
+							<tr>
+								<td class="table-item">
+									{{ loop.index }}
+								</td>
+								<td class="table-item text-center">
+									{{ data.item|upper }}
+								</td>
+								<td class="table-item text-center" {% if data.returned %}style="text-decoration: line-through" {% endif %}>
+									{{ data.total_weight|round0(3) }}g
+								</td>
+								<td class="table-item text-right pe-2">
+									{% if data.test_weight %}
+										{{ data.test_weight|round0(3) }}g
+									{% else %}
+										-
+									{% endif %}
+								</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+	</body>
+
+	<script type="application/javascript">
+        (function () {
+            let afterPrint = function () {
+                window.close()
+            };
+
+            if (window.matchMedia) {
+                var mediaQueryList = window.matchMedia('print');
+                mediaQueryList.addListener(function (mql) {
+                    if (!mql.matches) {
+                        afterPrint();
+                    }
+                });
+            }
+            window.onafterprint = afterPrint;
+        }());
+        window.print();
+	</script>
+</html>

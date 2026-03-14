@@ -1,0 +1,62 @@
+<!-- File Path: templates/dashboard/auth/index.html -->
+{% extends 'dashboard/auth/page.html' %}
+
+{% block content %}
+	<div class="container d-flex flex-column h-100">
+		<div class="row align-items-center justify-content-center no-gutters h-100">
+			<div class="col-12 col-md-5 col-lg-4 py-8 py-md-11">
+				<h1 class="font-bold text-center">Sign in</h1>
+				<p class="text-center mb-6">Welcome!</p>
+				<form id="loginForm" class="mb-6" novalidate>
+					<div class="form-group">
+						<input id="email" class="form-control form-control-lg" name="email" type="email" placeholder="Enter your Email" minlength="5" maxlength="127" required>
+					</div>
+					<div class="form-group">
+						<input id="password" class="form-control form-control-lg" name="password" type="password" placeholder="Enter your Password" minlength="8" maxlength="30" required>
+					</div>
+					<div class="form-group d-flex justify-content-between">
+						<div class="custom-control custom-checkbox">
+							<input id="remember" class="custom-control-input" name="remember" type="checkbox" checked>
+							<label class="custom-control-label" for="remember">Remember me</label>
+						</div>
+					</div>
+					<button class="btn btn-lg btn-block btn-primary" type="submit">Sign in</button>
+				</form>
+			</div>
+		</div>
+	</div>
+{% endblock content %}
+
+{% block body %}
+	<script type="application/javascript" defer>
+        $(document).on('submit', '#loginForm', function (e) {
+            e.preventDefault();
+
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            let invalids = $(this).find('*:invalid');
+            if (invalids.length > 0) {
+                invalids.addClass('is-invalid')[0].reportValidity();
+                return;
+            }
+
+            let data = {};
+            $.each($(this).find(':input'), function (i, e) {
+                if ($(e).val()) {
+                    data[$(e).attr('name')] = $(e).fval();
+                }
+            });
+
+            $.ajax({
+                data: JSON.stringify(data),
+                contentType: "application/json",
+                type: 'POST',
+                url: '{{ url_for('api.auth.login') }}',
+            }).done(function (response, status, xhr) {
+                location.reload();
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.description);
+            });
+        });
+	</script>
+{% endblock body %}

@@ -35,12 +35,14 @@ class SilverCertificateRepository {
                 this.db.prepare(`
                     INSERT INTO silver_certificate_item (
                         id, silver_certificate_id, item_number, certificate_number, 
-                        item_type, gross_weight, test_weight, net_weight, 
+                        name, item_type, gross_weight, test_weight, net_weight, 
                         purity, fine_weight, item_total, returned, created
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
                     itemId, certId, itemNumber, certNum,
-                    calculated.item_name, calculated.gross_weight, calculated.test_weight,
+                    item.name || item.item_name || calculated.item_name,
+                    item.item_type || item.item_name || calculated.item_name,
+                    calculated.gross_weight, calculated.test_weight,
                     calculated.net_weight, calculated.purity, calculated.fine_weight,
                     item.item_total || 0, calculated.is_returned ? 1 : 0, timestamp
                 );
@@ -205,27 +207,54 @@ class SilverCertificateRepository {
     }
 
     updateItem(certId, itemId, updates) {
-        const parent = this.db.prepare('SELECT status FROM silver_certificate WHERE id = ?').get(certId);
-        if (parent && parent.status === 'DONE') {
-            throw new Error('409: Parent certificate is DONE and items cannot be modified');
-        }
+        return transaction(() => {
+            const parent = this.db.prepare('SELECT status FROM silver_certificate WHERE id = ?').get(certId);
+            if (parent && parent.status === 'DONE') {
+                throw new Error('409: Parent certificate is DONE and items cannot be modified');
+            }
 
-        delete updates.item_number;
-        if (Object.keys(updates).length === 0) return { changes: 0 };
+            const currentItem = this.db.prepare(`
+                SELECT * FROM silver_certificate_item WHERE id = ? AND silver_certificate_id = ? AND deletedon IS NULL
+            `).get(itemId, certId);
 
-        const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
-        const values = [...Object.values(updates), itemId, certId];
+            if (!currentItem) throw new Error('Item not found');
 
-        const result = this.db.prepare(`
-            UPDATE silver_certificate_item SET ${fields}
-            WHERE id = ? AND silver_certificate_id = ? AND deletedon IS NULL
-        `).run(...values);
+            const mergedInput = { ...currentItem, ...updates };
+            const calculated = CertificateCalculationService.calculateSilverItem({
+                gross_weight: mergedInput.gross_weight,
+                test_weight: mergedInput.test_weight,
+                purity: mergedInput.purity,
+                is_returned: mergedInput.returned == 1 || mergedInput.returned === true,
+                item_name: mergedInput.name || mergedInput.item_type
+            });
 
-        if (result.changes > 0) {
-            CertificateCalculationService.updateCertificateTotals(certId, this.db);
-        }
+            const fieldsToUpdate = {
+                name: mergedInput.name,
+                item_type: mergedInput.item_type,
+                gross_weight: calculated.gross_weight,
+                test_weight: calculated.test_weight,
+                net_weight: calculated.net_weight,
+                purity: calculated.purity,
+                fine_weight: calculated.fine_weight,
+                item_total: updates.item_total !== undefined ? updates.item_total : mergedInput.item_total || 0,
+                returned: calculated.is_returned ? 1 : 0,
+                certificate_number: mergedInput.certificate_number
+            };
 
-        return result;
+            const fields = Object.keys(fieldsToUpdate).map(k => `${k} = ?`).join(', ');
+            const values = [...Object.values(fieldsToUpdate), itemId, certId];
+
+            const result = this.db.prepare(`
+                UPDATE silver_certificate_item SET ${fields}
+                WHERE id = ? AND silver_certificate_id = ? AND deletedon IS NULL
+            `).run(...values);
+
+            if (result.changes > 0) {
+                CertificateCalculationService.updateCertificateTotals(certId, this.db);
+            }
+
+            return result;
+        })();
     }
 
     softDelete(id) {

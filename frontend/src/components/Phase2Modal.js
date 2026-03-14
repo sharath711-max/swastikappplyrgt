@@ -10,7 +10,7 @@ const CURRENT_SYSTEM = 'LAB';
 
 const getWeights = (item) => {
     const gross = Number(item.gross_weight || item.sample_weight || 0);
-    const test = Number(item.test_weight || 0);
+    const test = Number(item.test_weight || item.sample_weight || 0);
     const net = Number(item.net_weight || (gross - test));
     const loss = Number((gross - (test + net)).toFixed(3));
     return { gross, test, net, loss };
@@ -270,30 +270,25 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
         const win = window.open('', '_blank', 'width=420,height=600');
         if (!win) return;
         const w = getWeights(item);
-        const grossStr = `${w.gross}g`;
-        const sampleStr = w.sample > 0 ? `${w.sample}g` : '—';
-        const netStr = w.net > 0 ? `${w.net}g` : grossStr;
+        const sampleStr = w.test > 0 ? `${w.test}g` : '—';
+        const netStr = w.net > 0 ? `${w.net}g` : '—';
+        const weightStr = item.returned ? `${netStr} / ${sampleStr}` : sampleStr;
         const purityVal = Number(item.purity || 0);
         const dateStr = test.created_at
-            ? new Date(test.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
-            : new Date().toLocaleString('en-IN');
+            ? new Date(test.created_at).toLocaleDateString('en-IN')
+            : new Date().toLocaleDateString('en-IN');
         const tokenNo = item.item_no || item.item_number || test.auto_number || '—';
         const itemType = item.item_type || item.item_name || '—';
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Gold Test Report</title>
-        <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#fff;display:flex;justify-content:flex-end;padding:10px}.slip{width:280px;border:1.5px solid #1f2937;border-radius:12px;overflow:hidden;font-size:12px}.slip-header{background:#1f2937;color:white;padding:10px 14px;text-align:center}.lab-name{font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase}.lab-sub{font-size:10px;opacity:.75;margin-top:2px}.slip-body{padding:12px 14px}.row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed #e5e7eb}.row:last-child{border-bottom:none}.label{color:#6b7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}.value{font-weight:700;color:#111827;font-size:12px;text-align:right}.value.gold{color:#b45309}.purity-block{margin:12px 14px;background:#f9fafb;border:2px solid #1f2937;border-radius:10px;padding:12px;text-align:center}.purity-label{font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}.purity-value{font-size:28px;font-weight:900;color:#111827;line-height:1}.pct{font-size:16px}.slip-footer{background:#f3f4f6;padding:8px 14px;text-align:center;font-size:9px;color:#9ca3af;border-top:1px solid #e5e7eb}@media print{body{padding:0;justify-content:flex-end}.slip{border:1.5px solid #000;page-break-inside:avoid}@page{margin:5mm;size:80mm auto}}</style>
-        </head><body><div class="slip"><div class="slip-header"><div class="lab-name">Swastik Lab</div><div class="lab-sub">Gold Testing Report</div></div>
-        <div class="slip-body">
-        <div class="row"><span class="label">Token No</span><span class="value gold">${escapeHtml(tokenNo)}</span></div>
-        <div class="row"><span class="label">Date</span><span class="value">${dateStr}</span></div>
-        <div class="row"><span class="label">Customer</span><span class="value">${escapeHtml(test.customer_name || '—')}</span></div>
-        <div class="row"><span class="label">Item</span><span class="value">${escapeHtml(itemType)}</span></div>
-        <div class="row"><span class="label">Gross Wt</span><span class="value">${grossStr}</span></div>
-        <div class="row"><span class="label">Sample Wt</span><span class="value">${sampleStr}</span></div>
-        <div class="row"><span class="label">Net Wt</span><span class="value">${netStr}</span></div>
-        ${item.returned ? '<div class="row"><span class="label">Returned</span><span class="value">Yes</span></div>' : ''}
+        <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#fff;padding:0}.slip{position:relative;width:80mm;height:120mm;margin:0 auto;background:transparent;color:#111827}.slip-header,.slip-body,.row,.purity-block,.slip-footer{display:none!important}.value{position:absolute;font-size:4.8mm;font-weight:700;line-height:1;white-space:nowrap}.value-date{top:31mm;right:8mm;text-align:right}.value-no{top:31mm;left:24mm;text-align:left}.value-name{top:46mm;right:8mm;text-align:right}.value-weight{top:67mm;right:8mm;text-align:right}.value-item{top:85mm;right:8mm;text-align:right}.purity-box{position:absolute;right:11mm;top:103mm;min-width:24mm;text-align:center;font-size:7.2mm;font-weight:800;line-height:1}@media print{@page{margin:0;size:80mm 120mm}body{margin:0}.slip{margin:0}}</style>
+        </head><body><div class="slip">
+        <div class="value value-date">${dateStr}</div>
+        <div class="value value-no">${escapeHtml(tokenNo)}</div>
+        <div class="value value-name">${escapeHtml(test.customer_name || 'â€”')}</div>
+        <div class="value value-weight">${weightStr}</div>
+        <div class="value value-item">${escapeHtml(itemType)}</div>
         </div>
-        <div class="purity-block"><div class="purity-label">Gold Purity</div><div class="purity-value">${purityVal}<span class="pct">%</span></div></div>
-        <div class="slip-footer">Swastik Gold &amp; Silver Lab &bull; Testing Receipt</div></div>
+        <div class="purity-box">${purityVal}%</div></div>
         <script>window.onload=function(){setTimeout(function(){window.print();window.onafterprint=function(){window.close()};},150)};</script></body></html>`;
         win.document.open();
         win.document.write(html);

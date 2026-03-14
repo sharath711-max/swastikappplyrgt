@@ -1,0 +1,1175 @@
+<!-- File Path: templates/dashboard/silver_certificate/index.html -->
+{% extends 'dashboard/templates/page.html' %}
+
+{% block content %}
+	<div class="d-flex justify-content-between align-items-center w-100 mb-5">
+		<h2 class="m-0">Silver Certificate Testing <span class="text-primary">({{ to_certificate_number(Globals.by_key('silver_certificate').value + 1) }})</span></h2>
+		<button class="btn btn-lg btn-danger" data-bs-toggle="modal" data-bs-target="#newTestModal">
+			<i class="uil-plus me-2"></i>
+			New Test
+		</button>
+	</div>
+
+	<div class="row">
+		<div class="col-sm-1 col-md-4 col-lg-4 mb-3">
+			{% set ongoing = SilverCertificate.by_status('ongoing') %}
+			<div class="card flex-fill mb-0" style="border-radius: 5px">
+				<div class="card-header bg-primary d-flex justify-content-between">
+					<h2 class="text-white mb-0">Ongoing</h2>
+					<span id="ongoingTestCounter" class="badge rounded-pill bg-danger h-100" style="font-size: 1.1rem">{{ ongoing|length }}</span>
+				</div>
+				<div class="card-body bg-primary py-1 px-2 h-100">
+					<div id="ongoing">
+						{% for test in ongoing %}
+							<div id="test_{{ test.id }}" class="card cursor-pointer mb-3" data-status="ongoing">
+								<div class="card-header pb-1">
+									<div class="card-actions float-end">
+										<div class="dropdown show">
+											<a href="#" data-bs-toggle="dropdown" data-bs-display="static">
+												<i class="uil-ellipsis-h"></i>
+											</a>
+											<div class="dropdown-menu dropdown-menu-dark">
+												<a class="receiptBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-invoice"></i>Receipt
+												</a>
+												<a class="deleteBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-trash-alt"></i>Delete
+												</a>
+											</div>
+										</div>
+									</div>
+									<div class="ongoingTest d-flex align-items-center" data-test-id="{{ test.id }}">
+										<h5 class="card-title mb-0 me-2" style="font-size: 1.2rem">
+											{{ test.customer.name }} - {{ test.data[0].certificate_number }}
+										</h5>
+										<small>{{ "(+91 " + test.customer.phone+ ")" if test.customer.phone else "" }}</small>
+									</div>
+								</div>
+								<div class="ongoingTest card-body pb-0 pt-1" data-test-id="{{ test.id }}">
+									<p>{{ test.created.strftime("%d %b, %Y - %I:%M %p") }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-1 col-md-4 col-lg-4 mb-3">
+			{% set pending = SilverCertificate.by_status('pending') %}
+			<div class="card flex-fill mb-0" style="border-radius: 5px">
+				<div class="card-header bg-warning d-flex justify-content-between">
+					<h2 class="text-white mb-0">Tested</h2>
+					<span id="pendingTestCounter" class="badge rounded-pill bg-danger h-100" style="font-size: 1.1rem">{{ pending|length }}</span>
+				</div>
+				<div class="card-body bg-warning py-1 px-2 h-100">
+					<div id="tested">
+						{% for test in pending[::-1] %}
+							<div id="test_{{ test.id }}" class="card cursor-pointer mb-3" data-status="pending">
+								<div class="card-header pb-1">
+									<div class="card-actions float-end">
+										<div class="dropdown show">
+											<a href="#" data-bs-toggle="dropdown" data-bs-display="static">
+												<i class="uil-ellipsis-h"></i>
+											</a>
+											<div class="dropdown-menu dropdown-menu-dark">
+												<a class="receiptBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-invoice"></i>Receipt
+												</a>
+												<a class="smallCertificateBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-file-bookmark-alt"></i>Small Certificate
+												</a>
+												<a class="certificateBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-file-bookmark-alt"></i>Certificate
+												</a>
+												<a class="deleteBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-trash-alt"></i>Delete
+												</a>
+											</div>
+										</div>
+									</div>
+									<div class="pendingTest d-flex align-items-center" data-test-id="{{ test.id }}">
+										<h5 class="card-title mb-0 me-2" style="font-size: 1.2rem">
+											{{ test.customer.name }} - {{ test.data[0].certificate_number }}
+										</h5>
+										<small>{{ "(+91 " + test.customer.phone+ ")" if test.customer.phone else "" }}</small>
+									</div>
+								</div>
+								<div class="card-body pendingTest pb-0 pt-1" data-test-id="{{ test.id }}">
+									<p>{{ test.created.strftime("%d %b, %Y - %I:%M %p") }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-1 col-md-4 col-lg-4 mb-3">
+			{% set completed = SilverCertificate.by_status('completed', True) %}
+			<div class="card flex-fill mb-0" style="border-radius: 5px">
+				<div class="card-header bg-success d-flex justify-content-between">
+					<h2 class="text-white mb-0">Completed</h2>
+					<span id="completedTestCounter" class="badge rounded-pill bg-danger h-100" style="font-size: 1.1rem">{{ completed|length }}</span>
+				</div>
+				<div class="card-body bg-success py-1 px-2 h-100">
+					<div id="completed">
+						{% for test in completed[::-1] %}
+							<div id="test_{{ test.id }}" class="card cursor-pointer mb-3" data-status="completed">
+								<div class="card-header pb-1">
+									<div class="card-actions float-end">
+										<div class="dropdown dropstart show">
+											<a href="#" data-bs-toggle="dropdown" data-bs-display="static">
+												<i class="uil-ellipsis-h"></i>
+											</a>
+											<div class="dropdown-menu dropdown-menu-dark">
+												<a class="receiptBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-invoice"></i>Receipt
+												</a>
+												<a class="smallCertificateBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-file-bookmark-alt"></i>Small Certificate
+												</a>
+												<a class="certificateBtn dropdown-item" data-test-id="{{ test.id }}">
+													<i class="me-2 uil-file-bookmark-alt"></i>Certificate
+												</a>
+											</div>
+										</div>
+									</div>
+									<div class="completedTest d-flex align-items-center" data-test-id="{{ test.id }}">
+										<h5 class="card-title mb-0 me-2" style="font-size: 1.2rem">
+											{{ test.customer.name }} - {{ test.data[0].certificate_number }}
+										</h5>
+										<small>{{ "(+91 " + test.customer.phone+ ")" if test.customer.phone else "" }}</small>
+									</div>
+								</div>
+								<div class="card-body completedTest pb-0 pt-1" data-test-id="{{ test.id }}">
+									<p>{{ test.created.strftime("%d %b, %Y - %I:%M %p") }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="newTestModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-scrollable modal-xxl" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 id="newTestModalTitle" class="modal-title">New Silver Test</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<div class="input-group input-group-lg mb-3 w-100">
+						<span class="input-group-text fw-bold">Customer</span>
+						<select id="customerSelect" class="form-select" required>
+							<option value="" selected disabled></option>
+							{% for customer in Customer.all() if not customer.disabled %}
+								<option value="{{ customer.id }}">
+									{{ customer.name }}{{ ' (+91 '+ customer.phone +')' if customer.phone else '' }}
+								</option>
+							{% endfor %}
+						</select>
+						<span class="input-group-text fw-bold">Balance</span>
+						<input id="selectedCustomerBalance" class="form-control" value="0" style="flex: 0 0 20%" disabled>
+					</div>
+					<div class="d-flex justify-content-between align-items-center">
+						<a id="addCustomerBtn" href="#">Add New Customer?</a>
+						<h4 id="previousCertificate" class="mb-0"></h4>
+					</div>
+					<div id="addCustomerBlock">
+						<hr>
+						<form id="addCustomerForm" autocomplete="off" novalidate>
+							<div class="row">
+								<div class="col-lg-6">
+									<div class="input-group input-group-lg mb-3">
+										<span class="input-group-text fw-bold">Name</span>
+										<input class="form-control" name="name" type="text" required>
+									</div>
+								</div>
+								<div class="col-lg-6">
+									<div class="input-group input-group-lg mb-3">
+										<span class="input-group-text fw-bold">Phone</span>
+										<span class="input-group-text">+91</span>
+										<input class="form-control" name="phone" type="integer" data-mask="0000000000" minlength="10">
+									</div>
+								</div>
+								<div class="col-lg-6">
+									<div class="input-group input-group-lg mb-3">
+										<span class="input-group-text fw-bold">Initial Balance</span>
+										<input class="form-control" name="balance" type="number" value="0">
+									</div>
+								</div>
+								<div class="input-group input-group-lg mb-3">
+									<span class="input-group-text fw-bold">Notes</span>
+									<textarea class="form-control" name="notes"></textarea>
+								</div>
+							</div>
+							<div class="d-flex justify-content-end">
+								<button id="addCustomerSubmitBtn" type="submit" class="btn btn-primary m-1">
+									<div id="addCustomerSubmitSpinner" class="spinner-border spinner-border-sm d-none" role="status"></div>
+									Add
+								</button>
+							</div>
+						</form>
+					</div>
+					<div id="sampleDetailsBlock" class="d-none">
+						<hr>
+						<div class="d-flex justify-content-between align-items-center my-4">
+							<h4 class="m-0">Sample Details <span class="text-primary">({{ to_certificate_number(Globals.by_key('silver_certificate').value + 1) }})</span></h4>
+							<div class="input-group w-25">
+								<span class="input-group-text fw-bold">Date</span>
+								<input id="dateTimePicker" class="form-control" type="singleDateTime" name="created">
+								<div class="input-group-text">
+									<input class="form-check-input mt-0" type="checkbox" name="gst" checked>
+									<span class="ms-2 fw-bold">GST</span>
+								</div>
+							</div>
+						</div>
+						<div id="sampleDetailsContainer">
+							<div class="sampleDetails input-group input-group-lg mb-4">
+								<div class="input-group input-group-lg mb-1">
+									<span class="input-group-text fw-bold">Name</span>
+									<input class="form-control" type="text" name='name' placeholder="Name" maxlength="32">
+									<span class="input-group-text fw-bold">Item</span>
+									<input class="form-control" type="text" name='item' placeholder="Item type" maxlength="32" required>
+									<span class="input-group-text fw-bold">Weight</span>
+									<input class="form-control" type="number" name="total_weight" placeholder="Total weight" min="0" step="any" required>
+									<span class="input-group-text">/</span>
+									<input class="form-control" type="number" name="test_weight" placeholder="Test weight" min="0" step="any" value="0" required>
+									<div class="input-group-text">
+										<input class="form-check-input mt-0" type="checkbox" name="returned" checked>
+										<span class="ms-1 fw-bold">Sample Returned</span>
+									</div>
+									<button class="btn btn-danger deleteSampleDetailsBtn invisible">
+										<i class="uil-trash-alt"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+						<div class="d-flex justify-content-center">
+							<a class="btn btn-outline-info w-50 " id="addSampleBtn">
+								<i class="uil-plus"></i>
+							</a>
+						</div>
+						<div class="d-flex justify-content-end">
+							<button id="sampleDetailsSubmitBtn" class="btn btn-primary btn-lg d-flex align-items-center m-1">
+								<div id="sampleDetailsSubmitSpinner" class="spinner-border spinner-border-sm text-light me-3 d-none" role="status"></div>
+								Submit
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="purityModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-xxl" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 class="modal-title">Silver Purity Test</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<div class="row mb-0">
+						<div class="col-4">
+							<h4 class="fw-light text-center">Invoice Number</h4>
+							<p id="purityModalInvoiceNumber" class="fw-bold fs-3 text-center"></p>
+						</div>
+						<div class="col-4">
+							<h4 class="fw-light text-center">Customer Name</h4>
+							<p id="purityModalCustomerName" class="fw-bold fs-3 text-center"></p>
+						</div>
+						<div class="col-4">
+							<h4 class="fw-light text-center">Balance</h4>
+							<p id="purityModalCustomerBalance" class="fw-bold fs-3 text-center"></p>
+						</div>
+					</div>
+					<hr>
+					<form id="purityForm" class="w-100">
+						<table class="table table-striped">
+							<thead>
+								<tr>
+									<th>Certificate Number</th>
+									<th>Name</th>
+									<th>Item Type</th>
+									<th>Total Weight (g)</th>
+									<th>Sample Weight (g)</th>
+									<th>Purity (%)</th>
+									<th>Sample Returned?</th>
+									<th>Small Certificate</th>
+								</tr>
+							</thead>
+							<tbody id="purityModalTableBody"></tbody>
+						</table>
+						<div class="d-flex justify-content-end">
+							<button id="puritySaveBtn" class="btn btn-primary btn-lg m-1" type="button">
+								<div id="puritySaveSpinner" class="spinner-border spinner-border-sm text-light me-3 d-none" role="status"></div>
+								Save
+							</button>
+							<button id="puritySubmitBtn" class="btn btn-danger btn-lg m-1" type="submit">
+								<div id="puritySubmitSpinner" class="spinner-border spinner-border-sm text-light me-3 d-none" role="status"></div>
+								Submit
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="paymentModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-xxl" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 id="paymentModalTitle" class="modal-title">Payment & Delivery</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<div class="row mb-0">
+						<div class="col-3">
+							<h4 class="fw-light text-center">Invoice Number</h4>
+							<p id="paymentModalInvoiceNumber" class="fw-bold fs-3 text-center"></p>
+						</div>
+						<div class="col-6">
+							<h4 class="fw-light text-center">Customer Name</h4>
+							<p id="paymentModalCustomerName" class="fw-bold fs-3 text-center"></p>
+						</div>
+						<div class="col-3">
+							<h4 class="fw-light text-center">Balance</h4>
+							<p id="paymentModalCustomerBalance" class="fw-bold fs-3 text-center"></p>
+						</div>
+					</div>
+					<hr>
+					<form id="paymentCompletedForm">
+						<table class="table table-striped">
+							<thead>
+								<tr>
+									<th>Certificate Number</th>
+									<th>Name</th>
+									<th>Item Type</th>
+									<th>Total Weight (g)</th>
+									<th>Sample Weight (g)</th>
+									<th>Purity (%)</th>
+									<th>Sample Returned?</th>
+									<th>Small Certificate</th>
+									<th>Certificate</th>
+								</tr>
+							</thead>
+							<tbody id="paymentModalTableBody"></tbody>
+						</table>
+						<div class="d-flex justify-content-end">
+							<div id="paymentDetails" class="input-group input-group-lg mb-3 w-auto">
+								<span class="input-group-text">Weight Loss</span>
+								<span class="input-group-text">₹</span>
+								<input id="weightLoss" class="form-control" name="weight_loss" type="number" min="0" value="0" step="any" required>
+								<span class="input-group-text">Mode of Payment</span>
+								<select id="modeOfPayment" class="form-select flex-grow-1" type="text" name="mode_of_payment" required>
+									<option value="cash" selected>Cash</option>
+									<option value="upi">UPI</option>
+									<option value="balance">Balance</option>
+								</select>
+								<button id="paymentSaveBtn" class="btn btn-primary" type="button">
+									<div id="paymentSaveSpinner" class="spinner-border spinner-border-sm text-light me-3 d-none" role="status"></div>
+									Save
+								</button>
+								<button id="paymentSubmitBtn" class="btn btn-danger" type="submit">
+									<div id="paymentSubmitSpinner" class="spinner-border spinner-border-sm text-light me-3 d-none" role="status"></div>
+									Delivered
+								</button>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="completedModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-xxl" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 id="completedModalTitle" class="modal-title">Completed</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<div class="row mb-0">
+						<div class="col-3">
+							<h4 class="fw-light text-center">Invoice Number</h4>
+							<p id="completedModalInvoiceNumber" class="fw-bold fs-3 text-center"></p>
+						</div>
+						<div class="col-6">
+							<h4 class="fw-light text-center">Customer Name</h4>
+							<p id="completedModalCustomerName" class="fw-bold fs-3 text-center"></p>
+						</div>
+						<div class="col-3">
+							<h4 class="fw-light text-center">Balance</h4>
+							<p id="completedModalCustomerBalance" class="fw-bold fs-3 text-center"></p>
+						</div>
+					</div>
+					<hr>
+					<table class="table table-striped">
+						<thead>
+							<tr>
+								<th>Certificate Number</th>
+								<th>Name</th>
+								<th>Item Type</th>
+								<th>Total Weight (g)</th>
+								<th>Sample Weight (g)</th>
+								<th>Purity (%)</th>
+								<th>Sample Returned?</th>
+								<th>Small Certificate</th>
+								<th>Certificate</th>
+							</tr>
+						</thead>
+						<tbody id="completedModalTableBody"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+
+{% endblock content %}
+
+{% block body %}
+	{{ super() }}
+
+	{# Add Customer #}
+	<script type="application/javascript">
+        let addCustomerForm = $('#addCustomerForm');
+        let addCustomerSubmitBtn = $('#addCustomerSubmitBtn');
+        let addCustomerSubmitSpinner = $('#addCustomerSubmitSpinner');
+
+        addCustomerForm.on('submit', function (e) {
+            e.preventDefault();
+
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            let invalids = $(this).find('*:invalid');
+            if (invalids.length > 0) {
+                invalids.addClass('is-invalid')[0].reportValidity();
+                return;
+            }
+
+            addCustomerSubmitBtn.prop('disabled', true);
+            addCustomerSubmitSpinner.removeClass('d-none');
+
+            let data = {};
+            $.each($(this).find(':input'), function (i, e) {
+                if ($(e).val()) {
+                    data[$(e).attr('name')] = $(e).fval();
+                }
+            });
+
+            $.ajax({
+                data: JSON.stringify(data),
+                type: 'POST',
+                url: `{{ url_for('api.customer.customer') }}`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                customerSelect.append(`<option value="${response.data.id}">${response.data.name}</option>`);
+                initializeSpecialInputsNewTestModal();
+                customerSelect.val(response.data.id).trigger('change');
+                selectedCustomerBalance.val(response.data.balance);
+                addCustomerBlock.addClass('d-none');
+                sampleDetailsBlock.removeClass('d-none');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.description);
+            });
+            addCustomerSubmitBtn.prop('disabled', false);
+            addCustomerSubmitSpinner.addClass('d-none');
+        });
+	</script>
+
+	{# New Test #}
+	<script type="application/javascript">
+        let newTestModal = $('#newTestModal');
+        let customerSelect = $('#customerSelect');
+        let selectedCustomerBalance = $('#selectedCustomerBalance');
+        let addCustomerBlock = $('#addCustomerBlock');
+        let sampleDetailsBlock = $('#sampleDetailsBlock');
+        let dateTimePicker = $('#dateTimePicker');
+        let sampleDetailsContainer = $('#sampleDetailsContainer');
+        let sampleDetailsSubmitBtn = $('#sampleDetailsSubmitBtn');
+        let sampleDetailsSubmitSpinner = $('#sampleDetailsSubmitSpinner');
+
+        function initializeSpecialInputsNewTestModal() {
+            customerSelect.select2({
+                theme: "bootstrap5",
+                placeholder: "Select...",
+                dropdownParent: newTestModal,
+            });
+
+            dateTimePicker.daterangepicker({
+                startDate: new Date(),
+                singleDatePicker: true,
+                timePicker: true,
+                showDropdowns: true,
+                autoUpdateInput: true,
+                parentEl: newTestModal,
+                locale: {
+                    format: 'Do MMM YYYY, hh:mm A'
+                }
+            });
+        }
+
+        initializeSpecialInputsNewTestModal();
+
+        $('#addCustomerBtn').on('click', function () {
+            addCustomerBlock.removeClass('d-none');
+            sampleDetailsBlock.addClass('d-none');
+            customerSelect.val('').trigger('change');
+        });
+
+        customerSelect.on('select2:select', function (e) {
+            $.ajax({
+                type: 'GET',
+                url: `{{ url_for('api.customer.customer') }}${parseInt(customerSelect.val())}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                selectedCustomerBalance.val(response.data.balance);
+                addCustomerBlock.addClass('d-none');
+                sampleDetailsBlock.removeClass('d-none');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+
+        $('#addSampleBtn').on('click', function () {
+            let sampleDetailsInput = newTestModal.find('.sampleDetails').first().clone();
+            sampleDetailsInput.find('input').val('').removeClass('is-invalid');
+            sampleDetailsInput.find('[name=test_weight]').val(0);
+            sampleDetailsInput.find('.deleteSampleDetailsBtn').removeClass('invisible');
+            sampleDetailsContainer.append(sampleDetailsInput);
+        });
+
+        $(document).on('click', '.deleteSampleDetailsBtn', function () {
+            $(this).closest('.sampleDetails').remove();
+        });
+
+        sampleDetailsSubmitBtn.on('click', function () {
+            newTestModal.find('.sampleDetails .is-invalid').removeClass('is-invalid');
+            let data = [];
+            let errorsFound = false;
+            $.each(newTestModal.find('.sampleDetails'), function (i, details) {
+                let invalids = $(details).find('*:invalid');
+                if (invalids.length > 0) {
+                    invalids.addClass('is-invalid')[0].reportValidity();
+                    errorsFound = true;
+                    return
+                }
+                let sampleData = {};
+                $.each($(details).find(':input'), function (i, e) {
+                    if ($(e).attr('name')) {
+                        sampleData[$(e).attr('name')] = $(e).fval();
+                    }
+                });
+                if (sampleData.test_weight > sampleData.total_weight) {
+                    $(details).find('[name=test_weight]').addClass('is-invalid');
+                    errorsFound = true;
+                    return
+                }
+                data.push(sampleData);
+            });
+            if (errorsFound) {
+                return;
+            }
+            sampleDetailsSubmitBtn.prop('disabled', true);
+            sampleDetailsSubmitSpinner.removeClass('d-none');
+            $.ajax({
+                data: JSON.stringify({
+                    customer_id: parseInt(customerSelect.val()),
+                    created: dateTimePicker.fval(),
+                    gst: newTestModal.find('[name=gst]').fval(),
+                    data: data,
+                    sid: socket.id
+                }),
+                type: 'POST',
+                url: `{{ url_for('api.silver_certificate.crud') }}`,
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                newTestModal.modal('hide');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+            sampleDetailsSubmitBtn.prop('disabled', false);
+            sampleDetailsSubmitSpinner.addClass('d-none');
+        });
+
+        newTestModal.on('show.bs.modal', function () {
+            $(this).find(':input').val("").removeClass('is-invalid');
+            customerSelect.val(null).trigger('change');
+            initializeSpecialInputsNewTestModal();
+            addCustomerBlock.removeClass('d-none');
+            sampleDetailsBlock.addClass('d-none');
+            newTestModal.find('.sampleDetails').slice(1).remove();
+            newTestModal.find('[name=test_weight]').val(0);
+        });
+	</script>
+
+	{# Purity #}
+	<script type="application/javascript">
+        let purityModal = $('#purityModal');
+        let puritySaveBtn = $('#puritySaveBtn');
+        let puritySaveSpinner = $('#puritySaveSpinner');
+        let puritySubmitBtn = $('#puritySubmitBtn');
+        let puritySubmitSpinner = $('#puritySubmitSpinner');
+        let purityTestId = null;
+
+        $(document).on('click', '.ongoingTest', function () {
+            purityTestId = parseInt($(this).attr('data-test-id'));
+            $.ajax({
+                type: 'GET',
+                url: `{{ url_for('api.silver_certificate.crud') }}${purityTestId}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                $("#purityModalInvoiceNumber").text(response.data.bill_number);
+                $("#purityModalCustomerName").text(response.data.customer.name);
+                $("#purityModalCustomerBalance").text(response.data.customer.balance);
+                $('#purityModalTableBody').empty();
+                $.each(response.data.data, function (i, data) {
+                    $('#purityModalTableBody').append(`<tr class="sampleDetails">
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='certificate_number' value="${data.certificate_number}" disabled>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='name' placeholder="Name" maxlength="32" value="${data.name ? data.name : ""}">
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='item' placeholder="Item type" maxlength="32" value="${data.item}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="total_weight" placeholder="Total weight" min="0" step="0.01" value="${data.total_weight}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="test_weight" placeholder="Test weight" min="0" step="0.01" value="${data.test_weight}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="purity" placeholder="Purity" type="number" min="0" max="100" step="any" value="${data.purity ? data.purity : 0}" required>
+								<span class="input-group-text">%</span>
+							</div>
+						</td>
+						<td>
+							<div class="input-group d-flex justify-content-center w-100">
+								<input class="form-check-input" name="returned" ${data.returned ? 'checked' : ''} type="checkbox">
+							</div>
+						</td>
+						<td>
+							<a class="smallCertificateBtn" data-test-id="${response.data.id}" data-index="${i+1}">
+	                            <i class="me-2 uil-file-bookmark-alt"></i>
+	                        </a>
+						</td>
+					</tr>`);
+                });
+                purityModal.modal('show');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+
+        puritySaveBtn.on('click', function () {
+            puritySaveBtn.prop('disabled', true);
+            puritySaveSpinner.removeClass('d-none');
+            let data = [];
+            $.each(purityModal.find('.sampleDetails'), function (i, e) {
+                let sampleData = {};
+                $.each($(e).find(':input'), function (i, e) {
+                    if ($(e).attr('name')) {
+                        sampleData[$(e).attr('name')] = $(e).fval();
+                    }
+                });
+                data.push(sampleData);
+            });
+            $.ajax({
+                data: JSON.stringify({data: data, sid: socket.id}),
+                type: 'PUT',
+                url: `/api/silver-certificate/${purityTestId}/save/`,
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                notyf.success('Saved Successfully!');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+            puritySaveBtn.prop('disabled', false);
+            puritySaveSpinner.addClass('d-none');
+        });
+
+        $(document).on('submit', '#purityForm', function (e) {
+            e.preventDefault();
+
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            let invalids = $(this).find('*:invalid');
+            if (invalids.length > 0) {
+                invalids.addClass('is-invalid')[0].reportValidity();
+                return;
+            }
+
+            puritySubmitBtn.prop('disabled', true);
+            puritySubmitSpinner.removeClass('d-none');
+            let data = [];
+            $.each(purityModal.find('.sampleDetails'), function (i, e) {
+                let sampleData = {};
+                $.each($(e).find(':input'), function (i, e) {
+                    if ($(e).attr('name')) {
+                        sampleData[$(e).attr('name')] = $(e).fval();
+                    }
+                });
+                data.push(sampleData);
+            });
+            $.ajax({
+                data: JSON.stringify({data: data, status: 'pending', sid: socket.id}),
+                type: 'PUT',
+                url: `/api/silver-certificate/${purityTestId}/save/`,
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                purityModal.modal('hide');
+            }).fail(function (xhr, status, e) {
+                puritySubmitBtn.prop('disabled', false);
+                puritySubmitSpinner.addClass('d-none');
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+            puritySubmitBtn.prop('disabled', false);
+            puritySubmitSpinner.addClass('d-none');
+        });
+	</script>
+
+	{# Payment #}
+	<script type="application/javascript">
+        let paymentModal = $("#paymentModal");
+        let paymentSaveBtn = $('#paymentSaveBtn');
+        let paymentSaveSpinner = $('#paymentSaveSpinner');
+        let paymentSubmitBtn = $('#paymentSubmitBtn');
+        let paymentSubmitSpinner = $('#paymentSubmitSpinner');
+        let paymentTestId = null;
+
+        $(document).on('click', '.pendingTest', function () {
+            paymentTestId = parseInt($(this).attr('data-test-id'));
+            $.ajax({
+                type: 'GET',
+                url: `{{ url_for('api.silver_certificate.crud') }}${paymentTestId}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                $("#paymentModalInvoiceNumber").text(response.data.bill_number);
+                $("#paymentModalCustomerName").text(response.data.customer.name);
+                $("#paymentModalCustomerBalance").text(response.data.customer.balance);
+                paymentModal.modal('show');
+                $("#paymentModalTableBody").empty();
+                $.each(response.data.data, function (i, data) {
+                    $('#paymentModalTableBody').append(`<tr class="sampleDetails">
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='certificate_number' value="${data.certificate_number}" disabled>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='name' placeholder="Name" maxlength="32" value="${data.name ? data.name : ""}">
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="text" name='item' placeholder="Item type" maxlength="32" value="${data.item}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="total_weight" placeholder="Total weight" min="0" step="0.01" value="${data.total_weight}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="test_weight" placeholder="Test weight" min="0" step="0.01" value="${data.test_weight}" required>
+							</div>
+						</td>
+						<td>
+							<div class="input-group w-100">
+								<input class="form-control" type="number" name="purity" placeholder="Purity" type="number" min="0" max="100" step="any" value="${data.purity ? data.purity : 0}" required>
+								<span class="input-group-text">%</span>
+							</div>
+						</td>
+						<td>
+							<div class="input-group d-flex justify-content-center w-100">
+								<input class="form-check-input" name="returned" ${data.returned ? 'checked' : ''} type="checkbox">
+							</div>
+						</td>
+						<td>
+							<a class="smallCertificateBtn" data-test-id="${response.data.id}" data-index="${i+1}">
+	                            <i class="me-2 uil-file-bookmark-alt"></i>
+	                        </a>
+						</td>
+						<td>
+							<a class="certificateBtn" data-test-id="${response.data.id}" data-index="${i+1}">
+	                            <i class="me-2 uil-file-bookmark-alt"></i>
+	                        </a>
+						</td>
+					</tr>`);
+                });
+                $("#weightLoss").val(0);
+                $("#modeOfPayment").val(response.data.mode_of_payment);
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+
+        paymentSaveBtn.on('click', function () {
+            paymentSaveBtn.prop('disabled', true);
+            paymentSaveSpinner.removeClass('d-none');
+            let data = {data: [], sid: socket.id};
+            $.each(paymentModal.find('.sampleDetails'), function (i, e) {
+                let sampleData = {};
+                $.each($(e).find(':input'), function (i, e) {
+                    if ($(e).attr('name')) {
+                        sampleData[$(e).attr('name')] = $(e).fval();
+                    }
+                });
+                data.data.push(sampleData);
+            });
+            $.each($('#paymentDetails').find(':input'), function (i, e) {
+                if ($(e).val()) {
+                    data[$(e).attr('name')] = $(e).fval();
+                }
+            });
+
+            $.ajax({
+                data: JSON.stringify(data),
+                type: 'PUT',
+                url: `/api/silver-certificate/${paymentTestId}/save/`,
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                notyf.success('Saved Successfully!');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+            paymentSaveBtn.prop('disabled', false);
+            paymentSaveSpinner.addClass('d-none');
+        });
+
+        $(document).on('submit', '#paymentCompletedForm', function (e) {
+            e.preventDefault();
+
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            let invalids = $(this).find('*:invalid');
+            if (invalids.length > 0) {
+                invalids.addClass('is-invalid')[0].reportValidity();
+                return;
+            }
+
+            paymentSubmitBtn.prop('disabled', true);
+            paymentSaveSpinner.removeClass('d-none');
+
+            let data = {data: [], sid: socket.id};
+            $.each(paymentModal.find('.sampleDetails'), function (i, e) {
+                let sampleData = {};
+                $.each($(e).find(':input'), function (i, e) {
+                    if ($(e).attr('name')) {
+                        sampleData[$(e).attr('name')] = $(e).fval();
+                    }
+                });
+                data.data.push(sampleData);
+            });
+            $.each($('#paymentDetails').find(':input'), function (i, e) {
+                if ($(e).val()) {
+                    data[$(e).attr('name')] = $(e).fval();
+                }
+            });
+
+            $.ajax({
+                data: JSON.stringify(data),
+                type: 'PUT',
+                url: `/api/silver-certificate/${paymentTestId}/complete/`,
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                paymentModal.modal('hide');
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+            paymentSubmitBtn.prop('disabled', false);
+            paymentSaveSpinner.addClass('d-none');
+        });
+	</script>
+
+	{# Completed #}
+	<script type="application/javascript">
+        let completedModal = $("#completedModal");
+        let completedTestId = null;
+
+        $(document).on('click', '.completedTest', function () {
+            completedTestId = parseInt($(this).attr('data-test-id'));
+            $.ajax({
+                type: 'GET',
+                url: `{{ url_for('api.silver_certificate.crud') }}${completedTestId}/`,
+                contentType: 'application/json',
+            }).done(function (response, status, xhr) {
+                $("#completedModalInvoiceNumber").text(response.data.bill_number);
+                $("#completedModalCustomerName").text(response.data.customer.name);
+                $("#completedModalCustomerBalance").text(response.data.customer.balance);
+                completedModal.modal('show');
+                $("#completedModalTableBody").empty();
+                $.each(response.data.data, function (i, data) {
+                    $('#completedModalTableBody').append(`<tr class="sampleDetails">
+						<td>${data.certificate_number}</td>
+						<td>${data.name ? data.name : ""}</td>
+						<td>${data.item}</td>
+						<td>${data.total_weight}</td>
+						<td>${data.test_weight}</td>
+						<td>${data.purity ? data.purity : 0}</td>
+						<td>${data.returned ? 'Yes' : 'No'}</td>
+						<td>
+							<a class="smallCertificateBtn" data-test-id="${response.data.id}" data-index="${i+1}">
+	                            <i class="me-2 uil-file-bookmark-alt"></i>
+	                        </a>
+						</td>
+						<td>
+							<a class="certificateBtn" data-test-id="${response.data.id}" data-index="${i+1}">
+	                            <i class="me-2 uil-file-bookmark-alt"></i>
+	                        </a>
+						</td>
+					</tr>`);
+                });
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+	</script>
+
+	{# Delete #}
+	<script type="application/javascript">
+        $(document).on('click', '.deleteBtn', function (e) {
+            e.stopPropagation();
+            $.ajax({
+                type: 'DELETE',
+                url: `{{ url_for('api.silver_certificate.crud') }}${parseInt($(this).attr('data-test-id'))}`,
+                contentType: 'application/json',
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+	</script>
+
+	{# Prints #}
+	<script type="application/javascript">
+        $(document).on('click', '.receiptBtn', function (e) {
+            e.stopPropagation();
+            let url = `/dashboard/silver-certificate/${$(this).attr('data-test-id')}/receipt/`;
+            window.open(url, '_blank', 'location=yes,height=750,width=400,scrollbars=yes,status=yes');
+        });
+
+        $(document).on('click', '.smallCertificateBtn', function (e) {
+            e.stopPropagation();
+            let test_id = $(this).attr('data-test-id');
+            let index = $(this).attr('data-index');
+            let url = `/dashboard/silver-certificate/${test_id}/small-certificate/${index ? index: ''}`;
+            window.open(url, '_blank', 'location=yes,height=750,width=600,scrollbars=yes,status=yes');
+        });
+
+        $(document).on('click', '.certificateBtn', function (e) {
+            e.stopPropagation();
+            let test_id = $(this).attr('data-test-id');
+            let index = $(this).attr('data-index');
+            let url = `/dashboard/silver-certificate/${test_id}/certificate/${index ? index: ''}`;
+            window.open(url, '_blank', 'location=yes,height=750,width=600,scrollbars=yes,status=yes');
+        });
+	</script>
+
+	{# sockets #}
+	<script type="application/javascript">
+        let socket = io.connect(window.location.protocol + '//' + document.domain + ':' + location.port);
+        socket.emit('join', {'room': 'silver_certificate'});
+
+        {% raw %}
+        let ongoingTest = Handlebars.compile(
+            `<div id="test_{{test_id}}" class="card cursor-pointer mb-3" data-status="ongoing">
+		        <div class="card-header pb-1">
+		            <div class="card-actions float-end">
+		                <div class="dropdown show dropstart">
+		                    <a href="#" data-bs-toggle="dropdown" data-bs-display="static">
+		                        <i class="uil-ellipsis-h"></i>
+		                    </a>
+		                    <div class="dropdown-menu dropdown-menu-dark">
+		                        <a class="receiptBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-invoice"></i>Receipt
+								</a>
+								<a class="deleteBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-trash-alt"></i>Delete
+								</a>
+		                    </div>
+		                </div>
+		            </div>
+		            <div class="ongoingTest d-flex align-items-center" data-test-id="{{test_id}}">
+		                <h5 class="card-title mb-0 me-2" style="font-size: 1.2rem">
+		                    {{name}} - {{certificate_number}}
+		                </h5>
+		                {{#if phone}}
+		                    <small>(+91 {{phone}})</small>
+		                {{/if}}
+		            </div>
+		        </div>
+		        <div class="card-body ongoingTest pb-0 pt-1" data-test-id="{{test_id}}">
+		            <p>{{created}}</p>
+		        </div>
+		    </div>`
+        );
+        let pendingTest = Handlebars.compile(
+            `<div id="test_{{test_id}}" class="card cursor-pointer mb-3" data-status="pending">
+			    <div class="card-header pb-1">
+			        <div class="card-actions float-end">
+			            <div class="dropdown show">
+			                <a href="#" data-bs-toggle="dropdown" data-bs-display="static">
+			                    <i class="uil-ellipsis-h"></i>
+			                </a>
+			                <div class="dropdown-menu dropdown-menu-dark">
+			                    <a class="receiptBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-invoice"></i>Receipt
+								</a>
+								<a class="smallCertificateBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-file-bookmark-alt"></i>Small Certificate
+								</a>
+								<a class="certificateBtn dropdown-item" data-test-id="{{ test.id }}">
+									<i class="me-2 uil-file-bookmark-alt"></i>Certificate
+								</a>
+								<a class="deleteBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-trash-alt"></i>Delete
+								</a>
+			                </div>
+			            </div>
+			        </div>
+			        <div class="pendingTest d-flex align-items-center" data-test-id="{{ test_id }}">
+			            <h5 class="card-title mb-0 me-2" style="font-size: 1.2rem">
+			                {{name}} - {{certificate_number}}
+			            </h5>
+			            {{#if phone}}
+			                <small>(+91 {{phone}})</small>
+			            {{/if}}
+			        </div>
+			    </div>
+			    <div class="card-body pendingTest pb-0 pt-1" data-test-id="{{ test_id }}">
+			        <p>{{created}}</p>
+			    </div>
+			</div>`
+        );
+        let completedTest = Handlebars.compile(
+            `<div id="completed_{{test_id}}" class="card cursor-pointer mb-3" data-status="completed">
+		        <div class="card-header pb-1">
+		            <div class="card-actions float-end">
+		                <div class="dropdown dropstart show">
+		                    <a href="#" data-bs-toggle="dropdown" data-bs-display="static">
+		                        <i class="uil-ellipsis-h"></i>
+		                    </a>
+		                    <div class="dropdown-menu dropdown-menu-dark">
+		                        <a class="receiptBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-invoice"></i>Receipt
+								</a>
+								<a class="smallCertificateBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-file-bookmark-alt"></i>Small Certificate
+								</a>
+								<a class="certificateBtn dropdown-item" data-test-id="{{ test_id }}">
+									<i class="me-2 uil-file-bookmark-alt"></i>Certificate
+								</a>
+		                    </div>
+		                </div>
+		            </div>
+		            <div class="completedTest d-flex align-items-center" data-test-id="{{ test_id }}">
+		                <h5 class="card-title mb-0 me-2" style="font-size: 1.2rem">
+		                    {{name}} - {{certificate_number}}
+		                </h5>
+		                {{#if phone}}
+		                    <small>(+91 {{phone}})</small>
+		                {{/if}}
+		            </div>
+		        </div>
+		        <div class="card-body completedTest pb-0 pt-1" data-test-id="{{ test_id }}">
+		            <p>{{created}}</p>
+		        </div>
+		    </div>`
+        );
+        {% endraw %}
+
+        function removeTest(test_id) {
+            let card = $(`#test_${test_id}`);
+            let status = card.attr('data-status');
+            card.remove();
+            let testCounter = $('#' + status + 'TestCounter');
+            testCounter.text(parseInt(testCounter.text()) - 1);
+        }
+
+        socket.on('added', function (data) {
+		    let ongoingTestCard = ongoingTest({
+		        test_id: data.data.id,
+		        name: data.data.customer.name,
+		        bill_number: data.data.bill_number,
+		        phone: data.data.customer.phone,
+		        created: moment(data.data.created).format('Do MMM, YYYY - hh:mm A'),
+		    });
+		    $("#ongoing").append(ongoingTestCard);
+		    let ongoingTestCounter = $("#ongoingTestCounter");
+		    ongoingTestCounter.text(parseInt(ongoingTestCounter.text()) + 1);
+            if (socket.id === data.sender) {
+                $(`#test_${data.data.id}`).find('.receiptBtn').trigger('click');
+                location.reload();
+            }
+		});
+
+		socket.on('pending', function (data) {
+            removeTest(data.data.id);
+
+		    let pendingTestCard = pendingTest({
+		        test_id: data.data.id,
+		        name: data.data.customer.name,
+		        bill_number: data.data.bill_number,
+		        certificate_number: data.data.data[0].certificate_number,
+		        phone: data.data.customer.phone,
+		        created: moment(data.data.created).format('Do MMM, YYYY - hh:mm A'),
+		    });
+		    $("#tested").prepend(pendingTestCard);
+		    let pendingTestCounter = $("#pendingTestCounter");
+		    pendingTestCounter.text(parseInt(pendingTestCounter.text()) + 1);
+            if (socket.id === data.sender) {
+                $(`#test_${data.data.id}`).find('.smallCertificateBtn').trigger('click');
+            }
+		});
+
+		socket.on('completed', function (data) {
+		    removeTest(data.data.id);
+
+		    let completedTestCard = completedTest({
+		        test_id: data.data.id,
+		        name: data.data.customer.name,
+		        bill_number: data.data.bill_number,
+
+		        phone: data.data.customer.phone,
+		        created: moment(data.data.created).format('Do MMM, YYYY - hh:mm A'),
+		    });
+		    $("#completed").prepend(completedTestCard);
+		    let completedTestCounter = $("#completedTestCounter");
+		    completedTestCounter.text(parseInt(completedTestCounter.text()) + 1);
+            if (socket.id === data.sender) {
+                $(`#test_${data.data.id}`).find('.certificateBtn').trigger('click');
+            }
+		});
+
+		socket.on('deleted', function (data) {
+	        removeTest(data);
+		});
+	</script>
+{% endblock body %}

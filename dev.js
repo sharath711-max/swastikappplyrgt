@@ -317,6 +317,96 @@ function checkDatabase() {
     }
 }
 
+function startFrontendProcess(processes, lanIp) {
+    log('Starting Frontend (port 3000)...', colors.green);
+
+    try {
+        const clientEnv = {
+            ...process.env,
+            HOST: '0.0.0.0',
+            PORT: '3000',
+            BROWSER: 'none',
+            REACT_APP_API_URL: `http://${lanIp}:5000/api`,
+            REACT_APP_LAN_IP: lanIp,
+            GENERATE_SOURCEMAP: 'false'
+        };
+
+        const client = spawn('npm', ['start'], {
+            cwd: path.join(__dirname, 'frontend'),
+            stdio: 'pipe',
+            shell: true,
+            env: clientEnv
+        });
+
+        processes.push(client);
+
+        client.stdout.on('data', (data) => {
+            const output = data.toString().trim();
+            if (output.includes('Compiled successfully')) {
+                log(`Frontend started: ${output}`, colors.green);
+            }
+            console.log(`[Frontend] ${output}`);
+        });
+
+        client.stderr.on('data', (data) => {
+            console.error(`[Frontend Error] ${data.toString().trim()}`);
+        });
+
+        client.on('error', (err) => {
+            log(`Frontend failed to start: ${err.message}`, colors.red);
+        });
+
+    } catch (error) {
+        log(`Failed to start frontend: ${error.message}`, colors.red);
+    }
+}
+
+function startBackendProcess(processes, lanIp) {
+    log('\nStarting Backend (port 5000)...', colors.green);
+
+    try {
+        const corsAllowedOrigins = [
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            `http://${lanIp}:3000`
+        ].join(',');
+
+        const server = spawn('npm', ['run', 'dev'], {
+            cwd: path.join(__dirname, 'backend'),
+            stdio: 'pipe',
+            shell: true,
+            env: {
+                ...process.env,
+                PORT: '5000',
+                HOST: '0.0.0.0',
+                NODE_ENV: 'development',
+                CORS_ALLOWED_ORIGINS: corsAllowedOrigins
+            }
+        });
+
+        processes.push(server);
+
+        server.stdout.on('data', (data) => {
+            const output = data.toString().trim();
+            if (output.includes('Server running')) {
+                log(`Backend started: ${output}`, colors.green);
+            }
+            console.log(`[Backend] ${output}`);
+        });
+
+        server.stderr.on('data', (data) => {
+            console.error(`[Backend Error] ${data.toString().trim()}`);
+        });
+
+        server.on('error', (err) => {
+            log(`Backend failed to start: ${err.message}`, colors.red);
+        });
+
+    } catch (error) {
+        log(`Failed to start backend: ${error.message}`, colors.red);
+    }
+}
+
 /**
  * Start the application
  */
@@ -396,6 +486,14 @@ async function start() {
     process.on('SIGTERM', cleanup);
     process.on('exit', cleanup);
 
+    startFrontendProcess(processes, lanIp);
+
+    // Wait a bit before starting backend
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    startBackendProcess(processes, lanIp);
+
+    if (false) {
     // Start Backend
     log('🟢 Starting Backend (port 5000)...', colors.green);
     try {
@@ -476,6 +574,7 @@ async function start() {
 
     } catch (error) {
         log(`❌ Failed to start frontend: ${error.message}`, colors.red);
+    }
     }
 
     // Display success message after both services are (hopefully) running

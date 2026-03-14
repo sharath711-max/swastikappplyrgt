@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const listService = require('../services/listService');
+const { authMiddleware } = require('../middleware/authMiddleware');
+
+router.use(authMiddleware);
 
 router.get('/:type', async (req, res) => {
     try {

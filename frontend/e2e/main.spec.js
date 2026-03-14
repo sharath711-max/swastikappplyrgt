@@ -1,6 +1,10 @@
 const { test, expect } = require('@playwright/test');
 
 const API_BASE = process.env.E2E_API_URL || 'http://127.0.0.1:5000/api';
+const DEFAULT_ADMIN = {
+    username: 'admin',
+    password: 'admin123',
+};
 const TEST_USER = {
     username: `pw_admin_${Date.now()}`,
     password: 'Playwright#123',
@@ -66,7 +70,14 @@ async function login(page) {
 
 test.describe('Swastik Gold & Silver Lab - Full E2E', () => {
     test.beforeAll(async ({ request }) => {
+        const bootstrapLogin = await request.post(`${API_BASE}/auth/login`, {
+            data: DEFAULT_ADMIN,
+        });
+        expect(bootstrapLogin.status()).toBe(200);
+
+        const bootstrapBody = await bootstrapLogin.json();
         const response = await request.post(`${API_BASE}/auth/register`, {
+            headers: { Authorization: `Bearer ${bootstrapBody.token}` },
             data: TEST_USER,
         });
 

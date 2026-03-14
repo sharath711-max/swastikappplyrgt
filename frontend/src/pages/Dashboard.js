@@ -110,6 +110,13 @@ const Dashboard = () => {
         .slice(0, 6);
 
     const PIE_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#6366f1'];
+    const weightLossCauses = analytics?.weightLossCauses || [];
+
+    const truncateLegendLabel = (value, maxLength = 34) => {
+        if (!value) return 'Unknown';
+        if (value.length <= maxLength) return value;
+        return `${value.slice(0, maxLength - 1)}…`;
+    };
 
     return (
         <div className="dashboard-container">
@@ -272,27 +279,45 @@ const Dashboard = () => {
 
                             <div className="panel-card">
                                 <h3 className="panel-title">Weight Loss Vectors</h3>
-                                <div style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {(analytics.weightLossCauses || []).length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
+                                <div className="chart-shell chart-shell-pie">
+                                    {weightLossCauses.length > 0 ? (
+                                        <>
+                                            <div className="pie-chart-area">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
                                                 <Pie
-                                                    data={analytics.weightLossCauses || []}
+                                                    data={weightLossCauses}
                                                     cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={70}
-                                                    outerRadius={100}
-                                                    paddingAngle={5}
+                                                    cy="46%"
+                                                    innerRadius={52}
+                                                    outerRadius={82}
+                                                    paddingAngle={3}
                                                     dataKey="value"
                                                 >
-                                                    {(analytics.weightLossCauses || []).map((entry, index) => (
+                                                    {weightLossCauses.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                                                     ))}
                                                 </Pie>
                                                 <Tooltip formatter={(value) => value + 'g'} />
-                                                <Legend iconType="circle" />
-                                            </PieChart>
-                                        </ResponsiveContainer>
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <div className="weight-loss-legend" aria-label="Weight loss legend">
+                                                {weightLossCauses.map((entry, index) => (
+                                                    <div className="weight-loss-legend-item" key={`${entry.name || 'unknown'}-${index}`}>
+                                                        <span
+                                                            className="weight-loss-legend-dot"
+                                                            style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                                                            aria-hidden="true"
+                                                        />
+                                                        <span className="weight-loss-legend-text" title={entry.name || 'Unknown'}>
+                                                            {truncateLegendLabel(entry.name)}
+                                                        </span>
+                                                        <span className="weight-loss-legend-value">{entry.value}g</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
                                     ) : (
                                         <div className="empty-state">No weight loss recorded</div>
                                     )}

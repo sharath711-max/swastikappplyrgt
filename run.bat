@@ -72,11 +72,13 @@ REM --- Create .env for backend if missing ---
 if not exist "backend\.env" (
     echo.
     echo  [WARN] backend\.env not found. Creating defaults...
+    for /f "usebackq delims=" %%S in (`powershell -NoProfile -Command "$bytes = New-Object byte[] 48; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes); [Convert]::ToBase64String($bytes)"`) do set "GENERATED_JWT_SECRET=%%S"
     (
         echo PORT=5000
         echo HOST=0.0.0.0
         echo DB_PATH=./db/lab.db
-        echo JWT_SECRET=swastik-lab-secret-key-change-in-production
+        echo JWT_SECRET=!GENERATED_JWT_SECRET!
+        echo CORS_ALLOWED_ORIGINS=http://localhost:3000
         echo NODE_ENV=development
     ) > "backend\.env"
     echo  [OK] backend\.env created

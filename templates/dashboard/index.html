@@ -1,0 +1,466 @@
+<!-- File Path: templates/dashboard/index.html -->
+﻿{% extends 'dashboard/templates/page.html' %}
+
+{% block content %}
+	{% set total_revenue = revenue() %}
+	{% set revenue_today = revenue(today=True) %}
+	{% set total_expense = expense() %}
+	{% set expense_today = expense(today=True) %}
+	{% set cash_in_hand = cash_in_hand() %}
+
+	<div class="col-12">
+		<div class="row">
+			<div class="col-6">
+				<div class="row">
+					<div class="col-6 d-flex">
+						<div class="card illustration flex-fill">
+							<div class="card-body p-0 d-flex flex-fill">
+								<div class="row g-0 w-100">
+									<div class="col-6 d-flex align-items-center">
+										<h2 class="illustration-text p-3 m-1">Welcome Back!</h2>
+									</div>
+									<div class="col-6 align-self-end text-end">
+										<img src="{{ url_for('static', filename='media/welcome.png') }}"
+										     class="img-fluid illustration-img">
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-6 d-flex">
+						<a class="w-100 text-decoration-none" href="{{ url_for('dashboard.customer.index') }}" style="color: inherit">
+							<div class="card flex-fill">
+								<div class="card-body py-4">
+									<div class="d-flex">
+										<div class="flex-grow-1">
+											<h1 class="mb-2">{{ Customer.query.filter(Customer.disabled==False).all()|length }}</h1>
+											<p class="mb-2">Active Customers</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</a>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-6 d-flex">
+						<a class="w-100 text-decoration-none" style="color: inherit" data-bs-toggle="modal" data-bs-target="#revenueTodayModal">
+							<div class="card flex-fill">
+								<div class="card-body py-4">
+									<div class="d-flex">
+										<div class="flex-grow-1">
+											<h1 class="mb-2">₹ {{ revenue_today.total | round(2) }}</h1>
+											<p class="mb-2">Revenue today</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</a>
+					</div>
+					<div class="col-6 d-flex">
+						<a class="w-100 text-decoration-none" style="color: inherit" data-bs-toggle="modal" data-bs-target="#totalRevenueModal">
+							<div class="card flex-fill">
+								<div class="card-body py-4">
+									<div class="d-flex">
+										<div class="flex-grow-1">
+											<h1 class="mb-2">₹ {{ total_revenue.total | round(2) }}</h1>
+											<p class="mb-2">Total Revenue</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="col-3 d-flex pb-4">
+				<div class="card flex-fill cursor-pointer h-100 mb-0" data-bs-toggle="modal" data-bs-target="#customerCreditModal">
+					<div class="card-body bg-info text-white py-4 h-100" style="border-radius: 5px">
+						<div class="d-flex flex-column h-100 justify-content-center align-items-center">
+							<div class="d-flex flex-column align-items-center mb-4">
+								<i class="uil-money-insert" style="font-size: 3rem"></i>
+							</div>
+							<h1 class="mb-2 text-white text-center" style="font-size: 1.6rem">Customer Credit</h1>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-3 d-flex pb-4">
+				<div class="card flex-fill cursor-pointer h-100 mb-0" data-bs-toggle="modal" data-bs-target="#weightLossModal">
+					<div class="card-body bg-dark text-white py-4 h-100" style="border-radius: 5px">
+						<div class="d-flex flex-column h-100 justify-content-center align-items-center">
+							<div class="d-flex flex-column align-items-center mb-4">
+								<i class="uil-balance-scale" style="font-size: 3rem"></i>
+							</div>
+							<h1 class="mb-2 text-white text-center" style="font-size: 1.6rem">Weight Loss</h1>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+		<div class="row">
+			<div class="col-3 d-flex pb-4">
+				<a href="{{ url_for('dashboard.gold_test.index') }}" class="w-100 text-decoration-none">
+					<div class="card flex-fill cursor-pointer h-100 mb-0">
+						<div class="card-body bg-warning text-white py-4 h-100" style="border-radius: 5px">
+							<div class="d-flex flex-column h-100 justify-content-center align-items-center">
+								<div class="d-flex flex-column align-items-center mb-4">
+									<i class="uil-gold" style="font-size: 3rem"></i>
+								</div>
+								<h1 class="mb-2 text-white text-center" style="font-size: 1.6rem">Gold Testing</h1>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+			<div class="col-3 d-flex pb-4">
+				<a href="{{ url_for('dashboard.gold_certificate.index') }}" class="w-100 text-decoration-none">
+					<div class="card flex-fill cursor-pointer h-100 mb-0">
+						<div class="card-body bg-danger text-white py-4 h-100" style="border-radius: 5px">
+							<div class="d-flex flex-column h-100 justify-content-center align-items-center">
+								<div class="d-flex flex-column align-items-center mb-4">
+									<i class="uil-file-check-alt" style="font-size: 3rem"></i>
+								</div>
+								<h1 class="mb-2 text-white text-center" style="font-size: 1.6rem">Gold Certificate</h1>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+			<div class="col-3 d-flex pb-4">
+				<a href="{{ url_for('dashboard.silver_certificate.index') }}" class="w-100 text-decoration-none">
+					<div class="card flex-fill cursor-pointer h-100 mb-0">
+						<div class="card-body bg-primary-light text-white py-4 h-100" style="border-radius: 5px">
+							<div class="d-flex flex-column h-100 justify-content-center align-items-center">
+								<div class="d-flex flex-column align-items-center mb-4">
+									<i class="uil uil-vertical-distribute-bottom" style="font-size: 3rem"></i>
+								</div>
+								<h1 class="mb-2 text-white text-center" style="font-size: 1.6rem">
+									Silver Certificate</h1>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+			<div class="col-3 d-flex pb-4">
+				<a href="{{ url_for('dashboard.photo_certificate.index') }}" class="w-100 text-decoration-none">
+					<div class="card flex-fill cursor-pointer h-100 mb-0">
+						<div class="card-body bg-success text-white py-4 h-100" style="border-radius: 5px">
+							<div class="d-flex flex-column h-100 justify-content-center align-items-center">
+								<div class="d-flex flex-column align-items-center mb-4">
+									<i class="uil-scenery" style="font-size: 3rem"></i>
+								</div>
+								<h1 class="mb-2 text-white text-center" style="font-size: 1.6rem">Photo Certificate</h1>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<div id="revenueTodayModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 class="modal-title">Revenue Today</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body pb-0">
+
+					<div class="row">
+						<div class="col-3">
+							<h1 class="text-center text-success m-0">₹ {{ revenue_today.total }}</h1>
+							<p class="text-center m-0">Total</p>
+						</div>
+						{% for m in ['cash','upi','balance'] %}
+							<div class="col-3">
+								<div>
+									<h1 class="text-center m-0">₹ {{ revenue_today[m] }}</h1>
+									<p class="text-center">{{ m | title }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+					<hr style="margin: 0.5rem 5%">
+					<h4 class="d-flex justify-content-center">Expense/Weight Loss</h4>
+					<div class="row">
+						<div class="col-3">
+							<div>
+								<h1 class="text-center m-0 text-danger">₹ {{ expense_today.total }}</h1>
+								<p class="text-center">Total</p>
+							</div>
+						</div>
+						{% for m in ['cash','upi'] %}
+							<div class="col-3">
+								<div>
+									<h1 class="text-center m-0">₹ {{ expense_today[m] }}</h1>
+									<p class="text-center">{{ m | title }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+					<hr style="margin: 0.5rem 5%">
+					<div class="d-flex justify-content-center">
+						<div>
+							<h1 class="text-center m-0">
+								₹ {{ (revenue_today.total - expense_today.total) }}</h1>
+							<p class="text-center">P&L</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="totalRevenueModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 class="modal-title">Total Revenue</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body pb-0">
+					<div class="row">
+						<div class="col-3">
+							<h1 class="text-center m-0 text-success">₹ {{ total_revenue.total }}</h1>
+							<p class="text-center m-0">Total</p>
+						</div>
+						{% for m in ['cash','upi','balance'] %}
+							<div class="col-3">
+								<div>
+									<h1 class="text-center m-0">₹ {{ total_revenue[m] }}</h1>
+									<p class="text-center">{{ m | title }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+					<hr style="margin: 0.5rem 5%">
+					<h4 class="d-flex justify-content-center">Expense/Weight Loss</h4>
+					<div class="row">
+						<div class="col-3">
+							<div>
+								<h1 class="text-center m-0 text-danger">₹ {{ total_expense.total }}</h1>
+								<p class="text-center">Total</p>
+							</div>
+						</div>
+						{% for m in ['cash','upi'] %}
+							<div class="col-3">
+								<div>
+									<h1 class="text-center m-0">₹ {{ total_expense[m] }}</h1>
+									<p class="text-center">{{ m | title }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+					<hr style="margin: 0.5rem 5%">
+					<div class="row">
+						<div class="col-6">
+							<h1 class="text-center m-0">
+								₹ {{ cash_in_hand }}</h1>
+							<p class="text-center">Cash In Hand</p>
+						</div>
+						<div class="col-6">
+							<h1 class="text-center m-0">
+								₹ {{ (total_revenue.total - total_expense.total) }}</h1>
+							<p class="text-center">P&L</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="customerCreditModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 class="modal-title">Customer Credit</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<div class="input-group input-group-lg mb-3 w-100">
+						<span class="input-group-text fw-bold">Customer</span>
+						<select id="customerSelect" class="form-select" name="customerId" required>
+							<option value="" selected disabled></option>
+							{% for customer in Customer.all() if not customer.disabled %}
+								<option value="{{ customer.id }}">
+									{{ customer.name }}{{ ' (+91 '+ customer.phone +')' if customer.phone else '' }}
+								</option>
+							{% endfor %}
+						</select>
+						<span class="input-group-text fw-bold">Balance</span>
+						<input id="selectedCustomerBalance" class="form-control" value="0" style="flex: 0 0 20%" disabled>
+					</div>
+					<form id="updateBalanceForm">
+						<div class="input-group input-group-lg mb-3">
+							<span class="input-group-text">Amount Credited</span>
+							<span class="input-group-text">₹</span>
+							<input type="number" class="form-control" name="amount" placeholder="Amount" required>
+						</div>
+						<div class="container d-flex justify-content-end">
+							<div class="input-group input-group-lg mb-3 w-auto">
+								<span class="input-group-text">Mode of Payment</span>
+								<select class="form-select flex-grow-1" name="modeOfPayment" required>
+									<option disabled selected value="">Please Select</option>
+									<option value="cash">Cash</option>
+									<option value="upi">UPI</option>
+								</select>
+								<button class="btn btn-primary" type="submit">Submit</button>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="weightLossModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 class="modal-title">Weight Loss</h3>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body m-3 mb-0">
+					<div class="input-group input-group-lg mb-3 w-100">
+						<span class="input-group-text fw-bold">Customer</span>
+						<select id="customerSelect2" class="form-select" name="customerId" required>
+							<option value="" selected disabled></option>
+							{% for customer in Customer.all() if not customer.disabled %}
+								<option value="{{ customer.id }}">
+									{{ customer.name }}{{ ' (+91 '+ customer.phone +')' if customer.phone else '' }}
+								</option>
+							{% endfor %}
+						</select>
+					</div>
+					<form id="updateWeightLossForm">
+						<div class="input-group input-group-lg mb-3">
+							<span class="input-group-text">Weight Loss Amount</span>
+							<span class="input-group-text">₹</span>
+							<input type="number" class="form-control" name="amount" placeholder="Amount" required>
+						</div>
+						<div class="container d-flex justify-content-end">
+							<div class="input-group input-group-lg mb-3 w-auto">
+								<span class="input-group-text">Mode of Payment</span>
+								<select class="form-select flex-grow-1" name="modeOfPayment" required>
+									<option disabled selected value="">Please Select</option>
+									<option value="cash">Cash</option>
+									<option value="upi">UPI</option>
+								</select>
+								<button class="btn btn-primary" type="submit">Submit</button>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+{% endblock content %}
+
+{% block body %}
+	<script type="application/javascript">
+        let customerCreditModal = $("#customerCreditModal");
+        let updateBalanceForm = $("#updateBalanceForm");
+        let customerSelect = $('#customerSelect');
+        let selectedCustomerBalance = $("#selectedCustomerBalance")
+
+        function initializeCustomerSelect() {
+            customerSelect.select2({
+                theme: "bootstrap5",
+                placeholder: "Select...",
+                dropdownParent: customerCreditModal,
+            });
+        }
+
+        initializeCustomerSelect();
+
+        customerCreditModal.on('show.bs.modal', function () {
+            updateBalanceForm.trigger('reset');
+            customerSelect.val(null).trigger('change');
+            selectedCustomerBalance.val(0);
+        });
+
+        customerSelect.on('select2:select', function (e) {
+            $.ajax({
+                type: 'GET',
+                url: '/api/customer/' + parseInt(customerSelect.val()) + '/',
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                selectedCustomerBalance.val(data.customer.balance);
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+
+        updateBalanceForm.on('submit', function (e) {
+            e.preventDefault();
+            let data = {};
+            $.each($(this).serializeArray(), function (i, field) {
+                if (field.value.trim() !== "") {
+                    data[field.name] = field.value.trim();
+                }
+            });
+            data.amount = parseFloat(data.amount);
+            $.ajax({
+                data: JSON.stringify(data),
+                type: 'PUT',
+                url: '/api/customer/' + parseInt(customerSelect.val()) + '/balance/',
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                customerCreditModal.modal('hide');
+                notyf.success('Customer balance successfully changed!')
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+	</script>
+
+	<script type="application/javascript">
+        let weightLossModal = $("#weightLossModal");
+        let updateWeightLossForm = $("#updateWeightLossForm");
+        let customerSelect2 = $('#customerSelect2');
+
+        function initializeCustomerSelect2() {
+            customerSelect2.select2({
+                theme: "bootstrap5",
+                placeholder: "Select...",
+                dropdownParent: weightLossModal,
+            });
+        }
+
+        initializeCustomerSelect2();
+
+        weightLossModal.on('show.bs.modal', function () {
+            updateWeightLossForm.trigger('reset');
+            customerSelect2.val(null).trigger('change');
+        });
+
+        updateWeightLossForm.on('submit', function (e) {
+            e.preventDefault();
+            let data = {};
+            $.each($(this).serializeArray(), function (i, field) {
+                if (field.value.trim() !== "") {
+                    data[field.name] = field.value.trim();
+                }
+            });
+            data.amount = parseFloat(data.amount);
+            $.ajax({
+                data: JSON.stringify(data),
+                type: 'PUT',
+                url: '/api/customer/' + parseInt(customerSelect2.val()) + '/weight-loss/',
+                contentType: 'application/json',
+            }).done(function (data, status, xhr) {
+                weightLossModal.modal('hide');
+                notyf.success('Weight loss updated!')
+            }).fail(function (xhr, status, e) {
+                console.log(xhr);
+                notyf.error(xhr.responseJSON.message);
+            });
+        });
+	</script>
+{% endblock body %}

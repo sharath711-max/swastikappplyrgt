@@ -1,0 +1,98 @@
+<!-- File Path: templates/dashboard/auth/page.html -->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<meta name="author" content="Creatix">
+
+		{% if config.PWA %}
+			<meta content='yes' name='apple-mobile-web-app-capable'/>
+			<meta content='yes' name='mobile-web-app-capable'/>
+			<link rel="manifest" href="{{ url_for('manifest') }}">
+		{% endif %}
+
+		<title>Admin Login</title>
+
+		<link rel="icon" type="image/png" href="{{ url_for('static', filename='media/creatix-logo-sm.png') }}"/>
+
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/bootstrap-5.1.3.min.css') }}">
+		<link href="{{ url_for('static', filename='css/notyf.min.css') }}" rel="stylesheet" type="text/css"/>
+		<link rel="stylesheet" type="text/css" href="{{ url_for('dashboard.static', filename='css/auth.css') }}">
+
+		{% block head %}
+		{% endblock head %}
+
+	</head>
+	<body>
+
+		{% block content %}
+		{% endblock content %}
+
+		<footer class="position-fixed bottom-0 w-100 py-2 px-5">
+			<p class="text-end">2022
+				<a href="https://www.creatixdevelopers.com/" target="_blank">© Creatix Developers</a>
+			</p>
+		</footer>
+
+		<script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+		<script src="{{ url_for('static', filename='js/bootstrap-5.1.3.bundle.min.js') }}"></script>
+		<script src="{{ url_for('static', filename='js/notyf.min.js') }}"></script>
+		<script type="text/javascript">
+            $.fn.fval = function () {
+                let e = $(this);
+                let t = e.attr('type');
+                let v = e.val();
+                if (t && v) {
+                    if (t === 'text') {
+                        return v.trim();
+                    } else if (t === 'integer') {
+                        return parseInt(v);
+                    } else if (t === 'number') {
+                        return parseFloat(v);
+                    } else if (t === 'singleDate') {
+                        return moment(v, 'Do MMM YYYY').valueOf();
+                    } else if (t === 'checkbox') {
+                        return v === 'on';
+                    } else {
+                        return v;
+                    }
+                } else return null;
+            }
+
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
+
+            $.ajaxSetup({
+                beforeSend: function (xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token() }}");
+                        xhr.setRequestHeader("X-CSRF-TOKEN", getCookie('csrf_access_token'));
+                    }
+                }
+            });
+
+            {% if config.PWA %}
+                window.addEventListener('load', () => {
+                    registerSW();
+                });
+                async function registerSW() {
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            await navigator.serviceWorker.register('{{ url_for('sw') }}');
+                        } catch (e) {
+                            console.log('SW registration failed');
+                        }
+                    }
+                }
+            {% endif %}
+
+            let notyf = new Notyf({duration: 3000, position: {x: 'right', y: 'top'}, dismissible: true});
+		</script>
+		{% block body %}
+		{% endblock body %}
+	</body>
+</html>

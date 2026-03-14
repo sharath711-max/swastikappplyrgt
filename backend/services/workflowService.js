@@ -2,6 +2,8 @@ const { db } = require('../db/db');
 const goldTestService = require('./goldTestService');
 const silverTestService = require('./silverTestService');
 const certificateService = require('./certificateService');
+const documentDeliveryService = require('./documentDeliveryService');
+const logger = require('../utils/logger');
 
 class WorkflowService {
     async getAllItems() {
@@ -83,56 +85,27 @@ class WorkflowService {
                 throw new Error('Invalid item type: ' + type);
         }
 
-        // --- GAP 3: Digital Delivery via SMS ---
+        const response = { updated: true, result };
+
         if (status === 'DONE') {
             try {
-                // Fetch the customer info and purity to send SMS
-                const { db } = require('../db/db');
-                const whatsappService = require('./whatsappService');
+                response.delivery = await documentDeliveryService.deliverCompletedRecord(type, id);
+            } catch (error) {
+                logger.error('Workflow completion delivery failed.', {
+                    type,
+                    id,
+                    error: error.message
+                });
 
-                let testRecord;
-                let purityStr = '';
-
-                if (type === 'gold' || type === 'silver') {
-                    const table = type === 'gold' ? 'gold_test' : 'silver_test';
-                    const itemsTable = type === 'gold' ? 'gold_test_item' : 'silver_test_item';
-
-                    testRecord = db.prepare(`
-                        SELECT t.auto_number, c.name, c.phone, i.purity
-                        FROM ${table} t
-                        JOIN customer c ON t.customer_id = c.id
-                        LEFT JOIN ${itemsTable} i ON i.${table}_id = t.id
-                        WHERE t.id = ?
-                    `).get(id);
-
-                    if (testRecord && testRecord.purity) {
-                        purityStr = testRecord.purity + '%';
-                    }
-                } else if (type.includes('_cert')) {
-                    const table = type === 'gold_cert' ? 'gold_certificate' : type === 'silver_cert' ? 'silver_certificate' : 'photo_certificate';
-
-                    testRecord = db.prepare(`
-                        SELECT t.auto_number, c.name, c.phone
-                        FROM ${table} t
-                        JOIN customer c ON t.customer_id = c.id
-                        WHERE t.id = ?
-                    `).get(id);
-                }
-
-                if (testRecord && testRecord.phone) {
-                    let msg = `*Swastik Lab*\n\nHello ${testRecord.name}, your ${type.replace('_', ' ').toUpperCase()} *(Ref: ${testRecord.auto_number})* is complete!`;
-                    if (purityStr) msg += `\nTested Purity: *${purityStr}*`;
-                    msg += `\n\nVerify digitally here: https://swastiklab.com/verify/${testRecord.auto_number}`;
-                    msg += `\n\nPlease collect your physical certificate at the front desk.`;
-
-                    whatsappService.sendMessage(testRecord.phone, msg);
-                }
-            } catch (err) {
-                console.error('[SMS Dispatch Failed]', err.message);
+                response.delivery = {
+                    ok: false,
+                    message: 'Moved to Completed, but the secure PDF or phone delivery could not be prepared.',
+                    error: error.message
+                };
             }
         }
 
-        return result;
+        return response;
     }
 }
 

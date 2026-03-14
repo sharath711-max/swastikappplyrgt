@@ -1,0 +1,269 @@
+<!-- File Path: templates/dashboard/templates/page.html -->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<meta name="author" content="Creatix">
+
+		{% if config.PWA %}
+			<meta content='yes' name='apple-mobile-web-app-capable'/>
+			<meta content='yes' name='mobile-web-app-capable'/>
+			<link rel="manifest" href="{{ url_for('manifest') }}">
+		{% endif %}
+
+		{% if title %}
+			<title>{{ title }}</title>
+		{% endif %}
+
+		<link rel="icon" type="image/png" href="{{ url_for('static', filename='media/logo-sm.png') }}"/>
+
+		<link href="{{ url_for('static', filename='css/select2.min.css') }}" rel="stylesheet"/>
+		<link href="{{ url_for('static', filename='css/select2-bootstrap5.min.css') }}" rel="stylesheet"/>
+		<link href="{{ url_for('dashboard.static', filename='css/icons.css') }}" rel="stylesheet" type="text/css"/>
+		<link href="{{ url_for('dashboard.static', filename='css/light.css') }}" rel="stylesheet">
+		<link href="{{ url_for('dashboard.static', filename='css/custom.css') }}" rel="stylesheet" type="text/css"/>
+		<link href="{{ url_for('static', filename='css/notyf.min.css') }}" rel="stylesheet" type="text/css"/>
+
+		{% import 'dashboard/templates/macros.html' as macros with context %}
+
+		{% block head %}
+		{% endblock head %}
+	</head>
+	<body data-theme="default" data-layout="fluid" data-sidebar-position="left" data-sidebar-behavior="sticky">
+		<div class="wrapper">
+
+			{% include 'dashboard/templates/sidebar.html' %}
+
+			<div class="main">
+				{% include 'dashboard/templates/navbar.html' %}
+
+				<main class="content">
+					{% block content %}
+					{% endblock content %}
+				</main>
+
+				{% include 'dashboard/templates/footer.html' %}
+			</div>
+		</div>
+
+		<div id="backupModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered modal-sm">
+				<div class="modal-content modal-filled bg-primary">
+					<div class="modal-body p-4">
+						<div class="text-center">
+							<div class="spinner-border text-light" role="status"></div>
+							<h1 class="mt-4 text-white">Backing up data</h1>
+							<p class="mt-3 text-white">Please wait.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="cashInHandModal" class="modal fade" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+			<div class="modal-dialog modal-lg" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h3 class="modal-title">Cash In Hand</h3>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body m-3 mb-0">
+						<form id="cashInHandForm">
+							<div class="input-group input-group-lg mb-3">
+								<span class="input-group-text">Amount</span>
+								<span class="input-group-text">₹</span>
+								<input id="cashInHandAmount" type="number" class="form-control" name="value" placeholder="Balance" required>
+							</div>
+							<div class="container d-flex justify-content-end">
+								<div class="input-group input-group-lg mb-3 w-auto">
+									<button class="btn btn-primary" type="submit">Submit</button>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script src="{{ url_for('dashboard.static', filename='js/main.js') }}"></script>
+		<script src="{{ url_for('static', filename='js/select2.min.js') }}"></script>
+		<script src="{{ url_for('static', filename='js/notyf.min.js') }}"></script>
+		<script src="{{ url_for('static', filename='js/handlebars.min.js') }}"></script>
+		{% if config.WEB_SOCKETS %}
+			<script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
+		{% endif %}
+
+		<script type="application/javascript">
+            let anchor = $('.sidebar-item .sidebar-link[href="' + window.location.pathname + '"]');
+            let list_item = anchor.parent();
+            let list = list_item.parent();
+            let sidebar_item = list.parent();
+            list_item.addClass('active');
+            list.addClass('show')
+            sidebar_item.addClass('active');
+
+            $.fn.fval = function () {
+                let e = $(this);
+                let t = e.attr('type');
+                let v = (t === 'checkbox') ? true : e.val();
+                if (t && v) {
+                    if (t === 'text') {
+                        return v.trim();
+                    } else if (t === 'integer') {
+                        return parseInt(v);
+                    } else if (t === 'number') {
+                        return parseFloat(v);
+                    } else if (t === 'singleDate') {
+                        return moment(v, 'Do MMM YYYY').valueOf();
+                    } else if (t === 'singleDateTime') {
+                        return moment(v, 'Do MMM YYYY, hh:mm A').valueOf();
+                    } else if (t === 'checkbox') {
+                        return e.prop('checked');
+                    } else {
+                        return v;
+                    }
+                } else return null;
+            }
+
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
+
+            $.ajaxSetup({
+                beforeSend: function (xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token() }}");
+                        xhr.setRequestHeader("X-CSRF-TOKEN", getCookie('csrf_access_token'));
+                    }
+                }
+            });
+
+            {% if config.PWA %}
+                window.addEventListener('load', () => {
+                    registerSW();
+                });
+                async function registerSW() {
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            await navigator.serviceWorker.register('{{ url_for('sw') }}');
+                        } catch (e) {
+                            console.log('SW registration failed');
+                        }
+                    }
+                }
+            {% endif %}
+
+            $(document).on('click', '.logout', function () {
+                $.ajax({
+                    type: 'POST',
+                    url: '{{ url_for('api.auth.logout') }}',
+                }).done(function (response, status, xhr) {
+                    location.reload();
+                });
+            })
+
+            let notyf = new Notyf({duration: 3000, position: {x: 'right', y: 'top'}, dismissible: true});
+
+            function updateDateTime() {
+                $('.currentDateTime').text(moment(new Date()).format('ddd, Do MMM YY, hh:mm A'));
+            }
+
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+		</script>
+
+		{# Cash in hand #}
+		<script type="application/javascript" defer>
+            let cashInHandModal = $("#cashInHandModal");
+            let cashInHandForm = $("#cashInHandForm");
+            let cashInHandSubmitBtn = $("#cashInHandSubmitBtn");
+            let cashInHandSubmitSpinner = $("#cashInHandSubmitSpinner");
+
+            cashInHandModal.on('show.bs.modal', function () {
+                $.ajax({
+                    type: 'GET',
+                    url: `{{ url_for('api.cash_in_hand.get') }}`,
+                    contentType: 'application/json',
+                }).done(function (response, status, xhr) {
+                    cashInHandForm.find('[name=value]').val(response.data);
+                    cashInHandModal.modal('show');
+                }).fail(function (xhr, status, e) {
+                    console.log(xhr);
+                    notyf.error(xhr.responseJSON.description);
+                });
+            });
+
+            cashInHandForm.on('submit', function (e) {
+                e.preventDefault();
+
+                $(this).find('.is-invalid').removeClass('is-invalid');
+                let invalids = $(this).find('*:invalid');
+                if (invalids.length > 0) {
+                    invalids.addClass('is-invalid')[0].reportValidity();
+                    return;
+                }
+
+                cashInHandSubmitBtn.prop('disabled', true);
+                cashInHandSubmitSpinner.removeClass('d-none');
+
+                let data = {};
+                $.each($(this).find(':input'), function (i, e) {
+                    if ($(e).val()) {
+                        data[$(e).attr('name')] = $(e).fval();
+                    }
+                });
+
+                $.ajax({
+                    data: JSON.stringify(data),
+                    type: 'PUT',
+                    url: `{{ url_for('api.cash_in_hand.put') }}/`,
+                    contentType: 'application/json',
+                }).done(function (response, status, xhr) {
+                    cashInHandModal.modal('hide');
+                    notyf.success('Cash In Hand updated!')
+                }).fail(function (xhr, status, e) {
+                    console.log(xhr);
+                    notyf.error(xhr.responseJSON.description);
+                    cashInHandSubmitBtn.prop('disabled', false);
+                    cashInHandSubmitSpinner.addClass('d-none');
+                });
+            });
+
+            cashInHandModal.on('hide.bs.modal', function () {
+                cashInHandForm.trigger('reset').find(':input').removeClass('is-invalid');
+                cashInHandSubmitBtn.prop('disabled', false);
+                cashInHandSubmitSpinner.addClass('d-none');
+            });
+		</script>
+
+		{# Backup #}
+		<script type="application/javascript">
+            let backupModal = $("#backupModal");
+            $(document).on('click', '.backup', function () {
+                if (!window.navigator.onLine) {
+                    notyf.error("Please connect to the internet to backup data.")
+                } else {
+                    backupModal.modal('show');
+                    $.ajax({
+                        type: 'POST',
+                        url: '{{ url_for('dashboard.backup') }}',
+                        contentType: 'application/json',
+                    }).done(function (data, status, xhr) {
+                        notyf.success('Successfully backed up data!')
+                        backupModal.modal('hide');
+                    }).fail(function (xhr, status, e) {
+                        console.log(xhr);
+                        notyf.error(xhr.responseJSON.message);
+                        backupModal.modal('hide');
+                    });
+                }
+            });
+		</script>
+
+		{% block body %}
+		{% endblock %}
+	</body>
+</html>

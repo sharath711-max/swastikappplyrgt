@@ -1,8 +1,24 @@
 const { db } = require('../db/db');
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 500;
+
+function normalizePositiveInteger(value, fallback, max = Number.MAX_SAFE_INTEGER) {
+    const parsed = Number.parseInt(value, 10);
+
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return fallback;
+    }
+
+    return Math.min(parsed, max);
+}
+
 class ListService {
     async getList(type, params) {
-        const { page = 1, limit = 10, search = '' } = params;
+        const page = normalizePositiveInteger(params.page, DEFAULT_PAGE);
+        const limit = normalizePositiveInteger(params.limit, DEFAULT_LIMIT, MAX_LIMIT);
+        const search = typeof params.search === 'string' ? params.search.trim() : '';
         const offset = (page - 1) * limit;
         const searchTerm = `%${search}%`;
 
@@ -22,8 +38,8 @@ class ListService {
                 data,
                 pagination: {
                     total: totalResult.total,
-                    page: parseInt(page),
-                    limit: parseInt(limit),
+                    page,
+                    limit,
                     totalPages: Math.ceil(totalResult.total / limit)
                 }
             };

@@ -1,0 +1,92 @@
+<!-- File Path: templates/dashboard/weight_loss.html -->
+{% extends 'dashboard/templates/table.html' %}
+
+{% set table = {
+	'name': 'weight_loss',
+	'entries': WeightLossHistory.all()|reverse,
+	'attributes': {},
+	'columns': {
+		'Date Time': {'val': '{{ e.created.strftime("%d %b, %Y") }}', 'order': '{{ e.created.strftime("%Y%m%d%H%M%S") }}'},
+		'Customer': {'val': '{{ e.customer.name }}', 'link': '{{ url_for("dashboard.customer.profile", uid=e.customer.id) }}'},
+		'Mode of Payment': {'val': '{{ e.mode_of_payment }}'},
+		'Amount': {'val': '₹{{ e.amount|round(2)|inr_format }}'},
+	},
+} %}
+
+{% block content %}
+	<div class="row mb-2 mb-xl-3">
+		<div class="col-auto d-sm-block">
+			<h3>Weight Loss History</h3>
+		</div>
+	</div>
+
+	<div class="card card-body">
+		<div class="d-flex justify-content-end align-items-center mb-2">
+			<div class="text-sm-end" id="{{ table.name }}ButtonContainer"></div>
+		</div>
+		{{ macros.render_table(table) }}
+	</div>
+{% endblock content %}
+
+{% block body %}
+	{{ super() }}
+
+	{# Datatable #}
+	<script type="application/javascript" defer>
+        const {{ table.name }}Table = $("#{{ table.name }}Table").DataTable({
+            language: {
+                paginate: {previous: "<i class='uil-angle-left'>", next: "<i class='uil-angle-right'>"},
+                info: "Showing _START_ to _END_ of _TOTAL_",
+                lengthMenu: 'Show <select class=\'form-select form-select-sm ms-1 me-1\'><option value="25">25</option><option value="50">50</option><option value="75">75</option><option value="-1">All</option></select>',
+            },
+            pageLength: 25,
+            order: [],
+            ordering: true,
+            responsive: false,
+            scrollX: true,
+            stateSave: false,
+            drawCallback: function () {
+                $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
+            },
+            footerCallback: function () {
+                let api = this.api();
+                $.each({{ table.columns|index_by_attributes(sum=True) }}, function (i, e) {
+                    let nodes = api.column(e, {page: 'current', search: 'applied'}).nodes().toArray();
+                    let sum = 0;
+                    $.each(nodes, function (j, n) {
+                        sum += $(n).hasClass('noExport') ? 0 : parseFloat($(n).text().replaceAll(/[^\d.]|\.(?=.*\.)/g, ''));
+                    });
+                    $(api.column(e).footer()).text(sum.toLocaleString('en-IN'));
+                });
+            },
+            columnDefs: [
+                {targets: '_all', type: 'natural-nohtml'},
+                {
+                    targets: {{ table.columns|index_by_attributes(inr=True) }}, render: (d, _, __) => {
+                        return Number(d).toLocaleString('en-IN')
+                    }
+                }
+            ],
+            buttons: [
+                {extend: 'copyHtml5', title: '{{ title }}', footer: true, exportOptions: exportOptions},
+                {extend: 'excelHtml5', title: '{{ title }}', footer: true, exportOptions: exportOptions},
+                {
+                    extend: 'pdfHtml5', title: '{{ title }}', footer: true, exportOptions: exportOptions,
+                    download: 'open', orientation: 'landscape',
+                    customize: function (doc) {
+                        doc.content[1].table.widths = Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+                    }
+                },
+            ],
+            {% set mergedColumns = table.columns|index_by_attributes(merged=True) %}
+            {% if mergedColumns %}
+                rowsGroup: {{ mergedColumns }},
+            {% endif %}
+            keys: {keys: [37, 38, 39, 40], clipboard: false},
+        });
+        {{ table.name }}Table.buttons().container().appendTo("#{{ table.name }}ButtonContainer");
+        $('.buttons-copy').html('<i class="uil-pathfinder"></i> Copy').removeClass('btn-secondary').addClass('btn-light ms-1');
+        $('.buttons-excel').html('<i class="uil-download-alt"></i> Export').removeClass('btn-secondary').addClass('btn-light ms-1');
+        $('.buttons-pdf').html('<i class="uil-file-alt"></i> PDF').removeClass('btn-secondary').addClass('btn-light ms-1');
+	</script>
+{% endblock %}

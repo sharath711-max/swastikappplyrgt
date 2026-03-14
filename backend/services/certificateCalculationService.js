@@ -143,7 +143,7 @@ class CertificateCalculationService {
      * Update parent certificate roll-up totals
      * Salesforce-style Master-Detail roll-up
      */
-    static async updateCertificateTotals(certificateId, db) {
+    static updateCertificateTotals(certificateId, db) {
         // Determine table based on ID prefix
         let tableName = 'gold_certificate';
         let itemTable = 'gold_certificate_item';
@@ -169,7 +169,9 @@ class CertificateCalculationService {
         const items = db.prepare(`
             SELECT 
                 COUNT(*) as item_count,
-                COALESCE(SUM(net_weight), 0) as total_net_weight
+                COALESCE(SUM(net_weight), 0) as total_net_weight,
+                COALESCE(SUM(fine_weight), 0) as total_fine_weight,
+                COALESCE(SUM(item_total), 0) as grand_total
             FROM ${itemTable}
             WHERE 
                 ${tableName}_id = ? 
@@ -183,11 +185,15 @@ class CertificateCalculationService {
             db.prepare(`
                 UPDATE gold_certificate 
                 SET 
+                    total = ?,
                     total_net_weight = ?,
+                    total_fine_weight = ?,
                     lastmodified = ?
                 WHERE id = ?
             `).run(
+                items.grand_total,
                 items.total_net_weight,
+                items.total_fine_weight,
                 now,
                 certificateId
             );
@@ -195,10 +201,12 @@ class CertificateCalculationService {
             db.prepare(`
                 UPDATE silver_certificate 
                 SET 
+                    total = ?,
                     total_net_weight = ?,
                     lastmodified = ?
                 WHERE id = ?
             `).run(
+                items.grand_total,
                 items.total_net_weight,
                 now,
                 certificateId
@@ -207,14 +215,16 @@ class CertificateCalculationService {
             // Photo certificate or others
             db.prepare(`
                 UPDATE ${tableName} 
-                SET lastmodified = ?
+                SET total = ?, lastmodified = ?
                 WHERE id = ?
-            `).run(now, certificateId);
+            `).run(items.grand_total, now, certificateId);
         }
 
         return {
             item_count: items.item_count,
-            total_net_weight: items.total_net_weight
+            total_net_weight: items.total_net_weight,
+            total_fine_weight: items.total_fine_weight,
+            grand_total: items.grand_total
         };
     }
 

@@ -1,0 +1,93 @@
+<!-- File Path: templates/dashboard/photo_certificate/certificate.html -->
+{% set test = PhotoCertificate.get(uid) %}
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/bootstrap-4.3.1.min.css') }}">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('dashboard.static', filename='css/photo_certificate/certificate.css') }}">
+		<title>Photo Test Certificate</title>
+	</head>
+	<body>
+		{% set test_data = [test.data[index - 1]] if index else test.data %}
+		{% for data in test_data %}
+			<div class="container p-0">
+				<div class="row">
+					<div style="width: 8.13cm">
+						<table>
+							<tr>
+								<td>
+									<h5>{{ test.created.strftime('%d/%m/%y') }}</h5>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<h5>{{ test.customer.name }}</h5>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<h5>{{ data.certificate_number }}</h5>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<h5 style="margin-bottom: 2.4rem">{{ data.item|upper }}</h5>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<h5 style="font-size: 2.4rem">{{ data.total_weight|round0(3) }}<span> GM</span></h5>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<h5>
+										{{ data.purity|in_carat if data.show_kt else '' }}
+									</h5>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<h5 id="purity" style="width: 9cm; font-size: 2.4rem;">{{ data.purity|round0(2) }}</h5>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<h5 style="margin-top: 0.5cm">Bhimram</h5>
+								</td>
+							</tr>
+						</table>
+					</div>
+					<div class="px-2 py-4" style="width: 8.13cm">
+						<img src="{{ url_for('static', filename='uploads/' + test.media[0]) if test.media else '' }}">
+					</div>
+				</div>
+			</div>
+			{% if not loop.last %}
+				<div class="page-break"></div>
+			{% endif %}
+		{% endfor %}
+		<script type="application/javascript">
+            (function () {
+                let afterPrint = function () {
+                    window.close()
+                };
+
+                if (window.matchMedia) {
+                    var mediaQueryList = window.matchMedia('print');
+                    mediaQueryList.addListener(function (mql) {
+                        if (!mql.matches) {
+                            afterPrint();
+                        }
+                    });
+                }
+                window.onafterprint = afterPrint;
+            }());
+            window.print();
+		</script>
+	</body>
+</html>

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const GoldCertificateItemRepository = require('../repositories/goldCertificateItemRepository');
 const SilverCertificateItemRepository = require('../repositories/SilverCertificateItemRepository');
+const { authMiddleware } = require('../middleware/authMiddleware');
 const { immutabilityGuard } = require('../middleware/immutabilityGuard');
 
 // We have 3 distinct tableNames to guard based on ID prefixes. We will create a dynamic guard for certificates:
@@ -20,6 +21,7 @@ const dynamicCertGuard = (req, res, next) => {
     next();
 };
 
+router.use(authMiddleware);
 router.use(dynamicCertGuard);
 
 /**

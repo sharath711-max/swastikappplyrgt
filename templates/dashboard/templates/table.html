@@ -1,0 +1,96 @@
+<!-- File Path: templates/dashboard/templates/table.html -->
+{% extends 'dashboard/templates/page.html' %}
+
+{% block head %}
+	<link href="{{ url_for('static', filename='css/dataTables/dataTables.bootstrap5.css') }}" rel="stylesheet" type="text/css"/>
+	<link href="{{ url_for('static', filename='css/dataTables/responsive.bootstrap5.min.css') }}" rel="stylesheet" type="text/css"/>
+	<link href="{{ url_for('static', filename='css/dataTables/buttons.bootstrap5.min.css') }}" rel="stylesheet" type="text/css"/>
+{% endblock head %}
+
+{% block content %}
+{% endblock content %}
+
+{% block body %}
+	<script src="{{ url_for('static', filename='js/dataTables/jquery.dataTables.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/dataTables.bootstrap5.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/dataTables.responsive.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/responsive.bootstrap5.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/dataTables.buttons.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/buttons.bootstrap5.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/buttons.html5.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/dataTables.keyTable.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/jszip.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/pdfmake.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/vfs_fonts.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/dataTables.rowgroup.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/dataTables/natural.js') }}"></script>
+
+	<script type="application/javascript" defer>
+		let exportOptions = {
+            columns: ':not(.noExport)', modifier: {search: 'applied', order: 'applied', page: 'current'},
+            format: {body: (data, row, column, node) => $(node).hasClass('noExport') ? '' : data.toString().replace(/(<([^>]+)>)/ig, "")}
+        };
+        $.extend(true, $.fn.dataTable.defaults, {
+            initComplete: function (settings, json) {
+                let api = this.api();
+                $(".dataTables_paginate").addClass("pagination-rounded");
+                api.buttons().container().appendTo(`#${api.table().node().id}ButtonContainer`);
+                $('.buttons-html5').removeClass('btn-secondary').addClass('btn-light d-flex align-items-center ms-1');
+            },
+	        footerCallback: function (row, data, start, end, display) {
+                let api = this.api();
+                $.each(api.init().sum, function (i, e) {
+                    let sum = 0;
+                    $.each(api.column(e, {page: 'current', search: 'applied'}).nodes().toArray(), function (j, n) {
+                        sum += $(n).hasClass('noExport') ? 0 : parseFloat($(n).text().replaceAll('₹', '').replaceAll(',', ''));
+                    });
+                    $(api.column(e).footer()).text(sum.toLocaleString());
+                });
+            },
+            language: {
+                paginate: {previous: '<i class="uil-angle-left">', next: '<i class="uil-angle-right">'},
+                info: 'Showing _START_ to _END_ of _TOTAL_',
+                lengthMenu: 'Show <select class="form-select form-select-sm ms-1 me-1"><option value="50">50</option><option value="75">75</option><option value="100">100</option><option value="-1">All</option></select>',
+                processing: `<div class="spinner-border mb-2" style="width: 3rem; height: 3rem;" role="status"></div><br>Loading...`
+            },
+            columnDefs: [
+                {targets: '_all', type: 'natural-nohtml'},
+            ],
+            buttons: [
+                {extend: 'copyHtml5', text: '<i class="uil-pathfinder fs-4"></i> Copy', footer: true, exportOptions: exportOptions},
+                {extend: 'excelHtml5', text: '<i class="uil-download-alt fs-4"></i> Export', footer: true, exportOptions: exportOptions},
+                {
+                    extend: 'pdfHtml5', text: '<i class="uil-file-alt fs-4"></i> PDF', footer: true, exportOptions: exportOptions, download: 'open', orientation: 'landscape',
+                    customize: function (doc) {
+                        doc.content[1].table.widths = Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+                    }
+                },
+            ],
+            pageLength: 50,
+            order: [],
+            processing: true,
+            ordering: true,
+            responsive: false,
+            scrollX: true,
+            stateSave: false,
+        });
+
+        function dataTableRenderDate(data, type, row, meta) {
+            return type === 'sort' ? moment(data).valueOf() : moment(data).format('Do MMM, YYYY');
+        }
+
+        function dataTableRenderDateTime(data, type, row, meta) {
+            return type === 'sort' ? moment(data).valueOf() : moment(data).format('Do MMM, YYYY - hh:mm A');
+        }
+
+        $(".button-menu-mobile").on('click', function () {
+            setTimeout(function () {
+                $.fn.dataTable.tables({api: true}).columns.adjust();
+            }, 10);
+        });
+
+        $(document).on('shown.bs.tab', '*[data-bs-toggle="tab"]', function (e) {
+            $.fn.dataTable.tables({api: true}).columns.adjust();
+        });
+	</script>
+{% endblock body %}

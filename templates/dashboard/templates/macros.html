@@ -1,0 +1,88 @@
+<!-- File Path: templates/dashboard/templates/macros.html -->
+{# --------- Example ---------
+	table = {
+		'name': 'user',
+		'entries': User.by_role('user')|reverse,
+		'attributes': {'data-api': url_for('api.admin.user')},
+		'columns': {
+			'Sl no.': {'export': False, 'orderable': False, 'merged': True},
+			'Created': {'val': Template('{{ e.created.strftime("%d %b, %Y") }}'), 'order': Template('{{ e.created.strftime("%Y%m%d%H%M%S") }}'), 'merged': True},
+			'Id': {'val': Template('{{ e.uid }}'), 'merged': True},
+			'Email': {'val': '{{ e.email }}', 'merged': True},
+			'A': {'val': Template('{{ e.a }}'), 'sum': True},
+			'B': {'val': Template('{{ e.b }}')},
+			'Actions': {'actions': {'edit': {'icon':'uil-pen'}, 'delete': {'icon':'uil-trash'}}, 'export': False, 'orderable': False, 'merged': True},
+		},
+		'nested': {'val': Template('{{ e.data }}'), 'columns': ['A', 'B']},
+	}
+#}
+
+{% macro render_table(table) %}
+	<table id="{{ table.name }}Table" class="table table-striped" style="width:100%">
+		<thead>
+			<tr>
+				{%- for column, properties in table.columns.items() %}
+					<th class="{{ 'noExport' if not properties.get('export', True) else '' }}" {% if not properties.get('orderable', True) %}data-orderable="false"{% endif %}>
+						{{- column -}}
+					</th>
+				{%- endfor %}
+			</tr>
+		</thead>
+		<tbody>
+			{%- for e in table.entries -%}
+				{% set outer = loop %}
+				{%- if table.get('nested') -%}
+					{%- for o in e.__getattribute__(table.nested.attr) %}
+						{{- render_row(table, outer.index0, e, loop.index0, o) -}}
+					{%- endfor -%}
+				{%- else -%}
+					{{- render_row(table, outer.index0, e, None, None) -}}
+				{%- endif -%}
+			{%- endfor -%}
+		</tbody>
+		{% if table.columns|index_by_attributes(sum=True) %}
+			<tfoot>
+				<tr>
+					{% for column in table.columns %}
+						<th>{% if loop.first %}Total{% endif %}</th>
+					{% endfor %}
+				</tr>
+			</tfoot>
+		{% endif %}
+	</table>
+{% endmacro %}
+
+{% macro render_row(table, i, e, j, o) %}
+	<tr id="{{ e.id }}" {% for attr, val in table.get('attributes', {}).items() %}{{ attr }}="{{ val }}" {% endfor -%}>
+	{%- for column, properties in table.columns.items() %}
+		{%- if column == 'Sl no.' %}
+			<td>{{- i + 1 -}}</td>
+		{%- elif column == 'Actions' %}
+			<td class="noExport">
+				<div class="d-flex justify-content-start align-items-center">
+					{%- for action, action_properties in properties.actions.items() %}
+						<a class="{{ action }}Action mx-1 {{ action_properties.get('class', '') }}" href="{{ rts(action_properties.get('link', '#'), e=e) }}" title="{{ action | title }}" data-uid="{{ e.id }}">
+							<i class="{{ action_properties.icon }} fs-4"></i>
+						</a>
+					{%- endfor %}
+				</div>
+			</td>
+		{%- else -%}
+			{% if table.get('nested') and column in table.nested.columns %}{% set p = e %}{% set e = o %}{% endif %}
+			{% set ctx = {'i': i, 'e': e, 'j': j, 'o': o} %}
+			{% set val = rts(properties.get('val', ''), **ctx) %}
+			<td {% if properties.get('order') %}data-order="{{ rts(properties.order, **ctx) }}"{% endif %}>
+				{%- if properties.get('link') %}
+					<a href="{{ rts(properties.link, **ctx) }}">{{ val }}</a>
+				{% elif properties.get('img') %}
+					<img src='{{ rts(properties.img, **ctx) }}' style="width: 100px; height: 100px; border-radius: 5px">
+				{% elif properties.get('icon') %}
+					<i class='{{ rts(properties.icon, **ctx) }} fs-2 me-2'></i>{{ val }}
+				{% else %}
+					<p class="m-0">{{ val }}</p>
+				{% endif -%}
+			</td>
+		{%- endif %}
+	{%- endfor %}
+	</tr>
+{% endmacro %}

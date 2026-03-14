@@ -1,0 +1,80 @@
+<!-- File Path: templates/dashboard/gold_certificate/certificate.html -->
+{% set test = GoldCertificate.get(uid) %}
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/bootstrap-4.3.1.min.css') }}">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('dashboard.static', filename='css/gold_certificate/certificate.css') }}">
+		<title>Gold Test Certificate</title>
+	</head>
+	<body>
+		{% set test_data = [test.data[index - 1]] if index else test.data %}
+		{% for data in test_data %}
+			<div class="container mt-4 p-0" style="padding-top: {% if loop.first %}4.4cm{% else %}4.4cm{% endif %} !important;">
+				<table>
+					<tr>
+						<td>
+							<h5 class="ml-4">{{ data.certificate_number }}</h5>
+						</td>
+						<td>
+							<h5 class="text-right">{{ test.created.strftime('%d/%m/%y') }}</h5>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<h5 class="ml-4">{{ data.name if data.name else test.customer.name }}</h5>
+						</td>
+						<td class="text-right">
+							<h5>{{ data.total_weight|round0(3) }} gm</h5>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<h5 class="ml-4">{{ data.item|upper }}</h5>
+						</td>
+						<td class="text-right">
+							<h5>{{ data.purity|in_carat }}</h5>
+						</td>
+					</tr>
+					<tr style="margin-top: -1rem">
+						<td colspan="2">
+							<div class="row" style="margin-left: 1.6cm">
+								<h5 id="purity" style="font-size: 1.75rem; margin-top: 0">{{ data.purity|round0(2) }}</h5>
+								<h5 class="ml-4 mt-0" style="font-size: 1.75rem; font-weight: 800; font-style: italic">
+									{{ num2words(data.purity|int).replace('-', ' ')|upper }}
+									POINT {{ num2words(((data.purity%1)|float*100)|round(2)|int).replace('-',' ')|upper }}
+								</h5>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+			{% if not loop.last %}
+				<div class="page-break"></div>
+			{% endif %}
+		{% endfor %}
+
+		<script type="application/javascript">
+            (function () {
+                let afterPrint = function () {
+                    window.close()
+                };
+
+                if (window.matchMedia) {
+                    var mediaQueryList = window.matchMedia('print');
+                    mediaQueryList.addListener(function (mql) {
+                        if (!mql.matches) {
+                            afterPrint();
+                        }
+                    });
+                }
+                window.onafterprint = afterPrint;
+            }());
+            window.print();
+		</script>
+	</body>
+</html>

@@ -43,7 +43,7 @@ class CertificateCalculationService {
             errors.push('Purity must be between 0 and 100%');
         }
 
-        if (!rate_per_gram || rate_per_gram <= 0) {
+        if (rate_per_gram !== undefined && rate_per_gram < 0) {
             errors.push('Rate per gram must be > 0');
         }
 

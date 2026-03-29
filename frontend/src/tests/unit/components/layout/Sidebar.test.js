@@ -1,12 +1,12 @@
 import React from 'react';
 import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import Sidebar from '../Sidebar';
-import { renderWithRouter } from '../../../test-utils/renderWithRouter';
+import Sidebar from '../../../../components/layout/Sidebar';
+import { renderWithRouter } from '../../../../test-utils/renderWithRouter';
 
 let mockAuthState = { user: { role: 'admin' } };
 
-jest.mock('../../../contexts/AuthContext', () => ({
+jest.mock('../../../../contexts/AuthContext', () => ({
     useAuth: () => mockAuthState
 }));
 

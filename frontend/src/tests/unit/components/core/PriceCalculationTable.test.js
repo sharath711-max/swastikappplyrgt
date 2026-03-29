@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import PriceCalculationTable from '../PriceCalculationTable';
+import PriceCalculationTable from '../../../../components/core/PriceCalculationTable';
 
 describe('Pillar 3: Unit Testing - Financial Engine (PriceCalculationTable)', () => {
     test('GST Mode 1 (Inclusive): 127.12 split should result in base 107.73 and tax 19.39', () => {

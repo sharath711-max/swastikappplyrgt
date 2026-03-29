@@ -1,13 +1,13 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import Header from '../Header';
+import Header from '../../../../components/layout/Header';
 
 const mockLogout = jest.fn();
 const mockNavigate = jest.fn();
 let mockUser = { username: 'admin', role: 'admin' };
 
-jest.mock('../../../contexts/AuthContext', () => ({
+jest.mock('../../../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: mockUser, logout: mockLogout })
 }));
 
@@ -19,7 +19,7 @@ jest.mock('react-router-dom', () => {
     };
 });
 
-jest.mock('../ChangePasswordModal', () => (props) => (
+jest.mock('../../../../components/layout/ChangePasswordModal', () => (props) => (
     props.show ? <div>Change Password Modal</div> : null
 ));
 

@@ -1,5 +1,5 @@
 import Decimal from 'decimal.js';
-import { calculateGstSplit, calculateGoldItem } from '../calculations';
+import { calculateGstSplit, calculateGoldItem } from '../../../utils/calculations';
 
 describe('Pillar 3: Unit Testing - Financial Engine (GST & Ledger)', () => {
 

@@ -2,17 +2,17 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { MemoryRouter } from 'react-router-dom';
-import LoginPage from '../LoginPage';
+import LoginPage from '../../../auth/LoginPage';
 
 const mockLogin = jest.fn();
 const mockAddToast = jest.fn();
 const mockNavigate = jest.fn();
 
-jest.mock('../../contexts/AuthContext', () => ({
+jest.mock('../../../contexts/AuthContext', () => ({
     useAuth: () => ({ login: mockLogin })
 }));
 
-jest.mock('../../contexts/ToastContext', () => ({
+jest.mock('../../../contexts/ToastContext', () => ({
     useToast: () => ({ addToast: mockAddToast })
 }));
 

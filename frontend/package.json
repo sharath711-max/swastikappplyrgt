@@ -20,6 +20,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:unit": "react-scripts test --watchAll=false",
     "test:components": "react-scripts test --watchAll=false --testPathPattern=\"src/(auth|components)/\"",
     "test:components:coverage": "react-scripts test --watchAll=false --coverage --testPathPattern=\"src/(auth|components)/\" --collectCoverageFrom=\"src/auth/LoginPage.js\" --collectCoverageFrom=\"src/auth/ProtectedRoute.js\" --collectCoverageFrom=\"src/components/layout/AppShell.js\" --collectCoverageFrom=\"src/components/layout/Header.js\" --collectCoverageFrom=\"src/components/layout/Sidebar.js\" --collectCoverageFrom=\"src/components/layout/ProtectedComponent.js\" --collectCoverageFrom=\"src/components/core/PriceCalculationTable.js\" --collectCoverageFrom=\"src/components/Phase2Modal.js\" --collectCoverageFrom=\"src/components/print/PhotoCert.js\" --collectCoverageFrom=\"src/components/print/ThermalReceipt.js\"",
     "eject": "react-scripts eject",

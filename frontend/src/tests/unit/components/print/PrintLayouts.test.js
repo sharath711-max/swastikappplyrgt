@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import ThermalReceipt from '../ThermalReceipt';
-import PhotoCertificate from '../PhotoCert';
+import ThermalReceipt from '../../../../components/print/ThermalReceipt';
+import PhotoCertificate from '../../../../components/print/PhotoCert';
 
 describe('Pillar 4: Visual/DOM Testing - Print Outputs', () => {
     const mockTest = {

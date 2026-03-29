@@ -6,6 +6,8 @@
     "start": "node app.js",
     "backup": "node utils/backup.js",
     "test": "jest tests/unit tests/integration",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
     "test:workflow": "node test_workflows.js",
     "test:workflow:v2": "node test_workflows_v2.js",
     "test:watch": "jest --watch tests/unit tests/integration"

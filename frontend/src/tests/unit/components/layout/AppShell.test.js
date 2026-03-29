@@ -1,9 +1,9 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import AppShell from '../AppShell';
+import AppShell from '../../../../components/layout/AppShell';
 
-jest.mock('../Header', () => (props) => (
+jest.mock('../../../../components/layout/Header', () => (props) => (
     <button
         type="button"
         data-testid="mock-header-toggle"
@@ -13,7 +13,7 @@ jest.mock('../Header', () => (props) => (
     </button>
 ));
 
-jest.mock('../Sidebar', () => (props) => (
+jest.mock('../../../../components/layout/Sidebar', () => (props) => (
     <div data-testid="mock-sidebar">{props.sidebarCollapsed ? 'collapsed' : 'expanded'}</div>
 ));
 

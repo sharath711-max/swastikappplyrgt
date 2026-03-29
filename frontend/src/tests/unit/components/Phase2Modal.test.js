@@ -1,16 +1,16 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import Phase2Modal from '../Phase2Modal';
+import Phase2Modal from '../../../components/Phase2Modal';
 
 // Mock context and services
-jest.mock('../../services/api', () => ({
+jest.mock('../../../services/api', () => ({
     post: jest.fn(() => Promise.resolve({ data: { success: true } })),
     patch: jest.fn(() => Promise.resolve({ data: { success: true } })),
     defaults: { baseURL: 'http://localhost:5000/api' }
 }));
 
-jest.mock('../../contexts/ToastContext', () => ({
+jest.mock('../../../contexts/ToastContext', () => ({
     useToast: () => ({ addToast: jest.fn() })
 }));
 

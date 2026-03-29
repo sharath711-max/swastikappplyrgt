@@ -49,11 +49,10 @@ test.describe('GC (Gold Certificate) End to End Flow', () => {
         const certModal = page.getByRole('dialog');
         await expect(certModal).toBeVisible();
 
-        // Select Gold Certificate Type (if prompted, but we default to Gold usually)
-        // Wait, "New Certificate" modal might have a Type Radio or Dropdown?
-        const typeSelect = certModal.locator('select').first();
-        if (await typeSelect.isVisible()) {
-            await typeSelect.selectOption({ label: 'Gold Certificate' });
+        // Select Gold Certificate Type
+        const goldRadio = certModal.getByRole('radio', { name: /Gold Certificate/i });
+        if (await goldRadio.isVisible()) {
+            await goldRadio.check();
         }
 
         // Search and Select customer
@@ -63,9 +62,7 @@ test.describe('GC (Gold Certificate) End to End Flow', () => {
         // Fill Item details (GCI)
         await certModal.getByPlaceholder('e.g. RING, NECK').fill('Gold Necklace');
         await certModal.locator('label').filter({ hasText: 'Cert No.' }).locator('..').locator('input').fill('GC-999');
-        await certModal.locator('label').filter({ hasText: 'Fee' }).locator('..').locator('input').fill('150');
         await certModal.locator('label').filter({ hasText: 'Gross Wt' }).locator('..').locator('input').fill('15.5');
-        await certModal.locator('label').filter({ hasText: 'Purity' }).locator('..').locator('input').fill('91.6');
         
         // Add to items list
         await certModal.getByRole('button', { name: /Add to List/i }).click();
@@ -89,11 +86,14 @@ test.describe('GC (Gold Certificate) End to End Flow', () => {
         await expect(recordLink).toBeVisible();
 
         // 5. Navigate to GCI page (Certificate Record Detail)
-        await recordLink.locator('td').first().click(); // Click ID/first cell
+        await recordLink.getByRole('button', { name: /view/i }).click();
+        
+        // Navigate to Items Tab
+        await page.getByRole('button', { name: /Items \(/i }).click();
         
         // Verify in GCI (Item details)
         await expect(page.getByText('Gold Necklace')).toBeVisible(); // Item type verification
-        await expect(page.getByText('15.5')).toBeVisible(); // Weight verification
+        await expect(page.getByText(/15\.5/)).toBeVisible(); // Weight verification
         await expect(page.getByText('GC-999')).toBeVisible(); 
     });
 });

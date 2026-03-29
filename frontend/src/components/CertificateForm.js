@@ -7,15 +7,13 @@ import { calculateGoldItem } from '../utils/calculations';
 import NewCustomerModal from './NewCustomerModal';
 
 const emptyDraft = {
-    name: '',
     item_name: '',
     weight: '',
     gross_weight: '',
     test_weight: '0',
-    purity: '91.6',
+    purity: '',
     carat: '',
     rate: '',
-    amount: '',
     sub_certificate_number: '',
     returned: false
 };
@@ -91,7 +89,6 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
         setSelectedCustomer(customer);
         setSearchTerm(customerDisplay(customer));
         setShowSuggestions(false);
-        setSampleDraft(prev => ({ ...prev, name: customer.name }));
     };
 
     const handleCustomerCreated = async (newCustomer) => {
@@ -135,7 +132,7 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
         }
 
         setItems(prev => [...prev, { ...sampleDraft, id: `${Date.now()}-${Math.random()}`, seq: prev.length + 1 }]);
-        setSampleDraft({ ...emptyDraft, name: selectedCustomer?.name || '' });
+        setSampleDraft({ ...emptyDraft });
     };
 
     const removeSample = (id) => {
@@ -261,36 +258,24 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                     </Col>
                 </Row>
                 <Row className="g-2 mb-2">
-                    <Col md={3}>
+                    <Col md={6}>
                         <Form.Label className="small fw-bold">Cert No.</Form.Label>
                         <Form.Control placeholder="Auto" value={sampleDraft.sub_certificate_number} onChange={(e) => handleDraftChange('sub_certificate_number', e.target.value)} />
                     </Col>
-                    <Col md={3}>
-                        <Form.Label className="small fw-bold">Sub-Name</Form.Label>
-                        <Form.Control placeholder="Optional" value={sampleDraft.name} onChange={(e) => handleDraftChange('name', e.target.value)} />
-                    </Col>
-                    <Col md={3}>
-                        <Form.Label className="small fw-bold">Fee (Amt)</Form.Label>
-                        <Form.Control type="number" placeholder="0" value={sampleDraft.amount} onChange={(e) => handleDraftChange('amount', e.target.value)} />
-                    </Col>
-                    <Col md={3} className="d-flex align-items-center mt-4">
+                    <Col md={6} className="d-flex align-items-center mt-4">
                         <Form.Check type="checkbox" label="Returned" checked={sampleDraft.returned || false} onChange={(e) => handleDraftChange('returned', e.target.checked)} />
                     </Col>
                 </Row>
 
                 {type === 'gold' && (
                     <Row className="g-2">
-                        <Col md={4}>
+                        <Col md={6}>
                             <Form.Label className="small fw-bold">Gross Wt</Form.Label>
                             <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.gross_weight} onChange={(e) => handleDraftChange('gross_weight', e.target.value)} />
                         </Col>
-                        <Col md={4}>
+                        <Col md={6}>
                             <Form.Label className="small fw-bold">Test Wt</Form.Label>
                             <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.test_weight} onChange={(e) => handleDraftChange('test_weight', e.target.value)} />
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Purity (%)</Form.Label>
-                            <Form.Control type="number" step="0.1" placeholder="91.6" value={sampleDraft.purity} onChange={(e) => handleDraftChange('purity', e.target.value)} />
                         </Col>
                     </Row>
                 )}
@@ -338,12 +323,8 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                                 <th>#</th>
                                 <th>Cert No.</th>
                                 <th>Item</th>
-                                <th>Sub-Name</th>
                                 <th>Gross Wt</th>
                                 {type !== 'photo' && <th>Test Wt</th>}
-                                {type === 'gold' && <th>Purity</th>}
-                                {type === 'gold' && <th>Net Wt</th>}
-                                <th>Amt</th>
                                 <th>Returned</th>
                                 <th className="text-center"></th>
                             </tr>
@@ -359,12 +340,8 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                                         <td>{s.seq}</td>
                                         <td>{s.sub_certificate_number || 'Auto'}</td>
                                         <td className="fw-bold">{s.item_name}</td>
-                                        <td>{s.name || '-'}</td>
                                         <td>{s.gross_weight || s.weight}g</td>
                                         {type !== 'photo' && <td>{s.test_weight}g</td>}
-                                        {type === 'gold' && <td>{s.purity}%</td>}
-                                        {type === 'gold' && <td>{s.net_weight || (s.gross_weight - s.test_weight).toFixed(3)}g</td>}
-                                        <td>{s.amount || '0'}</td>
                                         <td>{s.returned ? 'Yes' : 'No'}</td>
                                         <td className="text-center">
                                             <Button variant="link" className="p-0 text-danger" onClick={() => removeSample(s.id)}>

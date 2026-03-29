@@ -59,9 +59,7 @@ const Certificates = () => {
 
     const handleCreate = async (formData) => {
         try {
-            const res = await api.post('/certificates/with-photo', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            const res = await api.post('/certificates/with-photo', formData);
             if (res.data) {
                 addToast('Certificate issued successfully', 'success');
                 setShowForm(false);

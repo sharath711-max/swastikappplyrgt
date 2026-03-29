@@ -11,9 +11,7 @@ const NewCertificateModal = ({ show, onHide, onSuccess, type }) => {
     const handleCreate = async (formData) => {
         setLoading(true);
         try {
-            const res = await api.post('/certificates/with-photo', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            const res = await api.post('/certificates/with-photo', formData);
             if (res.data) {
                 addToast('Certificate issued successfully', 'success');
                 if (onSuccess) onSuccess();

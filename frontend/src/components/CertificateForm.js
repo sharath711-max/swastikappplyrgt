@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Form, Button, Row, Col, InputGroup, ListGroup, Badge } from 'react-bootstrap';
 import { FaPlus, FaTrash, FaSearch } from 'react-icons/fa';
 import api from '../services/api';
+import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import { calculateGoldItem } from '../utils/calculations';
-import NewCustomerModal from './NewCustomerModal';
 
 const emptyDraft = {
     item_name: '',
@@ -18,11 +18,22 @@ const emptyDraft = {
     returned: false
 };
 
-const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = null, loading = false }) => {
-    const { addToast } = useToast();
-    const initialType = forcedType || (initialData?.id?.startsWith('GTS') ? 'gold' : initialData?.id?.startsWith('STS') ? 'silver' : initialData?.certificate_type || 'gold');
+const getCertificateType = (initialData, forcedType) => (
+    forcedType || (
+        initialData?.id?.startsWith('GTS')
+            ? 'gold'
+            : initialData?.id?.startsWith('STS')
+                ? 'silver'
+                : initialData?.certificate_type || 'gold'
+    )
+);
 
-    const [type] = useState(initialType);
+const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = null, loading = false, isOpen = true }) => {
+    const { addToast } = useToast();
+    const { openModal } = useModal();
+    const initialType = getCertificateType(initialData, forcedType);
+
+    const [type, setType] = useState(initialType);
     const [includeGst] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -35,7 +46,6 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
     const [sampleDraft, setSampleDraft] = useState(emptyDraft);
     const [items, setItems] = useState([]);
     const [photo, setPhoto] = useState(null);
-    const [showCustomerModal, setShowCustomerModal] = useState(false);
     const currentDate = new Date().toLocaleDateString('en-US');
 
     const fetchCustomers = useCallback(async () => {
@@ -50,6 +60,17 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
 
     useEffect(() => {
         fetchCustomers();
+    }, [fetchCustomers]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        setType(initialType);
+        setSampleDraft({ ...emptyDraft });
+        setItems([]);
+        setPhoto(null);
+        setShowSuggestions(false);
+
         if (initialData?.customer_id && initialData.customer) {
             setSelectedCustomer({
                 id: initialData.customer_id,
@@ -57,8 +78,11 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                 phone: initialData.customer.phone
             });
             setSearchTerm(initialData.customer.name);
+        } else {
+            setSelectedCustomer(null);
+            setSearchTerm('');
         }
-    }, [initialData, fetchCustomers]);
+    }, [initialData, initialType, isOpen]);
 
     useEffect(() => {
         if (!searchTerm.trim()) {
@@ -96,7 +120,6 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
         if (newCustomer) {
             handleCustomerSelect(newCustomer);
         }
-        setShowCustomerModal(false);
     };
 
     const handleDraftChange = (field, value) => {
@@ -233,7 +256,14 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                             ))
                         ) : (
                             <ListGroup.Item className="text-center text-muted">
-                                No customers found.{' '}<Button variant="link" size="sm" onClick={() => setShowCustomerModal(true)}>Create New?</Button>
+                                No customers found.{' '}
+                                <Button
+                                    variant="link"
+                                    size="sm"
+                                    onClick={() => openModal('customer', { reload: handleCustomerCreated })}
+                                >
+                                    Create New?
+                                </Button>
                             </ListGroup.Item>
                         )}
                     </ListGroup>
@@ -366,8 +396,6 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                     </Button>
                 </Col>
             </Row>
-
-            <NewCustomerModal show={showCustomerModal} onHide={() => setShowCustomerModal(false)} onSuccess={handleCustomerCreated} />
 
             <style>{`
                 .new-sample-header {

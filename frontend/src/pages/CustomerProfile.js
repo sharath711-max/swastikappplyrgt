@@ -4,8 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Card, Nav, Tab, Row, Col, Badge, Button, Accordion, Table, Spinner } from 'react-bootstrap';
 import { FaPhone, FaArrowLeft, FaEdit, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import api from '../services/api';
+import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
-import NewCustomerModal from '../components/NewCustomerModal';
 import NewCreditHistoryModal from '../components/NewCreditHistoryModal';
 import NewWeightLossHistoryModal from '../components/NewWeightLossHistoryModal';
 import { FaPlus } from 'react-icons/fa';
@@ -50,6 +50,7 @@ const RelatedList = ({ title, data, columns, emptyMessage }) => {
 
 const CustomerProfile = () => {
     const { addToast } = useToast();
+    const { openModal } = useModal();
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('details');
@@ -66,7 +67,6 @@ const CustomerProfile = () => {
         loaded: false
     });
     const [loadingRelated, setLoadingRelated] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
     const [showCHModal, setShowCHModal] = useState(false);
     const [showWLHModal, setShowWLHModal] = useState(false);
 
@@ -157,7 +157,20 @@ const CustomerProfile = () => {
                             <h3 className={`fw-bold ${customer.balance > 0 ? 'text-danger' : 'text-success'}`}>
                                 {formatCurrency(customer.balance)}
                             </h3>
-                            <Button variant="outline-primary" size="sm" className="mt-2" onClick={() => setShowEditModal(true)}>
+                            <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="mt-2"
+                                onClick={() => openModal('customer', {
+                                    customer,
+                                    reload: async (updatedCustomer) => {
+                                        if (updatedCustomer) {
+                                            setCustomer(updatedCustomer);
+                                        }
+                                        await fetchCustomer();
+                                    }
+                                })}
+                            >
                                 <FaEdit className="me-1" /> Edit Customer
                             </Button>
                         </Col>
@@ -387,17 +400,6 @@ const CustomerProfile = () => {
                     </Card.Body>
                 </Card>
             </Tab.Container>
-
-            {/* Edit Customer Modal */}
-            <NewCustomerModal
-                show={showEditModal}
-                onHide={() => setShowEditModal(false)}
-                customer={customer}
-                onSuccess={(updatedCustomer) => {
-                    setCustomer(updatedCustomer);
-                    fetchCustomer();
-                }}
-            />
             {/* Credit History Modal */}
             <NewCreditHistoryModal
                 show={showCHModal}

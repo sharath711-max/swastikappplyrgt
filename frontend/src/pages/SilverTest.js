@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DataTable, Modal, Toast } from '../components/SalesforceComponents';
 import { FaFlask, FaPlus, FaTrash, FaPrint, FaCertificate } from 'react-icons/fa';
 import api from '../services/api';
+import { preventDuplicateCreate } from '../utils/certificateGuard';
 import GoldTestForm from '../components/GoldTestForm'; // Reuse GoldTestForm for Silver as items structure is similar or same
 
 const SilverTest = () => {
@@ -30,13 +31,13 @@ const SilverTest = () => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
     };
 
-    const fetchTests = async () => {
+    const loadTests = async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams(filters).toString();
             const response = await api.get(`/silver-tests?${params}`);
             if (response.data.success) {
-                setTests(response.data.data);
+                setTests([...(response.data.data || [])]);
                 // setPagination(response.data.pagination);
             }
         } catch (error) {
@@ -46,16 +47,24 @@ const SilverTest = () => {
         }
     };
 
+    const fetchTests = loadTests;
+
     const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
     const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
     const handleCreate = async (testData) => {
         try {
+            if (!preventDuplicateCreate('ST', testData.customer_id)) {
+                showToast('Silver Test creation is already in progress', 'warning');
+                return;
+            }
+
             const res = await api.post('/silver-tests', testData);
             if (res.data.success) {
                 showToast('Silver test created successfully', 'success');
                 setShowForm(false);
-                fetchTests();
+                setSelectedTest(null);
+                await loadTests();
             }
         } catch (error) {
             showToast(error.response?.data?.error || 'Error creating test', 'error');

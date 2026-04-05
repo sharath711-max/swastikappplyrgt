@@ -6,10 +6,12 @@ import {
 import {
     FaPlus, FaSearch, FaPrint, FaCertificate, FaHistory
 } from 'react-icons/fa';
+import { useModal } from '../hooks/useModal';
 import { useToast } from '../contexts/ToastContext';
 import api from '../services/api';
 import CertificateForm from '../components/CertificateForm';
 import GoldCertificateItemForm from '../components/GoldCertificateItemForm';
+import { preventDuplicateCreate } from '../utils/certificateGuard';
 
 const Certificates = () => {
     const { addToast } = useToast();
@@ -18,10 +20,9 @@ const Certificates = () => {
     const [certificates, setCertificates] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
-    const [showItemForm, setShowItemForm] = useState(false);
-    const [activeCertId, setActiveCertId] = useState(null);
     const [promoteData, setPromoteData] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const itemModal = useModal();
 
     useEffect(() => {
         if (location.state?.promoteData) {
@@ -53,17 +54,35 @@ const Certificates = () => {
         }
     }, [addToast]);
 
+    const openItemForm = useCallback((certificateId) => {
+        itemModal.open(certificateId);
+    }, [itemModal]);
+
     useEffect(() => {
         fetchCertificates();
     }, [fetchCertificates]);
 
     const handleCreate = async (formData) => {
         try {
+            const payload = JSON.parse(formData.get('data'));
+            const certificateTypeMap = {
+                gold: 'GC',
+                silver: 'SC',
+                photo: 'PC'
+            };
+
+            if (!preventDuplicateCreate(certificateTypeMap[payload.type] || 'CERT', payload.customer_id)) {
+                addToast('Certificate creation is already in progress', 'warning');
+                return;
+            }
+
             const res = await api.post('/certificates/with-photo', formData);
             if (res.data) {
                 addToast('Certificate issued successfully', 'success');
                 setShowForm(false);
-                fetchCertificates();
+                itemModal.close();
+                setPromoteData(null);
+                await fetchCertificates();
                 // Optionally auto-open print view
                 navigate(`/print/certificate/${res.data.certificate_no}`);
             }
@@ -158,10 +177,7 @@ const Certificates = () => {
                                             variant="success"
                                             size="sm"
                                             className="w-100 mt-2 fw-bold"
-                                            onClick={() => {
-                                                setActiveCertId(cert.id);
-                                                setShowItemForm(true);
-                                            }}
+                                            onClick={() => openItemForm(cert.id)}
                                         >
                                             <FaPlus className="me-1" /> Manage Items
                                         </Button>
@@ -189,6 +205,7 @@ const Certificates = () => {
                 <Modal.Body className="pt-0">
                     <CertificateForm
                         initialData={promoteData}
+                        isOpen={showForm}
                         onSubmit={handleCreate}
                         onCancel={() => { setShowForm(false); setPromoteData(null); }}
                     />
@@ -196,7 +213,7 @@ const Certificates = () => {
             </Modal>
 
             {/* New Modal for Managing Individual Items (Gold) */}
-            <Modal show={showItemForm} onHide={() => { setShowItemForm(false); setActiveCertId(null); }} size="md" centered>
+            <Modal show={itemModal.isOpen} onHide={itemModal.close} size="md" centered>
                 <Modal.Header closeButton className="border-0">
                     <Modal.Title className="fw-bold" style={{ color: '#198754' }}>
                         Add Gold Item to Certificate
@@ -204,7 +221,8 @@ const Certificates = () => {
                 </Modal.Header>
                 <Modal.Body className="pt-0">
                     <GoldCertificateItemForm
-                        certificateId={activeCertId}
+                        key={itemModal.selectedId || 'no-certificate'}
+                        certificateId={itemModal.selectedId}
                         onItemAdded={() => {
                             fetchCertificates(); // Refresh to show updated weights/counts
                         }}

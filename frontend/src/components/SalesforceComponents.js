@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import BaseModal from './core/Modal';
 
 // 1. Salesforce Toast Notification
 export const Toast = ({ message, type = 'info', duration = 3000, onClose }) => {
@@ -14,41 +15,15 @@ export const Toast = ({ message, type = 'info', duration = 3000, onClose }) => {
             <div className="slds-toast__content">
                 <strong>{type.toUpperCase()}:</strong> {message}
             </div>
-            <button className="modal-close" onClick={onClose} style={{ marginLeft: '12px' }}>
-                ×
+            <button className="modal-close" onClick={onClose} style={{ marginLeft: '12px' }} type="button">
+                x
             </button>
         </div>
     );
 };
 
 // 2. Salesforce Modal Component
-export const Modal = ({ isOpen, show, onClose, onHide, title, children, size = 'medium', dark = false }) => {
-    const isModalOpen = typeof isOpen === 'boolean' ? isOpen : !!show;
-    const handleClose = onClose || onHide || (() => { });
-
-    if (!isModalOpen) return null;
-
-    const sizeClasses = {
-        small: 'max-w-md',
-        medium: 'max-w-2xl',
-        large: 'max-w-4xl',
-        xlarge: 'max-w-6xl'
-    };
-
-    return (
-        <div className={`modal-overlay ${dark ? 'modal-dark' : ''}`}>
-            <div className={`modal-content ${sizeClasses[size] || ''}`}>
-                <div className="modal-header">
-                    <h2 className="modal-title">{title}</h2>
-                    <button className="modal-close" onClick={handleClose}>×</button>
-                </div>
-                <div className="modal-body">
-                    {children}
-                </div>
-            </div>
-        </div>
-    );
-};
+export const Modal = (props) => <BaseModal {...props} />;
 
 // 3. Salesforce DataTable with Advanced Features
 export const DataTable = ({
@@ -121,7 +96,7 @@ export const DataTable = ({
                             {column.header}
                             {sortColumn === column.field && (
                                 <span style={{ marginLeft: '4px' }}>
-                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                    {sortDirection === 'asc' ? '^' : 'v'}
                                 </span>
                             )}
                         </th>
@@ -131,7 +106,7 @@ export const DataTable = ({
             <tbody>
                 {sortedData.map((row, rowIndex) => (
                     <tr
-                        key={rowIndex}
+                        key={row.id || row.auto_number || row.certificate_no || rowIndex}
                         onClick={() => onRowClick && onRowClick(row)}
                         style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                         className={selectedRows.includes(rowIndex) ? 'row-selected' : ''}

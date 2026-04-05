@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Spinner, Container, Row, Col, Modal, Table } from 'react-bootstrap';
 import { FaPlus, FaSync, FaCheckDouble, FaSave, FaCheckCircle, FaPrint, FaCopy } from 'react-icons/fa';
+import { useModal } from '../hooks/useModal';
 import { useToast } from '../contexts/ToastContext';
 import api from '../services/api';
 import NewGoldTestModal from '../components/NewGoldTestModal';
@@ -262,15 +263,23 @@ const UpdatePurityModal = ({ show, onHide, testId, onUpdate }) => {
     }, [testId, onHide, addToast]);
 
     useEffect(() => {
-        if (show && testId) {
-            fetchDetails();
+        if (!show || !testId) {
+            setTest(null);
+            setItems([]);
+            return;
         }
+
+        setTest(null);
+        setItems([]);
+        fetchDetails();
     }, [show, testId, fetchDetails]);
 
     const handleFieldChange = (index, field, value) => {
-        const next = [...items];
-        next[index][field] = value;
-        setItems(next);
+        setItems((prev) => prev.map((item, itemIndex) => (
+            itemIndex === index
+                ? { ...item, [field]: value }
+                : item
+        )));
     };
 
     const hasValidPurity = () => items.every((item) => {
@@ -326,18 +335,18 @@ const UpdatePurityModal = ({ show, onHide, testId, onUpdate }) => {
         }
     };
 
-    if (!test) return null;
+    if (!show) return null;
 
     return (
         <Modal show={show} onHide={onHide} size="lg" centered className="gt-results-modal" contentClassName="shadow-lg" style={{ backdropFilter: 'blur(5px)' }}>
             <Modal.Header closeButton style={modalStyles.header}>
                 <Modal.Title className="fw-bold">
                     Add Test Results
-                    <span className="ms-2 opacity-75 h6 mb-0">({test.id})</span>
+                    <span className="ms-2 opacity-75 h6 mb-0">({test?.id || testId})</span>
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body style={modalStyles.body}>
-                {loading ? <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div> : (
+                {loading || !test ? <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div> : (
                     <div>
                         <div className="d-flex justify-content-between mb-4 p-3 rounded-4" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                             <span className="h6 mb-0"><strong>Customer:</strong> {test.customer_name}</span>
@@ -454,9 +463,13 @@ const CompletedDetailsModal = ({ show, onHide, testId }) => {
     }, [testId, onHide, addToast]);
 
     useEffect(() => {
-        if (show && testId) {
-            fetchDetails();
+        if (!show || !testId) {
+            setTest(null);
+            return;
         }
+
+        setTest(null);
+        fetchDetails();
     }, [show, testId, fetchDetails]);
 
     const handleCopy = async () => {
@@ -676,10 +689,10 @@ const GoldTest = () => {
     const [loading, setLoading] = useState(false);
     const [batchMoving, setBatchMoving] = useState(false);
     const [showModal, setShowModal] = useState(false);
-    const [selectedTestId, setSelectedTestId] = useState(null);
-    const [paymentModalTestId, setPaymentModalTestId] = useState(null);
-    const [completedModalTestId, setCompletedModalTestId] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
+    const todoModal = useModal();
+    const paymentModal = useModal();
+    const completedModal = useModal();
 
     const fetchColumnData = useCallback(async (status) => {
         try {
@@ -701,9 +714,9 @@ const GoldTest = () => {
                 fetchColumnData('DONE')
             ]);
             setColumns({
-                TODO: todo,
-                IN_PROGRESS: inProgress,
-                DONE: done
+                TODO: [...todo],
+                IN_PROGRESS: [...inProgress],
+                DONE: [...done]
             });
         } finally {
             setLoading(false);
@@ -714,16 +727,23 @@ const GoldTest = () => {
         loadBoard();
     }, [loadBoard]);
 
+    const handleCreateSuccess = useCallback(async () => {
+        todoModal.close();
+        paymentModal.close();
+        completedModal.close();
+        await loadBoard();
+    }, [completedModal, loadBoard, paymentModal, todoModal]);
+
     const handleCardOpen = (item) => {
         if (item.status === 'TODO') {
-            setSelectedTestId(item.id);
+            todoModal.open(item.id);
             return;
         }
         if (item.status === 'IN_PROGRESS') {
-            setPaymentModalTestId(item.id);
+            paymentModal.open(item.id);
             return;
         }
-        setCompletedModalTestId(item.id);
+        completedModal.open(item.id);
     };
 
     const handleDropToColumn = async (targetStatus) => {
@@ -740,7 +760,7 @@ const GoldTest = () => {
                 });
                 if (!hasPurity) {
                     addToast('Add test results before moving to Tested.', 'info');
-                    setSelectedTestId(draggedItem.id);
+                    todoModal.open(draggedItem.id);
                     return;
                 }
             }
@@ -750,7 +770,7 @@ const GoldTest = () => {
                 const mode = (draggedItem.mode_of_payment || '').trim();
                 if (!(Number.isFinite(amount) && amount > 0 && mode)) {
                     addToast('Add payment details in Tested status before moving to Completed.', 'info');
-                    setPaymentModalTestId(draggedItem.id);
+                    paymentModal.open(draggedItem.id);
                     return;
                 }
 
@@ -897,7 +917,7 @@ const GoldTest = () => {
                                 >
                                     {items.map((item) => (
                                         <div
-                                            key={item.id}
+                                            key={`${col.id}-${item.id}`}
                                             style={boardStyles.card(col.accent)}
                                             onClick={() => handleCardOpen(item)}
                                             draggable
@@ -976,27 +996,30 @@ const GoldTest = () => {
             <NewGoldTestModal
                 show={showModal}
                 onHide={() => setShowModal(false)}
-                onSuccess={loadBoard}
+                onSuccess={handleCreateSuccess}
             />
 
             <UpdatePurityModal
-                show={!!selectedTestId}
-                testId={selectedTestId}
-                onHide={() => setSelectedTestId(null)}
+                key={todoModal.selectedId || 'todo-modal'}
+                show={todoModal.isOpen}
+                testId={todoModal.selectedId}
+                onHide={todoModal.close}
                 onUpdate={loadBoard}
             />
 
             <PaymentDeliveryModal
-                show={!!paymentModalTestId}
-                testId={paymentModalTestId}
-                onHide={() => setPaymentModalTestId(null)}
+                key={paymentModal.selectedId || 'payment-modal'}
+                show={paymentModal.isOpen}
+                testId={paymentModal.selectedId}
+                onHide={paymentModal.close}
                 onSuccess={loadBoard}
             />
 
             <CompletedDetailsModal
-                show={!!completedModalTestId}
-                testId={completedModalTestId}
-                onHide={() => setCompletedModalTestId(null)}
+                key={completedModal.selectedId || 'completed-modal'}
+                show={completedModal.isOpen}
+                testId={completedModal.selectedId}
+                onHide={completedModal.close}
             />
         </Container>
     );

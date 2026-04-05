@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Phase2Modal from '../../../components/Phase2Modal';
+import { ModalProvider } from '../../../contexts/ModalContext';
 
 // Mock context and services
 jest.mock('../../../services/api', () => ({
@@ -29,9 +30,15 @@ const mockRecord = {
     }]
 };
 
+const renderModal = (props = {}) => render(
+    <ModalProvider>
+        <Phase2Modal show={true} onHide={() => { }} test={mockRecord} {...props} />
+    </ModalProvider>
+);
+
 describe('Pillar 2: Integration Testing - Technician Testing & WLH (Phase2Modal)', () => {
     test('Negative Case: Error shows when Returned + Test weight exceeds Intake', async () => {
-        render(<Phase2Modal show={true} onHide={() => { }} test={mockRecord} />);
+        renderModal();
 
         // Input Test Weight: 0.500
         const testInput = screen.getByTestId('item-test-weight');
@@ -53,7 +60,7 @@ describe('Pillar 2: Integration Testing - Technician Testing & WLH (Phase2Modal)
     });
 
     test('Positive Case (Zero Loss): Successfully saves without triggering specific WLH alerts', async () => {
-        render(<Phase2Modal show={true} onHide={() => { }} test={mockRecord} />);
+        renderModal();
 
         fireEvent.change(screen.getByTestId('item-test-weight'), { target: { value: '0.500' } });
         fireEvent.change(screen.getByTestId('item-net-weight'), { target: { value: '9.500' } });
@@ -64,7 +71,7 @@ describe('Pillar 2: Integration Testing - Technician Testing & WLH (Phase2Modal)
     });
 
     test('Positive Case (With Loss): Triggers Weight Loss History Alert when discrepancy > 0.001', async () => {
-        render(<Phase2Modal show={true} onHide={() => { }} test={mockRecord} />);
+        renderModal();
 
         fireEvent.change(screen.getByTestId('item-test-weight'), { target: { value: '0.500' } });
         fireEvent.change(screen.getByTestId('item-net-weight'), { target: { value: '9.200' } }); // 10.0 - (0.5+9.2) = 0.300 loss

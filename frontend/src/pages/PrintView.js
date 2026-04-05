@@ -16,6 +16,10 @@ const PrintView = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            setLoading(true);
+            setData(null);
+            setSelectedItem(null);
+
             try {
                 let endpoint = '';
                 if (type === 'gold-test' || type === 'silver-test') {
@@ -36,6 +40,8 @@ const PrintView = () => {
                 // Handle item-level precision for batch records
                 if (itemIndex !== null && result && result.items) {
                     setSelectedItem(result.items[parseInt(itemIndex, 10)]);
+                } else {
+                    setSelectedItem(null);
                 }
             } catch (error) {
                 console.error('Error fetching print data:', error);
@@ -95,7 +101,7 @@ const PrintView = () => {
                 ) : (
                     (queryParams.get('itemLevel') === 'true' || type.includes('certificate') || type.includes('cert') || type === 'gold' || type === 'silver' || type === 'photo') && data.items && data.items.length > 0 ? (
                         data.items.map((it, idx) => (
-                            <div key={idx} style={{ pageBreakAfter: idx < data.items.length - 1 ? 'always' : 'auto' }}>
+                            <div key={it.id || it.item_no || it.item_number || idx} style={{ pageBreakAfter: idx < data.items.length - 1 ? 'always' : 'auto' }}>
                                 <PrintManager
                                     type={type}
                                     data={data}

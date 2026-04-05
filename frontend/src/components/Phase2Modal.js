@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Table, Form, Alert, Badge, Row, Col, Spinner } from 'react-bootstrap';
-import { useToast } from '../contexts/ToastContext';
 import { FaCamera, FaCopy, FaPrint, FaExclamationTriangle } from 'react-icons/fa';
-import NewWeightLossHistoryModal from './NewWeightLossHistoryModal';
+import { useModal } from '../contexts/ModalContext';
+import { useToast } from '../contexts/ToastContext';
 import PriceCalculationTable from './core/PriceCalculationTable';
 import api from '../services/api';
 
@@ -32,6 +32,7 @@ const escapeHtml = (value) => String(value ?? '')
 
 const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
     const { addToast } = useToast();
+    const { openModal } = useModal();
     const [items, setItems] = useState([]);
     const [modeOfPayment, setModeOfPayment] = useState('Cash');
     const [amount, setAmount] = useState('');
@@ -39,7 +40,6 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [photos, setPhotos] = useState({});
-    const [showWlhModal, setShowWlhModal] = useState(false);
 
     const isSystemReadOnly = CURRENT_SYSTEM !== 'LAB';
     const isModalReadOnly = readOnly || isSystemReadOnly;
@@ -296,6 +296,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
     };
 
     const modalTitle = isTodoStage ? 'Add Test Results' : isDoneStage ? 'Completed Details' : 'Payment Details';
+    const totalWeightLoss = items.reduce((acc, it) => acc + getWeights(it).loss, 0);
 
     return (
         <>
@@ -513,21 +514,28 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                         </div>
                     )}
 
-                    {(() => {
-                        const totalLoss = items.reduce((acc, it) => acc + getWeights(it).loss, 0);
-                        if (totalLoss > 0.001) {
-                            return (
-                                <Alert variant="warning" className="d-flex align-items-center justify-content-between p-2 mt-2 border-warning shadow-sm">
-                                    <div className="d-flex align-items-center gap-2">
-                                        <FaExclamationTriangle className="text-warning" />
-                                        <span>Weight Loss Detected: <strong>{totalLoss.toFixed(3)}g</strong></span>
-                                    </div>
-                                    <Button size="sm" variant="warning" onClick={() => setShowWlhModal(true)}>Categorize Loss</Button>
-                                </Alert>
-                            );
-                        }
-                        return null;
-                    })()}
+                    {totalWeightLoss > 0.001 && (
+                        <Alert variant="warning" className="d-flex align-items-center justify-content-between p-2 mt-2 border-warning shadow-sm">
+                            <div className="d-flex align-items-center gap-2">
+                                <FaExclamationTriangle className="text-warning" />
+                                <span>Weight Loss Detected: <strong>{totalWeightLoss.toFixed(3)}g</strong></span>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="warning"
+                                onClick={() => openModal('weightLossHistory', {
+                                    customerId: test?.customer_id,
+                                    initialAmount: totalWeightLoss.toFixed(3),
+                                    initialReason: `Discrepancy in ${test?.auto_number}`,
+                                    reload: () => {
+                                        addToast('Loss categorized successfully', 'success');
+                                    }
+                                })}
+                            >
+                                Categorize Loss
+                            </Button>
+                        </Alert>
+                    )}
                 </Modal.Body>
 
                 <Modal.Footer className="border-0">
@@ -550,21 +558,6 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                     )}
                 </Modal.Footer>
             </Modal>
-            {
-                showWlhModal && (
-                    <NewWeightLossHistoryModal
-                        show={showWlhModal}
-                        onHide={() => setShowWlhModal(false)}
-                        onSuccess={() => {
-                            setShowWlhModal(false);
-                            addToast('Loss categorized successfully', 'success');
-                        }}
-                        customerId={test?.customer_id}
-                        initialAmount={items.reduce((acc, it) => acc + getWeights(it).loss, 0).toFixed(3)}
-                        initialReason={`Discrepancy in ${test?.auto_number}`}
-                    />
-                )
-            }
         </>
     );
 };

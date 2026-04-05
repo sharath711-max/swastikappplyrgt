@@ -3,8 +3,9 @@ import { Modal, Button, Form, Row, Col, Spinner, InputGroup } from 'react-bootst
 import { FaBalanceScale } from 'react-icons/fa';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import runModalSubmit from '../utils/handleSubmit';
 
-const NewWeightLossHistoryModal = ({ show, onHide, customerId, onSuccess, initialAmount = '', initialReason = '' }) => {
+const NewWeightLossHistoryModal = ({ show, onClose, onHide, customerId, onSuccess, initialAmount = '', initialReason = '' }) => {
     const { addToast } = useToast();
     const [loading, setLoading] = React.useState(false);
     const [errors, setErrors] = React.useState({});
@@ -12,6 +13,7 @@ const NewWeightLossHistoryModal = ({ show, onHide, customerId, onSuccess, initia
         amount: initialAmount,
         reason: initialReason
     });
+    const handleClose = onClose || onHide || (() => { });
 
     React.useEffect(() => {
         if (show) {
@@ -21,6 +23,14 @@ const NewWeightLossHistoryModal = ({ show, onHide, customerId, onSuccess, initia
             });
         }
     }, [show, initialAmount, initialReason]);
+
+    const resetForm = React.useCallback(() => {
+        setFormData({
+            amount: initialAmount,
+            reason: initialReason
+        });
+        setErrors({});
+    }, [initialAmount, initialReason]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -47,19 +57,20 @@ const NewWeightLossHistoryModal = ({ show, onHide, customerId, onSuccess, initia
 
         setLoading(true);
         try {
-            await api.post('/weight-loss', {
-                ...formData,
-                customer_id: customerId
+            await runModalSubmit({
+                action: async () => {
+                    await api.post('/weight-loss', {
+                        ...formData,
+                        customer_id: customerId
+                    });
+                    addToast('Weight loss recorded successfully', 'success');
+                },
+                reload: onSuccess,
+                close: () => {
+                    resetForm();
+                    handleClose();
+                }
             });
-            addToast('Weight loss recorded successfully', 'success');
-            onSuccess();
-            onHide();
-            // Reset form
-            setFormData({
-                amount: '',
-                reason: ''
-            });
-            setErrors({});
         } catch (error) {
             console.error('Error recording weight loss:', error);
             addToast(error.response?.data?.error || 'Failed to record weight loss', 'error');
@@ -69,7 +80,7 @@ const NewWeightLossHistoryModal = ({ show, onHide, customerId, onSuccess, initia
     };
 
     return (
-        <Modal show={show} onHide={onHide} centered backdrop="static" className="wlh-audit-modal shadow-lg">
+        <Modal show={show} onHide={handleClose} centered backdrop="static" className="wlh-audit-modal shadow-lg">
             <Modal.Header closeButton className="bg-gradient border-0" style={{ backgroundColor: '#2c3e50', color: '#f39c12' }}>
                 <Modal.Title className="fw-bold d-flex align-items-center gap-2">
                     <FaBalanceScale size={24} />
@@ -132,7 +143,7 @@ const NewWeightLossHistoryModal = ({ show, onHide, customerId, onSuccess, initia
                     </div>
                 </Modal.Body>
                 <Modal.Footer className="border-0 bg-white px-4 py-3">
-                    <Button variant="light" onClick={onHide} className="px-4 fw-semibold text-secondary shadow-sm">
+                    <Button variant="light" onClick={handleClose} className="px-4 fw-semibold text-secondary shadow-sm">
                         Cancel
                     </Button>
                     <Button variant="warning" type="submit" disabled={loading} className="px-4 fw-bold shadow-sm d-flex align-items-center gap-2">

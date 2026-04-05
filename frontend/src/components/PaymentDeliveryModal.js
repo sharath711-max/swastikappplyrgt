@@ -3,6 +3,7 @@ import { Modal, Button, Table, Form, Row, Col, Alert, Spinner } from 'react-boot
 import { FaTruck, FaSave, FaCheckCircle } from 'react-icons/fa';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import runModalSubmit from '../utils/handleSubmit';
 
 const getWeights = (item) => {
     const total = Number(item.sample_weight || 0);
@@ -44,9 +45,19 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
     }, [testId]);
 
     useEffect(() => {
-        if (show && testId) {
-            fetchDetails();
+        if (!show || !testId) {
+            setTest(null);
+            setItems([]);
+            setError(null);
+            setModeOfPayment('Cash');
+            setPaymentAmount('');
+            return;
         }
+
+        setTest(null);
+        setItems([]);
+        setError(null);
+        fetchDetails();
     }, [show, testId, fetchDetails]);
 
     const itemWeights = useMemo(() => items.map(getWeights), [items]);
@@ -103,10 +114,14 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
 
         setSaving(true);
         try {
-            await api.post(`/gold-tests/${testId}/results`, buildResultsPayload());
-            addToast('Payment details saved in Tested status.', 'success');
-            if (onSuccess) onSuccess();
-            onHide();
+            await runModalSubmit({
+                action: async () => {
+                    await api.post(`/gold-tests/${testId}/results`, buildResultsPayload());
+                    addToast('Payment details saved in Tested status.', 'success');
+                },
+                reload: onSuccess,
+                close: onHide
+            });
         } catch (err) {
             addToast(err.response?.data?.error || 'Failed to save payment details', 'error');
         } finally {
@@ -128,15 +143,19 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
 
         setSubmitting(true);
         try {
-            await api.post(`/gold-tests/${testId}/results`, buildResultsPayload());
-            await api.post(`/gold-tests/${testId}/finalize`, {
-                items: payloadItems,
-                mode_of_payment: modeOfPayment,
-                weight_loss: 0
+            await runModalSubmit({
+                action: async () => {
+                    await api.post(`/gold-tests/${testId}/results`, buildResultsPayload());
+                    await api.post(`/gold-tests/${testId}/finalize`, {
+                        items: payloadItems,
+                        mode_of_payment: modeOfPayment,
+                        weight_loss: 0
+                    });
+                    addToast('Payment submitted. Card moved to Completed.', 'success');
+                },
+                reload: onSuccess,
+                close: onHide
             });
-            addToast('Payment submitted. Card moved to Completed.', 'success');
-            if (onSuccess) onSuccess();
-            onHide();
         } catch (err) {
             addToast(err.response?.data?.error || 'Delivery failed', 'error');
         } finally {
@@ -152,7 +171,7 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
                 <Modal.Title className="fw-bold">
                     <FaTruck className="me-2 text-white" />
                     Finalize & Payment
-                    <span className="ms-2 opacity-75 h6 mb-0">({test.id})</span>
+                    <span className="ms-2 opacity-75 h6 mb-0">({test?.id || testId})</span>
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body className="p-0">

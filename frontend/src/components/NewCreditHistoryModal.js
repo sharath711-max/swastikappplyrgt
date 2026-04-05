@@ -3,6 +3,7 @@ import { Modal, Button, Form, Row, Col, Spinner } from 'react-bootstrap';
 import { FaSave, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import runModalSubmit from '../utils/handleSubmit';
 
 const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
     const { addToast } = useToast();
@@ -14,6 +15,15 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
         mode_of_payment: 'Cash',
         description: ''
     });
+    const resetForm = () => {
+        setFormData({
+            amount: '',
+            type: 'CREDIT',
+            mode_of_payment: 'Cash',
+            description: ''
+        });
+        setErrors({});
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -40,21 +50,20 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
 
         setLoading(true);
         try {
-            await api.post('/credit-history', {
-                ...formData,
-                customer_id: customerId
+            await runModalSubmit({
+                action: async () => {
+                    await api.post('/credit-history', {
+                        ...formData,
+                        customer_id: customerId
+                    });
+                    addToast('Transaction recorded successfully', 'success');
+                },
+                reload: onSuccess,
+                close: () => {
+                    resetForm();
+                    onHide();
+                }
             });
-            addToast('Transaction recorded successfully', 'success');
-            onSuccess();
-            onHide();
-            // Reset form
-            setFormData({
-                amount: '',
-                type: 'CREDIT',
-                mode_of_payment: 'Cash',
-                description: ''
-            });
-            setErrors({});
         } catch (error) {
             console.error('Error recording transaction:', error);
             addToast(error.response?.data?.error || 'Failed to record transaction', 'error');

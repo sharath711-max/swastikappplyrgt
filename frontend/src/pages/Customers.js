@@ -2,18 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserPlus, FaSearch, FaPhone, FaArrowRight, FaSync, FaInbox, FaUserEdit } from 'react-icons/fa';
 import api from '../services/api';
-import NewCustomerModal from '../components/NewCustomerModal';
+import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import './Customers.css';
 
 const Customers = () => {
     const { addToast } = useToast();
+    const { openModal } = useModal();
     const navigate = useNavigate();
     const [customers, setCustomers] = useState([]);
     const [filteredCustomers, setFilteredCustomers] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [showModal, setShowModal] = useState(false);
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     const fetchCustomers = useCallback(async () => {
@@ -44,13 +43,16 @@ const Customers = () => {
 
     const handleEditCustomer = (e, customer) => {
         e.stopPropagation();
-        setSelectedCustomer(customer);
-        setShowModal(true);
+        openModal('customer', {
+            customer,
+            reload: fetchCustomers
+        });
     };
 
     const handleAddCustomer = () => {
-        setSelectedCustomer(null);
-        setShowModal(true);
+        openModal('customer', {
+            reload: fetchCustomers
+        });
     };
 
     const getInitials = (name) => {
@@ -164,16 +166,6 @@ const Customers = () => {
                     </div>
                 )}
             </div>
-
-            <NewCustomerModal
-                show={showModal}
-                onHide={() => setShowModal(false)}
-                customer={selectedCustomer}
-                onSuccess={() => {
-                    fetchCustomers();
-                    setShowModal(false);
-                }}
-            />
         </div>
     );
 };

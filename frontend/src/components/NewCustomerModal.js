@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import runModalSubmit from '../utils/handleSubmit';
 
-const NewCustomerModal = ({ show, onHide, onSuccess, customer = null }) => {
+const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null }) => {
     const { addToast } = useToast();
     const [formData, setFormData] = useState({
         name: '',
@@ -13,15 +14,19 @@ const NewCustomerModal = ({ show, onHide, onSuccess, customer = null }) => {
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [touched, setTouched] = useState({});
+    const handleClose = onClose || onHide || (() => { });
 
     const isEdit = !!customer;
+    const resetForm = React.useCallback(() => {
+        setFormData({ name: '', phone: '', notes: '' });
+        setErrors({});
+        setTouched({});
+    }, []);
 
     // Reset or Populate form when modal opens
     React.useEffect(() => {
         if (!show) {
-            setFormData({ name: '', phone: '', notes: '' });
-            setErrors({});
-            setTouched({});
+            resetForm();
         } else if (customer) {
             setFormData({
                 name: customer.name || '',
@@ -29,7 +34,7 @@ const NewCustomerModal = ({ show, onHide, onSuccess, customer = null }) => {
                 notes: customer.notes || ''
             });
         }
-    }, [show, customer]);
+    }, [show, customer, resetForm]);
 
     const validateField = (name, value) => {
         let error = '';
@@ -91,24 +96,26 @@ const NewCustomerModal = ({ show, onHide, onSuccess, customer = null }) => {
 
         setLoading(true);
         try {
-            const payload = {
-                ...formData,
-                name: formData.name.trim()
-            };
+            await runModalSubmit({
+                action: async () => {
+                    const payload = {
+                        ...formData,
+                        name: formData.name.trim()
+                    };
 
-            let res;
-            if (isEdit) {
-                res = await api.put(`/customers/${customer.id}`, payload);
-                addToast('Customer Updated Successfully', 'success');
-            } else {
-                res = await api.post('/customers', payload);
-                addToast('Customer Created Successfully', 'success');
-            }
+                    const res = isEdit
+                        ? await api.put(`/customers/${customer.id}`, payload)
+                        : await api.post('/customers', payload);
 
-            if (onSuccess) onSuccess(res.data.data || res.data);
-
-            // Explicitly Close ONLY after success
-            onHide();
+                    addToast(isEdit ? 'Customer Updated Successfully' : 'Customer Created Successfully', 'success');
+                    return res.data.data || res.data;
+                },
+                reload: onSuccess,
+                close: () => {
+                    resetForm();
+                    handleClose();
+                }
+            });
         } catch (error) {
             console.error('Submit Error:', error);
             const serverError = error.response?.data?.error || '';
@@ -132,7 +139,7 @@ const NewCustomerModal = ({ show, onHide, onSuccess, customer = null }) => {
     };
 
     return (
-        <Modal show={show} onHide={onHide} centered backdrop="static">
+        <Modal show={show} onHide={handleClose} centered backdrop="static">
             <Modal.Header closeButton>
                 <Modal.Title>{isEdit ? 'Edit Customer' : 'Add New Customer'}</Modal.Title>
             </Modal.Header>
@@ -183,7 +190,7 @@ const NewCustomerModal = ({ show, onHide, onSuccess, customer = null }) => {
                 </Form>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="secondary" onClick={onHide}>Cancel</Button>
+                <Button variant="secondary" onClick={handleClose}>Cancel</Button>
                 <Button
                     variant="primary"
                     type="submit"

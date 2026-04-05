@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Modal, Button, Form, Row, Col, InputGroup, ListGroup, Badge } from 'react-bootstrap';
 import { FaPlus, FaTrash, FaSearch } from 'react-icons/fa';
 import api from '../services/api';
+import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
-import NewCustomerModal from './NewCustomerModal';
+import { preventDuplicateCreate } from '../utils/certificateGuard';
+import runModalSubmit from '../utils/handleSubmit';
 
 const emptyDraft = {
     item: '',
@@ -34,6 +36,7 @@ const deriveWeights = (draft) => {
 
 const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
     const { addToast } = useToast();
+    const { openModal } = useModal();
     const [searchTerm, setSearchTerm] = useState('');
     const [customers, setCustomers] = useState([]);
     const [filteredCustomers, setFilteredCustomers] = useState([]);
@@ -44,7 +47,6 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
     const [sampleDraft, setSampleDraft] = useState(emptyDraft);
     const [sampleItems, setSampleItems] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [errors, setErrors] = useState({});
 
     const currentDate = new Date().toLocaleDateString('en-US');
@@ -113,7 +115,6 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
         if (newCustomer) {
             handleCustomerSelect(newCustomer);
         }
-        setShowCustomerModal(false);
     };
 
     const handleWeightFieldInput = (field, value) => {
@@ -181,25 +182,37 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
 
         setLoading(true);
         try {
-            const payload = {
-                customer_id: selectedCustomer.id,
-                items: sampleItems.map((s) => ({
-                    item_name: s.item,
-                    gross_weight: s.grossWeight,
-                    test_weight: s.sampleWeight, // API expects test_weight
-                    sample_weight: s.sampleWeight, // Backwards compatibility
-                    returned: s.returned
-                }))
-            };
+            await runModalSubmit({
+                action: async () => {
+                    if (!preventDuplicateCreate('GT', selectedCustomer.id)) {
+                        throw new Error('Duplicate gold test submission blocked');
+                    }
 
-            await api.post('/gold-tests', payload);
-            addToast('Gold Test Created Successfully', 'success');
+                    const payload = {
+                        customer_id: selectedCustomer.id,
+                        items: sampleItems.map((s) => ({
+                            item_name: s.item,
+                            gross_weight: s.grossWeight,
+                            test_weight: s.sampleWeight,
+                            sample_weight: s.sampleWeight,
+                            returned: s.returned
+                        }))
+                    };
 
-            // Explicitly call onSuccess to reload board AND close modal
-            if (onSuccess) onSuccess();
-            onHide();
-            resetForm();
+                    await api.post('/gold-tests', payload);
+                    addToast('Gold Test Created Successfully', 'success');
+                },
+                reload: onSuccess,
+                close: () => {
+                    resetForm();
+                    onHide();
+                }
+            });
         } catch (error) {
+            if (error.message === 'Duplicate gold test submission blocked') {
+                addToast('Gold Test creation is already in progress', 'warning');
+                return;
+            }
             addToast(error.response?.data?.error || 'Failed to create test', 'error');
         } finally {
             setLoading(false);
@@ -256,7 +269,13 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
                             ) : (
                                 <ListGroup.Item className="text-center text-muted">
                                     No customers found.{' '}
-                                    <Button variant="link" size="sm" onClick={() => setShowCustomerModal(true)}>Create New?</Button>
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        onClick={() => openModal('customer', { reload: handleCustomerCreated })}
+                                    >
+                                        Create New?
+                                    </Button>
                                 </ListGroup.Item>
                             )}
                         </ListGroup>
@@ -401,12 +420,6 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
                     Cancel
                 </Button>
             </Modal.Footer>
-
-            <NewCustomerModal
-                show={showCustomerModal}
-                onHide={() => setShowCustomerModal(false)}
-                onSuccess={handleCustomerCreated}
-            />
 
             <style>{`
                 .new-sample-modal .modal-content {

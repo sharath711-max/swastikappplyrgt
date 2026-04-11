@@ -1,0 +1,78 @@
+.modal-container {
+  width: 900px;
+  max-width: 95%;
+  height: 80vh;
+  background: #fff;
+  border-radius: 10px;
+  display: flex !important;
+  flex-direction: column;
+  margin: auto;
+}
+
+.modal-container .modal-content {
+  height: 100%;
+  border: none;
+  border-radius: inherit;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-container .modal-body {
+  flex: 1;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.modal-container .table-container {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.modal-container .modal-footer {
+  border-top: 1px solid #eee;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #fff;
+}
+
+.modal-container .alert {
+  padding: 6px 10px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.modal-container .customer-info {
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+/* Ensure forms inside modal body also use flex out of the box */
+.modal-container form,
+.modal-container .new-sample-modal {
+  flex: 1;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* Sample list panels wrap the tables in creation modals */
+.modal-container .sample-list-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 0 !important;
+}
+
+.modal-container .sample-list-panel .table-responsive {
+  flex: 1;
+  overflow-y: auto;
+}
+

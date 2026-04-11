@@ -24,6 +24,7 @@ All project documentation is organized in this folder. Use this index to find th
 - **[PM2_INSTALLATION_SUMMARY.md](PM2_INSTALLATION_SUMMARY.md)** - PM2 installation details and version info
 - **[PM2_SETUP_GUIDE.md](PM2_SETUP_GUIDE.md)** - Complete PM2 setup and configuration guide
 - **[PM2_QUICK_REFERENCE.md](PM2_QUICK_REFERENCE.md)** - Quick command reference for PM2
+- **[LOG_RETENTION_STRATEGY.md](LOG_RETENTION_STRATEGY.md)** - Log rotation, retention, and maintenance defaults
 
 ### Dev.js Integration
 - **[DEV_PM2_INTEGRATION.md](DEV_PM2_INTEGRATION.md)** - How to use PM2 with dev.js launcher
@@ -72,6 +73,7 @@ npm run dev -- --pm2
 | Using PM2 with dev.js | [DEV_PM2_INTEGRATION.md](DEV_PM2_INTEGRATION.md) |
 | PM2 commands | [PM2_QUICK_REFERENCE.md](PM2_QUICK_REFERENCE.md) |
 | Daily monitoring | [PM2_DAILY_MONITORING_CHECKLIST.md](PM2_DAILY_MONITORING_CHECKLIST.md) |
+| Log retention | [LOG_RETENTION_STRATEGY.md](LOG_RETENTION_STRATEGY.md) |
 | System rules | [MASTER_SYSTEM_RULES.md](MASTER_SYSTEM_RULES.md) |
 
 ---

@@ -125,8 +125,7 @@ class CertificateService {
         } else if (type === 'silver') {
             return silverCertificateRepository.updateResults(id, data);
         } else if (type === 'gold') {
-            // Forward to existing logic if needed
-            throw new Error('Update not implemented for gold via certificateService');
+            return goldCertificateRepository.updateResults(id, data);
         }
 
         return { success: false, error: 'Unknown type' };

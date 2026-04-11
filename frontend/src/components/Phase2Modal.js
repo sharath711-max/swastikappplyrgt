@@ -330,8 +330,9 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                         </Row>
                     </div>
 
-                    <Table responsive bordered hover size="sm" className="mb-3 align-middle">
-                        <thead className="table-light">
+                    <div className="table-container">
+                        <Table responsive bordered hover size="sm" className="mb-0 align-middle">
+                            <thead className="table-light">
                             <tr>
                                 <th>Seq</th>
                                 <th>Item Name</th>
@@ -454,6 +455,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                             )}
                         </tbody>
                     </Table>
+                    </div>
 
                     {!isTodoStage && (
                         <div className="p-3 border rounded bg-white shadow-sm">

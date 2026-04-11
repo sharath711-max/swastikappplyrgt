@@ -57,7 +57,7 @@ const PrintView = () => {
         if (!loading && data) {
             const timer = setTimeout(() => {
                 window.print();
-            }, 800); // Slightly longer delay for high-fidelity asset loading
+            }, 300); // Slightly longer delay for high-fidelity asset loading
             return () => clearTimeout(timer);
         }
     }, [loading, data]);

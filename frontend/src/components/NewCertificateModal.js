@@ -53,7 +53,7 @@ const NewCertificateModal = ({ show, onHide, onSuccess, type }) => {
     };
 
     return (
-        <Modal show={show} onHide={onHide} size="xl" centered className="new-sample-modal">
+        <Modal show={show} onHide={onHide} centered dialogClassName="modal-container" className="new-sample-modal">
             <Modal.Header closeButton className="new-sample-header">
                 <Modal.Title className="fw-bold">
                     {titleMap[type] || 'New Certificate Entry'}

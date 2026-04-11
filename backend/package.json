@@ -5,6 +5,7 @@
     "dev": "nodemon app.js",
     "start": "node app.js",
     "backup": "node utils/backup.js",
+    "logs:maintain": "node scripts/log_maintenance.js",
     "test": "jest tests/unit tests/integration",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",

@@ -10,12 +10,11 @@ import AppShell from './components/layout/AppShell';
 
 import Customers from './pages/Customers';
 import CustomerProfile from './pages/CustomerProfile';
-import Certificates from './pages/Certificates';
+import CertificatePage from './pages/CertificatePage';
 import WorkflowBoard from './pages/WorkflowBoard';
 import ListViewsPage from './pages/ListViewsPage';
 import PrintView from './pages/PrintView';
-import GoldTest from './pages/GoldTest';
-import SilverTest from './pages/SilverTest';
+import TestPage from './pages/TestPage';
 import WeightLoss from './pages/WeightLoss';
 import CashInHand from './pages/CashInHand';
 import UserManagement from './pages/UserManagement';
@@ -44,7 +43,7 @@ function App() {
 
                             {/* Protected Routes wrapped in AppShell */}
                             <Route path="/" element={
-                                <ProtectedRoute roles={['admin', 'manager']}>
+                                <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk']}>
                                     <AppShell>
                                         <Dashboard />
                                     </AppShell>
@@ -66,11 +65,19 @@ function App() {
                                 </ProtectedRoute>
                             } />
 
-                            <Route path="/certificates" element={
+                            <Route path="/gold-certificates" element={
                                 <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
-                                    <AppShell>
-                                        <Certificates />
-                                    </AppShell>
+                                    <AppShell><CertificatePage type="gold" /></AppShell>
+                                </ProtectedRoute>
+                            } />
+                            <Route path="/silver-certificates" element={
+                                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
+                                    <AppShell><CertificatePage type="silver" /></AppShell>
+                                </ProtectedRoute>
+                            } />
+                            <Route path="/photo-certificates" element={
+                                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
+                                    <AppShell><CertificatePage type="photo" /></AppShell>
                                 </ProtectedRoute>
                             } />
                             <Route path="/list-views" element={
@@ -90,14 +97,14 @@ function App() {
                             <Route path="/gold-test" element={
                                 <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
                                     <AppShell>
-                                        <GoldTest />
+                                        <TestPage title="Gold Tests" endpoint="gold-tests" print="gold-certificate" modalType="gold" />
                                     </AppShell>
                                 </ProtectedRoute>
                             } />
                             <Route path="/silver-test" element={
                                 <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
                                     <AppShell>
-                                        <SilverTest />
+                                        <TestPage title="Silver Tests" endpoint="silver-tests" print="silver-certificate" modalType="silver" />
                                     </AppShell>
                                 </ProtectedRoute>
                             } />

@@ -7,6 +7,14 @@ const { db } = require('../db/db');
  */
 function immutabilityGuard(tableName, idParamName = 'id') {
     return (req, res, next) => {
+        const isIdempotentCompletionReplay =
+            req.method === 'POST' &&
+            /^\/(finalize|complete)\/?$/.test(req.path);
+
+        if (isIdempotentCompletionReplay) {
+            return next();
+        }
+
         // We only care about mutation methods
         if (['PUT', 'PATCH', 'DELETE', 'POST'].includes(req.method)) {
             const recordId = req.params[idParamName] || req.body[idParamName];

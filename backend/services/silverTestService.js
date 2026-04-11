@@ -81,7 +81,7 @@ class SilverTestService {
         const result = silverTestRepository.finalize(id, items, mode_of_payment, weight_loss || 0);
 
         // Notify customer
-        if (result && result.success) {
+        if (result && result.success && !result.idempotent) {
             try {
                 const test = silverTestRepository.findById(id);
                 if (test && test.customer_id) {

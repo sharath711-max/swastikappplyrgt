@@ -208,7 +208,7 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                     mappedItem.net_weight = calc.net_weight;
                     mappedItem.fine_weight = calc.fine_weight;
                     mappedItem.item_total = parseFloat(item.amount) || calc.item_total || 0;
-                    mappedItem.purity = calc.purity;
+                    mappedItem.purity = parseFloat(item.purity || 0);
                 }
                 return mappedItem;
             })

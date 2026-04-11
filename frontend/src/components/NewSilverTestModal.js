@@ -220,7 +220,7 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
     };
 
     return (
-        <Modal show={show} onHide={onHide} centered className="new-sample-modal">
+        <Modal show={show} onHide={onHide} centered dialogClassName="modal-container" className="new-sample-modal">
             <Modal.Header closeButton className="new-sample-header">
                 <Modal.Title className="fw-bold">New Sample Entry</Modal.Title>
             </Modal.Header>

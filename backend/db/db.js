@@ -5,8 +5,26 @@ require('../config/env');
 const { generateId } = require('../utils/idUtils');
 
 const isPkg = typeof process.pkg !== 'undefined';
-const DB_PATH = process.env.DB_PATH || (isPkg ? path.join(path.dirname(process.execPath), 'lab.db') : path.join(__dirname, 'lab.db'));
+const APP_ROOT = path.join(__dirname, '..');
+
+function resolveDbPath() {
+    const configuredPath = process.env.DB_PATH && process.env.DB_PATH.trim();
+
+    if (configuredPath) {
+        return path.isAbsolute(configuredPath)
+            ? configuredPath
+            : path.resolve(APP_ROOT, configuredPath);
+    }
+
+    return isPkg
+        ? path.join(path.dirname(process.execPath), 'lab.db')
+        : path.join(__dirname, 'lab.db');
+}
+
+const DB_PATH = resolveDbPath();
 const INIT_SQL_PATH = path.join(__dirname, 'init.sql');
+
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const db = new Database(DB_PATH, {
     verbose: process.env.NODE_ENV === 'development' ? console.log : null
@@ -30,6 +48,8 @@ function applyPostInitMigrations() {
     ensureColumn('gold_certificate', 'total_net_weight', 'REAL DEFAULT 0');
     ensureColumn('gold_certificate', 'total_fine_weight', 'REAL DEFAULT 0');
     ensureColumn('silver_certificate', 'total_net_weight', 'REAL DEFAULT 0');
+    ensureColumn('gold_test', 'completion_request_id', 'TEXT');
+    ensureColumn('silver_test', 'completion_request_id', 'TEXT');
 
     ensureColumn('gold_certificate_item', 'fine_weight', 'REAL DEFAULT 0');
     ensureColumn('gold_certificate_item', 'item_total', 'REAL DEFAULT 0');
@@ -39,6 +59,15 @@ function applyPostInitMigrations() {
 
     ensureColumn('photo_certificate_item', 'fine_weight', 'REAL DEFAULT 0');
     ensureColumn('photo_certificate_item', 'item_total', 'REAL DEFAULT 0');
+
+    ensureColumn('audit_logs', 'request_id', 'TEXT');
+    ensureColumn('audit_logs', 'event', 'TEXT');
+    ensureColumn('audit_logs', 'operation', 'TEXT');
+    ensureColumn('audit_logs', 'method', 'TEXT');
+    ensureColumn('audit_logs', 'url', 'TEXT');
+    ensureColumn('audit_logs', 'metadata_json', 'TEXT');
+
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_request ON audit_logs (request_id)');
 }
 
 // Initialize database with schema

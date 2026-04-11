@@ -156,6 +156,46 @@ class GoldCertificateRepository {
         })();
     }
 
+    updateResults(id, data) {
+        return transaction(() => {
+            const current = this.findById(id);
+            if (!current) throw new Error('Certificate not found');
+            if (current.status === 'DONE') throw new Error('409: Certificate is immutable');
+
+            const { items, mode_of_payment, gst, total, total_tax, gst_bill_number } = data;
+
+            // 1. Update Items
+            if (items && Array.isArray(items)) {
+                for (const item of items) {
+                    if (item.id) {
+                        this.updateItem(id, item.id, item);
+                    }
+                }
+            }
+
+            // 2. Update Parent Financials
+            const updates = [];
+            const values = [];
+
+            if (mode_of_payment !== undefined) { updates.push('mode_of_payment = ?'); values.push(mode_of_payment); }
+            if (gst !== undefined) { updates.push('gst = ?'); values.push(gst); }
+            if (total !== undefined) { updates.push('total = ?'); values.push(total); }
+            if (total_tax !== undefined) { updates.push('total_tax = ?'); values.push(total_tax); }
+            if (gst_bill_number !== undefined) { updates.push('gst_bill_number = ?'); values.push(gst_bill_number); }
+
+            if (updates.length > 0) {
+                values.push(now(), id);
+                this.db.prepare(`
+                    UPDATE gold_certificate 
+                    SET ${updates.join(', ')}, lastmodified = ? 
+                    WHERE id = ?
+                `).run(...values);
+            }
+
+            return this.findById(id);
+        })();
+    }
+
     async updateItem(certId, itemId, updates) {
         return transaction(() => {
             // 0. Check Status (Immutability)

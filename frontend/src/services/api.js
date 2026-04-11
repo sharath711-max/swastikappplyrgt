@@ -4,53 +4,32 @@ const api = axios.create({
     baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
 });
 
-// Helper to get cookie
-const getCookie = (name) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-};
-
-api.interceptors.request.use(
-    (config) => {
-        // Add CSRF Token
-        if (!['get', 'head', 'options', 'trace'].includes(config.method.toLowerCase())) {
-            const csrfToken = getCookie('csrf_access_token');
-            if (csrfToken) config.headers['X-CSRF-TOKEN'] = csrfToken;
-        }
-        return config;
-    },
-    error => Promise.reject(error)
-);
-
-// Add a request interceptor to attach the JWT token
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
+api.interceptors.request.use((config) => {
+    config.headers['X-Request-ID'] = window.crypto?.randomUUID?.() || Date.now().toString();
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (!['get', 'head', 'options', 'trace'].includes(config.method?.toLowerCase())) {
+        const match = document.cookie.match(/(?:^|; )csrf_access_token=([^;]*)/);
+        if (match) config.headers['X-CSRF-TOKEN'] = match[1];
     }
-);
+    return config;
+});
 
-// Add a response interceptor to handle unauthorized errors
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (error.response?.status === 401 && !error.config.url.includes('/auth/login')) {
             localStorage.removeItem('token');
             sessionStorage.removeItem('token');
-            
-            // Do not reload if we are already trying to login
-            if (!error.config.url.includes('/auth/login')) {
-                window.location.href = '/login';
-            }
+            window.location.href = '/login';
         }
-        return Promise.reject(error);
+        const data = error.response?.data;
+        return Promise.reject({
+            message: data?.error || 'System error occurred',
+            type: data?.type || (error.response?.status >= 500 ? 'SYSTEM' : 'BUSINESS'),
+            idempotent: !!data?.idempotent,
+            status: error.response?.status
+        });
     }
 );
 

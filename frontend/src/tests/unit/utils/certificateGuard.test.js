@@ -14,8 +14,21 @@ describe('preventDuplicateCreate', () => {
         expect(preventDuplicateCreate('GC', 'CUST-1')).toBe(true);
         expect(preventDuplicateCreate('GC', 'CUST-1')).toBe(false);
 
-        jest.advanceTimersByTime(500);
+        jest.advanceTimersByTime(100);
 
         expect(preventDuplicateCreate('GC', 'CUST-1')).toBe(true);
+    });
+
+    test('rapid reopen works correctly with reduced timeout', () => {
+        // First open
+        expect(preventDuplicateCreate('GC', 'CUST-X')).toBe(true);
+        // Instant secondary open fails (double-click guard)
+        expect(preventDuplicateCreate('GC', 'CUST-X')).toBe(false);
+        
+        // Wait just 100ms (simulate rapid manual close -> open)
+        jest.advanceTimersByTime(100);
+        
+        // Should succeed now
+        expect(preventDuplicateCreate('GC', 'CUST-X')).toBe(true);
     });
 });

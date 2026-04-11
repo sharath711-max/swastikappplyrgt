@@ -55,7 +55,7 @@ class GoldTestService {
         const result = goldTestRepository.finalize(id, items, mode_of_payment, weight_loss || 0);
 
         // Asynchronously notify customer via WhatsApp Webhook if finalized successfully
-        if (result && result.success) {
+        if (result && result.success && !result.idempotent) {
             try {
                 const test = goldTestRepository.findById(id);
                 if (test && test.customer_id) {

@@ -1,6 +1,7 @@
 const { db, now, genId, getNextSequence, transaction } = require('../db/db');
 const SequenceService = require('../services/sequenceService');
 const SilverTestCalculationService = require('../services/silverTestCalculationService');
+const { buildCompletionRequestId, claimCompletion } = require('../utils/completionGuard');
 
 class SilverTestRepository {
     constructor() {
@@ -231,11 +232,23 @@ class SilverTestRepository {
     }
 
     finalize(id, items, mode_of_payment, weightLossAmount) {
+        const requestId = buildCompletionRequestId();
+
         return transaction(() => {
-            // Check current status
-            const current = this.db.prepare("SELECT status FROM silver_test WHERE id = ?").get(id);
-            if (current && current.status === 'DONE') {
-                throw new Error('409: Silver test is already finalized and immutable');
+            const claim = claimCompletion(this.db, 'silver_test', id, requestId);
+            if (claim.state === 'not_found') {
+                throw new Error('Silver test not found');
+            }
+            if (claim.state === 'idempotent') {
+                return {
+                    success     : true,
+                    idempotent  : true,
+                    alreadyDone : true,
+                    requestId   : claim.requestId,
+                };
+            }
+            if (claim.state === 'in_progress' || claim.state === 'blocked') {
+                throw new Error('409: Silver test completion is already in progress');
             }
 
             const timestamp = now();
@@ -282,7 +295,11 @@ class SilverTestRepository {
                 }
             }
 
-            return { success: true };
+            return {
+                success    : true,
+                idempotent : false,
+                requestId,
+            };
         })();
     }
 

@@ -145,13 +145,14 @@ const PaymentDeliveryModal = ({ show, onHide, testId, onSuccess }) => {
         try {
             await runModalSubmit({
                 action: async () => {
-                    await api.post(`/gold-tests/${testId}/results`, buildResultsPayload());
-                    await api.post(`/gold-tests/${testId}/finalize`, {
+                    const res1 = await api.post(`/gold-tests/${testId}/results`, buildResultsPayload());
+                    const res2 = await api.post(`/gold-tests/${testId}/finalize`, {
                         items: payloadItems,
                         mode_of_payment: modeOfPayment,
                         weight_loss: 0
                     });
                     addToast('Payment submitted. Card moved to Completed.', 'success');
+                    return res2.data;
                 },
                 reload: onSuccess,
                 close: onHide

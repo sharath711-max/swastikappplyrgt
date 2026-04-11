@@ -8,13 +8,20 @@ const { auditMiddleware } = require('../middleware/auditMiddleware');
 router.use(authMiddleware);
 router.use('/:id', immutabilityGuard('gold_test'));
 
+const handleError = (res, error) => {
+    if (error.message.startsWith('409:')) {
+        return res.status(409).json({ success: false, error: error.message.replace('409: ', '') });
+    }
+    return res.status(400).json({ success: false, error: error.message });
+};
+
 // POST /api/gold-tests
 router.post('/', async (req, res) => {
     try {
         const result = await goldTestService.createTest(req.body);
         res.status(201).json({ success: true, data: result });
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+        handleError(res, error);
     }
 });
 
@@ -64,7 +71,7 @@ router.delete('/:id', async (req, res) => {
         await goldTestService.deleteTest(req.params.id);
         res.json({ success: true, message: 'Test soft-deleted successfully' });
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+        handleError(res, error);
     }
 });
 
@@ -74,7 +81,7 @@ router.patch('/:id/status', async (req, res) => {
         await goldTestService.updateStatus(req.params.id, req.body.status);
         res.json({ success: true, message: 'Status updated' });
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+        handleError(res, error);
     }
 });
 
@@ -84,7 +91,7 @@ router.post('/:id/finalize', async (req, res) => {
         const result = await goldTestService.finalizeTest(req.params.id, req.body);
         res.json({ success: true, data: result });
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+        handleError(res, error);
     }
 });
 
@@ -94,7 +101,7 @@ router.post('/:id/results', async (req, res) => {
         const result = await goldTestService.saveTestResults(req.params.id, req.body);
         res.json({ success: true, data: result });
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+        handleError(res, error);
     }
 });
 
@@ -107,7 +114,7 @@ router.put('/:id/items/:itemId',
             const result = await goldTestService.updateItem(id, itemId, req.body);
             res.json({ success: true, message: 'Item updated successfully', data: result });
         } catch (error) {
-            res.status(400).json({ success: false, error: error.message });
+            handleError(res, error);
         }
     });
 

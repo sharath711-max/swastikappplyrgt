@@ -11,6 +11,7 @@
     "setup": "run.bat",
     "windows": "run.bat",
     "test:backend": "npm --prefix backend test -- --runInBand",
+    "logs:maintain": "npm --prefix backend run logs:maintain",
     "test:frontend": "npm --prefix frontend test -- --watchAll=false",
     "test:ui-components": "npm --prefix frontend run test:components",
     "test:ui-components:coverage": "npm --prefix frontend run test:components:coverage",

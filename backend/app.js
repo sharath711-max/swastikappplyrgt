@@ -1,24 +1,34 @@
+'use strict';
+
 const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { initDb } = require('./db/db');
-const logger = require('./utils/logger'); // Import Logger
+const cors    = require('cors');
+const path    = require('path');
+const fs      = require('fs');
+
+const { initDb }              = require('./db/db');
+const logger                  = require('./utils/logger');
 const { getAllowedCorsOrigins } = require('./config/env');
+const { correlationMiddleware, getRequestId } = require('./utils/audit');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 5000;
-const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
 
+const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
 const isAllowedCorsOrigin = (origin) => !origin || allowedCorsOrigins.has(origin);
 
-// Middleware
+// ── 1. Correlation ID + audit tracing (MUST be first) ────────────────────────
+//   Opens an AsyncLocalStorage context for the full request/response lifecycle.
+//   Reads X-Request-Id header or generates a UUID.
+//   Sets req.requestId for backward-compat with existing logger calls.
+//   Emits HTTP_REQ (arrival) and HTTP_RES / HTTP_RES_ERROR (finish) audit events.
+app.use(correlationMiddleware);
+
+// ── 2. CORS ───────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-
     if (origin && !allowedCorsOrigins.has(origin)) {
         return res.status(403).json({ error: 'CORS origin not allowed.' });
     }
-
     return next();
 });
 
@@ -26,99 +36,93 @@ app.use(cors({
     origin(origin, callback) {
         callback(null, isAllowedCorsOrigin(origin));
     },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'X-Request-Id']
+    methods     : ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'X-Request-Id'],
 }));
+
+// ── 3. Body parsing + static uploads ─────────────────────────────────────────
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const crypto = require('crypto');
-
-// Request Logging Middleware
-app.use((req, res, next) => {
-    req.requestId = req.headers['x-request-id'] || crypto.randomUUID();
-    res.setHeader('X-Request-Id', req.requestId);
-
-    logger.info(`${req.method} ${req.url}`, { ip: req.ip, requestId: req.requestId });
-    const start = Date.now();
-    res.on('finish', () => {
-        const duration = Date.now() - start;
-        logger.info(`${req.method} ${req.url} completed`, {
-            status: res.statusCode,
-            duration: `${duration}ms`,
-            requestId: req.requestId
-        });
-    });
-    next();
-});
-
-// Initialize Database
+// ── 4. Database init ──────────────────────────────────────────────────────────
 try {
     initDb();
 } catch (error) {
     process.exit(1);
 }
 
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
+// ── 5. API routes ─────────────────────────────────────────────────────────────
+app.use('/api/auth',             require('./routes/authRoutes'));
 app.use('/api/public/documents', require('./routes/publicDocumentRoutes'));
-app.use('/api/public/verify', require('./routes/verifyRoutes'));
-app.use('/api/customers', require('./routes/customerRoutes'));
+app.use('/api/public/verify',    require('./routes/verifyRoutes'));
+app.use('/api/customers',        require('./routes/customerRoutes'));
 app.use('/api/certificates/:id', require('./routes/certificateItemRoutes'));
-app.use('/api/certificates', require('./routes/certificateRoutes'));
-app.use('/api/gold-tests', require('./routes/goldTestRoutes'));
-app.use('/api/silver-tests', require('./routes/silverTestRoutes'));
+app.use('/api/certificates',     require('./routes/certificateRoutes'));
+app.use('/api/gold-tests',       require('./routes/goldTestRoutes'));
+app.use('/api/silver-tests',     require('./routes/silverTestRoutes'));
+app.use('/api/weight-loss',      require('./routes/weightLossRoutes'));
+app.use('/api/cash-register',    require('./routes/cashRoutes'));
+app.use('/api/workflow',         require('./routes/workflowRoutes'));
+app.use('/api/credit-history',   require('./routes/creditHistoryRoutes'));
+app.use('/api/list',             require('./routes/listRoutes'));
+app.use('/api/records',          require('./routes/recordRoutes'));
+app.use('/api/analytics',        require('./routes/analyticsRoutes'));
 
-app.use('/api/weight-loss', require('./routes/weightLossRoutes'));
-app.use('/api/cash-register', require('./routes/cashRoutes'));
-app.use('/api/workflow', require('./routes/workflowRoutes'));
-app.use('/api/credit-history', require('./routes/creditHistoryRoutes'));
-app.use('/api/list', require('./routes/listRoutes'));
-app.use('/api/records', require('./routes/recordRoutes'));
-app.use('/api/analytics', require('./routes/analyticsRoutes'));
-
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
     res.json({ status: 'ok', message: 'Swastik API is running' });
 });
 
-// Serve static files from the 'public' folder (frontend build)
+// ── 6. Frontend (SPA fallback) ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Handle React routing, return all requests to React app
-// Handle React routing, return all requests to React app
 app.get('*', (req, res) => {
-    // Check if the request is for API, skip
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'API endpoint not found' });
     }
 
     const indexPath = path.join(__dirname, 'public', 'index.html');
-
-    // Check if index.html exists (e.g. in production or after build)
-    const fs = require('fs');
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
     } else {
-        // In development (or if build is missing), provide a clear message
         res.status(200).send(`
             <div style="font-family: sans-serif; text-align: center; margin-top: 50px;">
-                <h1>Swastik Gold & Silver Lab - API Server</h1>
+                <h1>Swastik Gold &amp; Silver Lab — API Server</h1>
                 <p>The backend is running successfully on port ${PORT}.</p>
-                <p>If you are looking for the Frontend, please visit <a href="http://localhost:3000">http://localhost:3000</a> (Development)</p>
-                <p><em>(public/index.html not found)</em></p>
+                <p>Frontend: <a href="http://localhost:3000">http://localhost:3000</a> (development)</p>
+                <p><em>(public/index.html not found — run the frontend build first)</em></p>
             </div>
         `);
     }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    logger.error(`Error handling ${req.method} ${req.url}: ${err.message}`, { stack: err.stack, requestId: req.requestId });
-    console.error(err.stack); // Keep console for dev
-    res.status(500).json({ error: 'Something went wrong!', traceId: req.requestId });
+// ── 7. Global error handler ───────────────────────────────────────────────────
+//   BusinessError / ValidationError → status from err.statusCode (4xx), with
+//   machine-readable `code` and optional `details` field.
+//   Anything else → 500 with a traceId for the audit log.
+app.use((err, req, res, next) => {  // eslint-disable-line no-unused-vars
+    const requestId  = req.requestId ?? getRequestId();
+    const statusCode = err.statusCode ?? 500;
+
+    logger.error(`Error handling ${req.method} ${req.url}: ${err.message}`, {
+        stack     : err.stack,
+        requestId,
+        errorCode : err.code,
+        statusCode,
+    });
+
+    if (statusCode < 500) {
+        return res.status(statusCode).json({
+            error  : err.message,
+            code   : err.code,
+            ...(err.details != null ? { details: err.details } : {}),
+            requestId,
+        });
+    }
+
+    res.status(500).json({ error: 'Something went wrong!', traceId: requestId });
 });
 
-// Start Server
+// ── 8. Start server ───────────────────────────────────────────────────────────
 if (require.main === module) {
     app.listen(PORT, () => {
         logger.info(`🚀 Server running on port ${PORT}`);

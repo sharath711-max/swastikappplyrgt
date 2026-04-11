@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { db } = require('../db/db');
 const { getJwtSecret } = require('../config/env');
+const { setUserId } = require('../utils/audit');
 
 const JWT_SECRET = getJwtSecret();
 
@@ -25,10 +26,12 @@ const authMiddleware = (req, res, next) => {
 
         req.user = {
             ...decoded,
-            id: dbUser.id,
+            id      : dbUser.id,
             username: dbUser.username,
-            role: dbUser.role
+            role    : dbUser.role,
         };
+        // Enrich AsyncLocalStorage context so all audit logs carry the user identity
+        setUserId(dbUser.id, dbUser.username);
         next();
     } catch (error) {
         res.status(401).json({ error: 'Invalid or expired token.' });

@@ -10,7 +10,7 @@ export const preventDuplicateCreate = (type, customerId) => {
     activeKeys.add(key);
     setTimeout(() => {
         activeKeys.delete(key);
-    }, 500);
+    }, 100);
 
     return true;
 };

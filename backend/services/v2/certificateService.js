@@ -251,11 +251,13 @@ function _createCertificateWork(type, data, ts, tx = db) {
     ts = ts || now();
 
     const certId     = genId(c.parentIdPrefix);
-    // Sequence inside caller's transaction — race-safe, no SAVEPOINT overhead
+    // Certificate tracking number (lab sequence, daily-reset)
     const autoNumber = seqSvc._generateGlobalSequenceWork(type, { context: 'CERT', isGst: gst });
+    // Financial bill number (yearly sequence, NEVER resets — uniqueness enforced by DB index)
+    const billNumber = seqSvc.getNextBillNumber(gst);
 
-    // Parent INSERT
-    const pi = _buildParentInsert(type, certId, autoNumber, customer_id, status, mode_of_payment, gst, gst_bill_number, total_tax, ts);
+    // Parent INSERT — billNumber written to gst_bill_number column
+    const pi = _buildParentInsert(type, certId, autoNumber, customer_id, status, mode_of_payment, gst, billNumber, total_tax, ts);
     db.prepare(pi.sql).run(...pi.values);
 
     // Item INSERTs
@@ -273,11 +275,12 @@ function _createCertificateWork(type, data, ts, tx = db) {
     }
 
     return {
-        id         : certId,
-        auto_number: autoNumber,
-        items      : insertedItems,
-        totals     : agg,
-        created    : ts,
+        id          : certId,
+        auto_number : autoNumber,
+        bill_number : billNumber,
+        items       : insertedItems,
+        totals      : agg,
+        created     : ts,
     };
 }
 

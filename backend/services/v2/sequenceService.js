@@ -185,11 +185,53 @@ function generateTestItemNumber(parentAutoNumber, itemSeq) {
  */
 function peekGlobalSequence() {
     const dateRow = db.prepare('SELECT value FROM globals WHERE key = ?').get(DATE_KEY);
-    const seqRow  = db.prepare('SELECT value FROM globals WHERE key = ?').get(SEQ_KEY);
+    const seqRow  = db.prepare('SELECT value FROM globals WHERE key = ?').get('daily_global_seq');
     return {
         date : dateRow?.value ?? '(none)',
         value: parseInt(seqRow?.value ?? '0', 10),
     };
+}
+
+/**
+ * Generate a unique GST bill number or NON-GST bill number.
+ * COMPOSABLE BARE-DB — must be called inside the same transaction that inserts the certificate.
+ *
+ * Sequence is YEARLY (not daily). Gaps are legally acceptable; duplicates are not.
+ * The UNIQUE index on gst_bill_number provides the DB-level enforcement.
+ *
+ * Format:  G26-0001  (GST)  |  N26-0001  (Non-GST)
+ *
+ * @param {boolean} isGst
+ * @returns {string}
+ * @throws {SystemError} if sequence row missing (table corruption)
+ */
+function getNextBillNumber(isGst) {
+    const seqKey = isGst ? 'GST_CERT_SEQ' : 'NON_GST_CERT_SEQ';
+    const prefix = isGst ? 'G' : 'N';
+    const yy     = String(new Date().getFullYear()).slice(-2);
+
+    // Ensure row exists (idempotent on first call after migration)
+    db.prepare(
+        'INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+    ).run(seqKey, '0');
+
+    // Atomic increment — single round-trip, no read-before-write
+    const row = db.prepare(`
+        UPDATE globals
+        SET    value        = CAST(CAST(value AS INTEGER) + 1 AS TEXT),
+               lastmodified = CURRENT_TIMESTAMP
+        WHERE  key = ?
+        RETURNING CAST(value AS INTEGER) AS new_seq
+    `).get(seqKey);
+
+    if (!row || row.new_seq == null) {
+        throw new SystemError(
+            `getNextBillNumber: RETURNING returned no row for key ${seqKey}`,
+            null, { seqKey, isGst }
+        );
+    }
+
+    return `${prefix}${yy}-${String(row.new_seq).padStart(4, '0')}`;
 }
 
 module.exports = {
@@ -197,6 +239,7 @@ module.exports = {
     generateCertificateLabel,
     generateTestItemNumber,
     peekGlobalSequence,
-    // Composable bare-DB export for outer transactions
+    getNextBillNumber,
+    // Composable bare-DB exports for outer transactions
     _generateGlobalSequenceWork,
 };

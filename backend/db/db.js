@@ -82,6 +82,34 @@ function applyPostInitMigrations() {
     ensureColumn('gold_test_item', 'certificate_required', 'INTEGER DEFAULT 0');
     ensureColumn('silver_test_item', 'certificate_required', 'INTEGER DEFAULT 0');
 
+    // Patch 06: GST COMPLIANCE — unique bill number enforcement + sequence seeding
+    // Seed GST/NON-GST cert sequences if they don't exist in globals table
+    db.prepare(
+        'INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+    ).run('GST_CERT_SEQ', '0');
+    db.prepare(
+        'INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+    ).run('NON_GST_CERT_SEQ', '0');
+    db.prepare(
+        'INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+    ).run('GOLD_TEST_SEQ', '0');
+    db.prepare(
+        'INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+    ).run('SILVER_TEST_SEQ', '0');
+
+    // UNIQUE constraint on gst_bill_number — legal requirement (no duplicate GST bills)
+    // SQLite cannot add UNIQUE constraint via ALTER TABLE — use a partial unique index instead
+    db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_gc_bill_number_unique
+        ON gold_certificate(gst_bill_number)
+        WHERE gst_bill_number IS NOT NULL AND gst_bill_number != ''
+    `);
+    db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_sc_bill_number_unique
+        ON silver_certificate(gst_bill_number)
+        WHERE gst_bill_number IS NOT NULL AND gst_bill_number != ''
+    `);
+
     db.exec(`
         CREATE TABLE IF NOT EXISTS request_log (
             request_id TEXT PRIMARY KEY,

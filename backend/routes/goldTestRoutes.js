@@ -95,10 +95,11 @@ router.post('/:id/finalize', async (req, res) => {
         handleError(res, error);
     }
 });
-// POST /api/gold-tests/:id/results
-router.post('/:id/results', async (req, res) => {
+// PUT /api/gold-tests/:id/save-draft
+router.put('/:id/save-draft', async (req, res) => {
     try {
-        const result = await goldTestService.saveTestResults(req.params.id, req.body);
+        const testServiceV2 = require('../services/v2/testService');
+        const result = await testServiceV2.saveTestDraft('gold', req.params.id, req.body);
         res.json({ success: true, data: result });
     } catch (error) {
         handleError(res, error);

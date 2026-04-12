@@ -168,14 +168,20 @@ function _finalizeItemsWork(type, testId, items, ts) {
             item_type   : current.item_type,
         });
 
+        // Persist operator cert-eligibility override alongside purity
+        const certRequired = raw.certificate_required !== undefined
+            ? (raw.certificate_required ? 1 : 0)
+            : current.certificate_required ?? 0;
+
         db.prepare(`
             UPDATE ${c.itemTable}
-            SET purity = ?, returned = ?, fine_weight = ?, item_total = ?, lastmodified = ?
+            SET purity = ?, returned = ?, fine_weight = ?, item_total = ?,
+                certificate_required = ?, lastmodified = ?
             WHERE id = ? AND ${c.fkColumn} = ? AND deletedon IS NULL
         `).run(
             calc.purity, calc.returned ? 1 : 0,
             calc.fine_weight, calc.item_total,
-            ts, raw.id, testId
+            certRequired, ts, raw.id, testId
         );
     }
 }
@@ -272,15 +278,15 @@ function createTest(type, data) {
 
 // ─── SAVE RESULTS ─────────────────────────────────────────────────────────────
 
-function saveResults(type, id, data) {
+function saveTestDraft(type, id, data) {
     // ── Validate BEFORE transaction ─────────────────────────────────────────
     _validateSaveResults(type, id, data);
-    audit.validate('testService.saveResults', { type, id, item_count: (data.items ?? []).length });
+    audit.validate('testService.saveTestDraft', { type, id, item_count: (data.items ?? []).length });
 
     const c = _cfg(type);
     const { items = [], mode_of_payment, total } = data;
 
-    audit.start('testService.saveResults', { type, id });
+    audit.start('testService.saveTestDraft', { type, id });
 
     const _txn = transaction(() => {
         const ts = now();
@@ -302,14 +308,19 @@ function saveResults(type, id, data) {
 
             const calc = c.calc.calculateItem(mergedInput);
 
+            // Also persist operator cert-override during draft save
+            const certRequired = raw.certificate_required !== undefined
+                ? (raw.certificate_required ? 1 : 0)
+                : current.certificate_required ?? 0;
+
             db.prepare(`
                 UPDATE ${c.itemTable}
                 SET purity = ?, returned = ?, fine_weight = ?, item_total = ?,
-                    test_weight = ?, net_weight = ?, lastmodified = ?
+                    test_weight = ?, net_weight = ?, certificate_required = ?, lastmodified = ?
                 WHERE id = ? AND ${c.fkColumn} = ? AND deletedon IS NULL
             `).run(
                 calc.purity, calc.returned ? 1 : 0, calc.fine_weight, calc.item_total,
-                calc.test_weight, calc.net_weight, ts,
+                calc.test_weight, calc.net_weight, certRequired, ts,
                 raw.id, id
             );
         }
@@ -323,17 +334,15 @@ function saveResults(type, id, data) {
         db.prepare(`UPDATE ${c.parentTable} SET ${sets.join(', ')} WHERE id = ? AND deletedon IS NULL`)
           .run(...values);
 
-        // Auto-advance to IN_PROGRESS
-        if (mode_of_payment !== undefined) {
-            const curr = db.prepare(`SELECT status FROM ${c.parentTable} WHERE id = ?`).get(id);
-            if (curr && curr.status === 'TODO') {
-                db.prepare(`
-                    UPDATE ${c.parentTable}
-                    SET status = 'IN_PROGRESS', in_progress_at = COALESCE(in_progress_at, ?)
-                    WHERE id = ?
-                `).run(ts, id);
-                audit.statusChange('testService.saveResults', id, 'TODO', 'IN_PROGRESS');
-            }
+        // Auto-advance to IN_PROGRESS (PENDING draft state)
+        const curr = db.prepare(`SELECT status FROM ${c.parentTable} WHERE id = ?`).get(id);
+        if (curr && curr.status === 'TODO') {
+            db.prepare(`
+                UPDATE ${c.parentTable}
+                SET status = 'IN_PROGRESS', in_progress_at = COALESCE(in_progress_at, ?)
+                WHERE id = ?
+            `).run(ts, id);
+            audit.statusChange('testService.saveTestDraft', id, 'TODO', 'IN_PROGRESS');
         }
 
         return { success: true };
@@ -341,11 +350,11 @@ function saveResults(type, id, data) {
 
     try {
         const result = _txn();
-        audit.commit('testService.saveResults', { id, type });
+        audit.commit('testService.saveTestDraft', { id, type });
         return result;
     } catch (err) {
-        audit.rollback('testService.saveResults', err, { type, id });
-        rethrow(err, 'testService.saveResults', { type, id });
+        audit.rollback('testService.saveTestDraft', err, { type, id });
+        rethrow(err, 'testService.saveTestDraft', { type, id });
     }
 }
 
@@ -431,18 +440,34 @@ function completeTest(type, testId, data) {
         // Step 1: Finalize items
         _finalizeItemsWork(type, testId, items, ts);
 
-        // Step 2: Mark test DONE
-        _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts);
-
-        // Step 3: Build cert — get fresh item state post-update
+        // Step 2: Build cert — get fresh item state post-update
         const finalItems = db.prepare(
             `SELECT * FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
         ).all(testId);
 
         const threshold = HALLMARK_THRESHOLD[type];
-        const certItems = finalItems.filter(
-            item => !item.returned && parseFloat(item.purity) >= threshold
-        );
+        // BUSINESS_LOGIC_PIVOT: Operator override (certificate_required=1) takes precedence over auto purity rule
+        const certItems = finalItems.filter(item => {
+            if (item.returned) return false;
+            // Explicit operator selection wins
+            if (item.certificate_required === 1) return true;
+            if (item.certificate_required === 0) return false;
+            // Fallback: auto-suggest based on purity threshold
+            return parseFloat(item.purity) >= threshold;
+        });
+        const nonCertItems = finalItems.filter(item => !certItems.includes(item));
+        
+        const isFullConvert = (certItems.length > 0 && nonCertItems.length === 0);
+
+        if (isFullConvert) {
+            // IF 100% Cert: Mark DONE first (needed by ledger cross-check), then clean up staging rows
+            _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts);
+            db.prepare(`DELETE FROM ${c.itemTable} WHERE ${c.fkColumn} = ?`).run(testId);
+            db.prepare(`DELETE FROM ${c.parentTable} WHERE id = ?`).run(testId);
+        } else {
+            // IF Mixed or NO_CONVERT: UPDATE parent Test to status='DONE'
+            _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts);
+        }
 
         let certificate = null;
         if (certItems.length > 0) {
@@ -471,10 +496,12 @@ function completeTest(type, testId, data) {
         let testTax = applyGst ? (testFeeTotal - (testFeeTotal / 1.18)) : 0;
         let certTax = applyGst ? (certFeeTotal - (certFeeTotal / 1.18)) : 0;
 
-        // Update Test Parent with calculated amount
-        db.prepare(
-            `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
-        ).run(testFeeTotal, testTax, ts, testId);
+        // Update Test Parent with calculated amount ONLY if it wasn't deleted
+        if (!isFullConvert) {
+            db.prepare(
+                `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
+            ).run(testFeeTotal, testTax, ts, testId);
+        }
         
         // Also update the cert totals to match our fixed fee if cert was created
         if (certificate) {
@@ -490,7 +517,8 @@ function completeTest(type, testId, data) {
 
         if (post_ledger) {
             // Split Bill Logic: 1st Bill for Lab Test
-            if (testFeeTotal > 0) {
+            // skip_status_check=true because full-convert deletes the test row after marking DONE
+            if (testFeeTotal > 0 && !isFullConvert) {
                 const cap = type.charAt(0).toUpperCase() + type.slice(1);
                 ledgerEntry = ledgerSvc.recordRevenue(type, {
                     customer_id,
@@ -501,6 +529,7 @@ function completeTest(type, testId, data) {
                     post_cash_register: false,
                     reference_type: c.parentTable,
                     reference_id: testId,
+                    skip_status_check: true,  // row is DONE but may have been deleted (full-convert)
                 }, tx);
             }
 
@@ -516,13 +545,17 @@ function completeTest(type, testId, data) {
                     post_cash_register: false,
                     reference_type: type === 'gold' ? 'gold_certificate' : 'silver_certificate',
                     reference_id: certificate.id,
+                    skip_status_check: true,  // cert is IN_PROGRESS at billing time
                 }, tx);
             }
         }
 
         const printSvc = require('./printService');
-        const testSnapshot = JSON.stringify(printSvc.getPrintLayout('test', type, testId));
-        tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ? WHERE id = ?`).run(testSnapshot, testId);
+        
+        if (!isFullConvert) {
+            const testSnapshot = JSON.stringify(printSvc.getPrintLayout('test', type, testId));
+            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ? WHERE id = ?`).run(testSnapshot, testId);
+        }
         
         if (certificate) {
             const certSnapshot = JSON.stringify(printSvc.getPrintLayout('certificate', type, certificate.id));
@@ -724,7 +757,7 @@ module.exports = {
     getTest,
     listTests,
     updateStatus,
-    saveResults,
+    saveTestDraft,
     finalizeTest,
     completeTest,
     deleteTest,

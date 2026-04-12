@@ -78,6 +78,10 @@ function applyPostInitMigrations() {
     ensureColumn('gold_certificate', 'print_snapshot', 'TEXT');
     ensureColumn('silver_certificate', 'print_snapshot', 'TEXT');
 
+    // Patch 05: OPERATOR_OVERRIDE — cert eligibility flag per test item
+    ensureColumn('gold_test_item', 'certificate_required', 'INTEGER DEFAULT 0');
+    ensureColumn('silver_test_item', 'certificate_required', 'INTEGER DEFAULT 0');
+
     db.exec(`
         CREATE TABLE IF NOT EXISTS request_log (
             request_id TEXT PRIMARY KEY,

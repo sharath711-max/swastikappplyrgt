@@ -184,6 +184,13 @@ function recordRevenue(source_type, opts, tx = db) {
         throw new BusinessError('Invalid or missing reference_type. Must be a TEST or CERT.', ERR.VALIDATION, 400);
     }
 
+    if (opts.reference_id && !opts.skip_status_check) {
+        const row = tx.prepare(`SELECT status FROM ${opts.reference_type} WHERE id = ?`).get(opts.reference_id);
+        if (row && row.status !== 'DONE') {
+            throw new BusinessError(`recordRevenue cross-check failed: source record ${opts.reference_id} must be DONE, but is ${row.status}`, ERR.VALIDATION, 409);
+        }
+    }
+
     _validateAppendEntry(source_type, opts);
 
     // We execute the DEBIT for the charge always

@@ -65,7 +65,9 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
             ...item,
             purity: (item.purity !== undefined && item.purity !== null && item.purity !== 0 && item.purity !== '0') ? item.purity : '',
             returned: item.returned === 1 || item.returned === true,
-            show_kt: item.show_kt === 1 || item.show_kt === true
+            show_kt: item.show_kt === 1 || item.show_kt === true,
+            // Operator override: null = use auto-rule; 1 = force cert; 0 = force non-cert
+            certificate_required: item.certificate_required ?? null,
         })));
         setModeOfPayment(test.mode_of_payment || 'Cash');
         setAmount(isDoneStage && test.total > 0 ? test.total : '');
@@ -124,11 +126,17 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
         return null;
     };
 
+    const getDraftEndpoint = () => {
+        if (isGoldTest) return `/gold-tests/${test.id}/save-draft`;
+        if (isSilverTest) return `/silver-tests/${test.id}/save-draft`;
+        return null;
+    };
+
     const getEndpoint = () => {
-        if (isGoldTest) return `/gold-tests/${test.id}/results`;
-        if (isSilverTest) return `/silver-tests/${test.id}/results`;
+        if (isGoldTest) return `/gold-tests/${test.id}/save-draft`;
+        if (isSilverTest) return `/silver-tests/${test.id}/save-draft`;
         if (isPhotoCert || test?.type?.includes('cert')) return `/certificates/${test.id}/results`;
-        return `/gold-tests/${test.id}/results`;
+        return `/gold-tests/${test.id}/save-draft`;
     };
 
     const buildBaseData = () => ({
@@ -136,6 +144,34 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
         total: parseFloat(amount || 0),
         gst: includeGst ? 1 : 0
     });
+
+    const handleSaveDraft = async () => {
+        if (isDoneStage || isModalReadOnly) return;
+        const draftEndpoint = getDraftEndpoint();
+        if (!draftEndpoint) return;
+        setLoading(true);
+        setError('');
+        try {
+            await api.put(draftEndpoint, {
+                mode_of_payment: modeOfPayment,
+                items: items.map(i => ({
+                    id: i.id,
+                    purity: Number(i.purity) || 0,
+                    returned: !!i.returned,
+                    test_weight: i.test_weight !== undefined ? Number(i.test_weight) : undefined,
+                    net_weight: i.net_weight !== undefined ? Number(i.net_weight) : undefined,
+                    // Operator override: send null to reset to auto-rule
+                    certificate_required: i.certificate_required,
+                }))
+            });
+            addToast('Draft saved — order is now PENDING', 'info');
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            setError(err.response?.data?.error || err.message || 'Failed to save draft');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSave = async (closeModal = true) => {
         const valError = validate();
@@ -464,9 +500,32 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                                                 type="switch"
                                                 checked={!!item.returned}
                                                 onChange={(e) => handleItemChange(idx, 'returned', e.target.checked)}
-                                                disabled={isModalReadOnly}
+                                                disabled={isModalReadOnly || isDoneStage}
                                             />
                                         </td>
+                                        {(isGoldTest || isSilverTest) && (
+                                            <td className="text-center">
+                                                {isDoneStage ? (
+                                                    <Badge bg={item.certificate_required === 1 ? 'success' : item.certificate_required === 0 ? 'secondary' : 'warning'} className="small">
+                                                        {item.certificate_required === 1 ? 'Cert' : item.certificate_required === 0 ? 'No Cert' : 'Auto'}
+                                                    </Badge>
+                                                ) : (
+                                                    <Form.Select
+                                                        size="sm"
+                                                        style={{ width: 80 }}
+                                                        value={item.certificate_required === null || item.certificate_required === undefined ? '' : item.certificate_required}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value === '' ? null : Number(e.target.value);
+                                                            handleItemChange(idx, 'certificate_required', val);
+                                                        }}
+                                                    >
+                                                        <option value="">Auto</option>
+                                                        <option value="1">Cert ✓</option>
+                                                        <option value="0">No Cert ✗</option>
+                                                    </Form.Select>
+                                                )}
+                                            </td>
+                                        )}
                                         {isDoneStage && (
                                             <td>
                                                 <Button variant="outline-secondary" size="sm" onClick={() => printSingle(item)}>
@@ -571,23 +630,34 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                     )}
                 </Modal.Body>
 
+                
                 <Modal.Footer className="border-0">
-                    <Button variant="secondary" onClick={onHide}>Cancel</Button>
-                    {!isModalReadOnly && (
+                    <Button variant="secondary" onClick={onHide}>Close</Button>
+                    {!isDoneStage && !isModalReadOnly && (
                         <>
-                            <Button
-                                variant="primary"
-                                onClick={() => handleSave().then((ok) => ok && addToast('Saved', 'success'))}
-                                disabled={loading}
-                            >
-                                {loading ? <Spinner animation="border" size="sm" /> : 'Save'}
-                            </Button>
+                            {(isGoldTest || isSilverTest) && (
+                                <Button
+                                    variant="outline-primary"
+                                    onClick={handleSaveDraft}
+                                    disabled={loading}
+                                    title="Save purity/weights as draft (no financial impact)"
+                                >
+                                    {loading ? <Spinner animation="border" size="sm" /> : '💾 Save Draft'}
+                                </Button>
+                            )}
                             {nextStatus && (
-                                <Button variant="success" onClick={handleSubmitFlow} disabled={loading}>
-                                    {nextStatus === 'IN_PROGRESS' ? 'Submit to Tested' : 'Submit to Completed'}
+                                <Button
+                                    variant={nextStatus === 'DONE' ? 'success' : 'primary'}
+                                    onClick={handleSubmitFlow}
+                                    disabled={loading}
+                                >
+                                    {nextStatus === 'IN_PROGRESS' ? 'Submit to Tested' : '🔒 Finalize & Commit'}
                                 </Button>
                             )}
                         </>
+                    )}
+                    {isDoneStage && (
+                        <Badge bg="success" className="px-3 py-2">✓ DONE — Record is Immutable</Badge>
                     )}
                 </Modal.Footer>
             </Modal>

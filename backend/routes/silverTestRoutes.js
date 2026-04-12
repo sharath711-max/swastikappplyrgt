@@ -69,9 +69,11 @@ router.post('/:id/finalize', async (req, res) => {
     }
 });
 
-router.post('/:id/results', async (req, res) => {
+// PUT /api/silver-tests/:id/save-draft
+router.put('/:id/save-draft', async (req, res) => {
     try {
-        const result = await silverTestService.saveTestResults(req.params.id, req.body);
+        const testServiceV2 = require('../services/v2/testService');
+        const result = await testServiceV2.saveTestDraft('silver', req.params.id, req.body);
         res.json({ success: true, data: result });
     } catch (error) {
         handleError(res, error);

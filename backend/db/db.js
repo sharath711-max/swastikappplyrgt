@@ -66,6 +66,25 @@ function applyPostInitMigrations() {
     ensureColumn('audit_logs', 'method', 'TEXT');
     ensureColumn('audit_logs', 'url', 'TEXT');
     ensureColumn('audit_logs', 'metadata_json', 'TEXT');
+    
+    // Patch 02 & 03: TRACE fields
+    ensureColumn('credit_history', 'reference_type', 'TEXT');
+    ensureColumn('credit_history', 'reference_id', 'TEXT');
+    ensureColumn('weight_loss_history', 'ref_id', 'TEXT');
+
+    // Patch 04: HISTORICAL_IMMUTABILITY (Snapshot prints)
+    ensureColumn('gold_test', 'print_snapshot', 'TEXT');
+    ensureColumn('silver_test', 'print_snapshot', 'TEXT');
+    ensureColumn('gold_certificate', 'print_snapshot', 'TEXT');
+    ensureColumn('silver_certificate', 'print_snapshot', 'TEXT');
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS request_log (
+            request_id TEXT PRIMARY KEY,
+            response_json TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
 
     db.exec('CREATE INDEX IF NOT EXISTS idx_audit_request ON audit_logs (request_id)');
 }
@@ -83,9 +102,44 @@ function initDb() {
     }
 }
 
-// Transaction helper
+// Transaction helper with Service-Layer Idempotency
 const transaction = (fn) => {
-    return db.transaction(fn);
+    return db.transaction((...args) => {
+        const { getRequestId } = require('../utils/audit');
+        const requestId = getRequestId();
+        
+        if (requestId) {
+            // 1 & 2. Atomic Check & Placeholder: INSERT OR IGNORE
+            const result = db.prepare('INSERT OR IGNORE INTO request_log (request_id) VALUES (?)').run(requestId);
+            
+            if (result.changes === 0) {
+                // Duplicate Request Found!
+                const row = db.prepare('SELECT response_json FROM request_log WHERE request_id = ?').get(requestId);
+                if (row && row.response_json) {
+                    try {
+                        return JSON.parse(row.response_json);
+                    } catch (e) {
+                         // Fallback safely below
+                    }
+                } else {
+                    const { BusinessError, ERR } = require('../services/v2/errors');
+                    throw new BusinessError('Request is already processing', ERR?.IDEMPOTENT_COLLISION || 'CONFLICT', 409);
+                }
+            }
+        }
+        
+        // Execute original transaction function
+        const res = fn(...args);
+        
+        // 3. Finalize: UPDATE result after commit
+        if (requestId && res !== undefined) {
+             try {
+                 db.prepare('UPDATE request_log SET response_json = ? WHERE request_id = ?').run(JSON.stringify(res), requestId);
+             } catch(e) {}
+        }
+        
+        return res;
+    });
 };
 
 const genId = (prefix) => {

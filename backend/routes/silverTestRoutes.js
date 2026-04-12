@@ -61,7 +61,8 @@ router.patch('/:id/status', async (req, res) => {
 
 router.post('/:id/finalize', async (req, res) => {
     try {
-        const result = await silverTestService.finalizeTest(req.params.id, req.body);
+        const testServiceV2 = require('../services/v2/testService');
+        const result = await testServiceV2.completeTest('silver', req.params.id, req.body);
         res.json({ success: true, data: result });
     } catch (error) {
         handleError(res, error);

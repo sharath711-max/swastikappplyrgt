@@ -210,6 +210,37 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
     const handleSubmitFlow = async () => {
         if (!nextStatus) return;
 
+        if (nextStatus === 'DONE' && (isGoldTest || isSilverTest)) {
+            const valError = validate();
+            if (valError) {
+                setError(valError);
+                return;
+            }
+
+            setLoading(true);
+            try {
+                const totalWtLoss = items.reduce((acc, it) => acc + getWeights(it).loss, 0);
+                const testTypeStr = test.type === 'silver' ? 'silver' : 'gold';
+
+                await api.post(`/${testTypeStr}-tests/${test.id}/finalize`, {
+                    items: items.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned, item_number: i.item_number || i.item_no })),
+                    mode_of_payment: modeOfPayment,
+                    weight_loss: totalWtLoss,
+                    cert: { gst: includeGst }
+                });
+                
+                addToast('Moved to Completed ✓', 'success');
+                
+                if (onSuccess) onSuccess();
+                onHide();
+            } catch (err) {
+                setError(err.response?.data?.error || err.message || 'Failed to complete test');
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
         // Skip closemodal on handlesave to manage it here
         const saved = await handleSave(false);
         if (!saved) return;

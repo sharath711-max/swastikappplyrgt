@@ -62,7 +62,7 @@ export default function CertificatePage({ type }) {
             </div>
             
             <Table hover responsive className="bg-white shadow-sm">
-                <thead><tr><th>Cert No</th><th>Customer</th><th>Date</th><th>Amount</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Cert No</th><th>Customer</th><th>Date</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                     {certs.length === 0 ? (
                         <tr><td colSpan="5" className="text-center py-4 text-muted">No certificates found.</td></tr>
@@ -76,9 +76,17 @@ export default function CertificatePage({ type }) {
                             </td>
                             <td>{c.customer_name}</td>
                             <td>{formatDate(c.issue_date || c.created || c.created_at)}</td>
-                            <td>₹{c.total_amount || 0}</td>
+                            <td>₹{c.total || c.total_amount || 0}</td>
                             <td>
-                                <Button size="sm" className="me-2" variant="outline-primary" onClick={() => window.open(`/print/${config.print}/${c.certificate_no}`, '_blank')}>Print</Button>
+                                <Badge bg={c.status === 'DONE' ? 'success' : c.status === 'IN_PROGRESS' ? 'info' : 'warning'}>
+                                    {c.status || 'DONE'}
+                                </Badge>
+                            </td>
+                            <td>
+                                {c.status !== 'DONE' && (
+                                    <Button size="sm" className="me-2" variant="primary" onClick={() => navigate(`/workflow?tab=${type}_cert`)}>Process</Button>
+                                )}
+                                <Button size="sm" className="me-2" variant="outline-primary" onClick={() => window.open(`/print/${config.print}/${c.certificate_no || c.auto_number}`, '_blank')}>Print</Button>
                                 <Button size="sm" className="me-2" variant="outline-info" onClick={() => navigate(`/record/${type}s/${c.id}`)}>Details</Button>
                                 {config.hasItems && (
                                     <Button size="sm" variant="success" onClick={() => setItemId(c.id)}>Items</Button>

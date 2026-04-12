@@ -5,8 +5,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * CHANGES IN THIS VERSION
  *   1. All validation runs BEFORE the transaction opens; throws BusinessError.
- *   2. _appendEntryWork is composable bare-DB (no own transaction).
- *   3. appendEntry wraps it in its own transaction + audit START/COMMIT/ROLLBACK.
+ *   2. _recordTransaction is composable bare-DB (no own transaction) and remains PRIVATE.
  *   4. rethrow() converts unknown errors to SystemError.
  *   5. No silent failures anywhere.
  */
@@ -122,7 +121,7 @@ function _rollupWeightBalance(customer_id, source_type) {
  * @param {Object} opts
  * @returns {Object} – ledger row + computed balances
  */
-function _appendEntryWork(source_type, opts) {
+function _recordTransaction(source_type, opts, tx = db) {
     const {
         customer_id,
         amount,
@@ -131,6 +130,8 @@ function _appendEntryWork(source_type, opts) {
         mode_of_payment    = 'Cash',
         weight             = 0,
         post_cash_register = false,
+        reference_type     = null,
+        reference_id       = null,
     } = opts;
 
     const weight_type = WEIGHT_TYPE_MAP[source_type] ?? WeightType.NONE;
@@ -138,11 +139,11 @@ function _appendEntryWork(source_type, opts) {
     const timestamp   = now();
 
     // 1. Insert ledger row
-    db.prepare(`
+    tx.prepare(`
         INSERT INTO credit_history
-          (id, customer_id, amount, weight, weight_type, type, mode_of_payment, description, created)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, customer_id, amount, weight, weight_type, entry_type, mode_of_payment, description, timestamp);
+          (id, customer_id, amount, weight, weight_type, type, mode_of_payment, description, reference_type, reference_id, created)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, customer_id, amount, weight, weight_type, entry_type, mode_of_payment, description, reference_type, reference_id, timestamp);
 
     // 2. Roll-up money balance (throws SystemError if customer vanished)
     const new_balance = _rollupBalance(customer_id);
@@ -175,69 +176,33 @@ function _appendEntryWork(source_type, opts) {
 // ─── Public standalone API ────────────────────────────────────────────────────
 
 /**
- * Standalone ledger write with its own transaction.
- * Validation runs BEFORE the transaction opens.
- * Any error → rollback + rethrow annotated.
- *
- * @param {'gold'|'silver'|'cash'} source_type
- * @param {Object} opts  – see _appendEntryWork
- * @returns {Object}
+ * Encapsulated revenue recording logic (SOLE PUBLIC ENTRY POINT FOR CASH-FLOW).
+ * Ensures the DEBIT liability is tracked, and immediately offsets it with a CREDIT if payment is instantaneous.
  */
-function appendEntry(source_type, opts) {
-    // ── Validate BEFORE the transaction ────────────────────────────────────
-    _validateAppendEntry(source_type, opts);
-    audit.validate('ledgerService.appendEntry', {
-        source_type,
-        customer_id: opts.customer_id,
-        entry_type : opts.entry_type,
-        amount     : opts.amount,
-    });
-
-    audit.start('ledgerService.appendEntry', { source_type, customer_id: opts.customer_id });
-
-    const _txn = transaction(() => _appendEntryWork(source_type, opts));
-    try {
-        const result = _txn();
-        audit.commit('ledgerService.appendEntry', {
-            id          : result.id,
-            customer_id : result.customer_id,
-            type        : result.type,
-            amount      : result.amount,
-            new_balance : result.new_balance,
-        });
-        return result;
-    } catch (err) {
-        audit.rollback('ledgerService.appendEntry', err, { source_type, customer_id: opts.customer_id });
-        rethrow(err, 'ledgerService.appendEntry', { source_type });
+function recordRevenue(source_type, opts, tx = db) {
+    if (!opts.reference_type || !['gold_test', 'silver_test', 'gold_certificate', 'silver_certificate'].includes(opts.reference_type)) {
+        throw new BusinessError('Invalid or missing reference_type. Must be a TEST or CERT.', ERR.VALIDATION, 400);
     }
-}
 
-/**
- * Charge customer for a service (DEBIT — increases outstanding balance).
- */
-function chargeCustomer(source_type, customer_id, amount, description, mode_of_payment = 'Cash') {
-    return appendEntry(source_type, {
-        customer_id,
-        amount,
-        entry_type         : EntryType.DEBIT,
-        description,
-        mode_of_payment,
-        post_cash_register : false,
-    });
-}
+    _validateAppendEntry(source_type, opts);
 
-/**
- * Record a payment received (CREDIT — reduces outstanding balance).
- */
-function recordPayment(source_type, customer_id, amount, mode_of_payment = 'Cash', description = 'Payment received') {
-    return appendEntry(source_type, {
-        customer_id,
-        amount,
-        entry_type         : EntryType.CREDIT,
-        description,
-        mode_of_payment,
-        post_cash_register : (mode_of_payment === 'Cash'),
-    });
+    // We execute the DEBIT for the charge always
+    const debitOpt = { ...opts, entry_type: EntryType.DEBIT, post_cash_register: false };
+    const debitEntry = _recordTransaction(source_type, debitOpt, tx);
+
+    // If payment mode is not Balance, record the immediate receipt of payment (Revenue)
+    let creditEntry = null;
+    if (opts.mode_of_payment && opts.mode_of_payment !== 'Balance' && opts.amount > 0) {
+        const creditOpt = {
+            ...opts,
+            entry_type: EntryType.CREDIT,
+            description: `Payment for ${opts.description}`,
+            post_cash_register: (opts.mode_of_payment === 'Cash')
+        };
+        creditEntry = _recordTransaction(source_type, creditOpt, tx);
+    }
+    
+    return { debit: debitEntry, credit: creditEntry };
 }
 
 // ─── Read-only helpers ────────────────────────────────────────────────────────
@@ -259,13 +224,9 @@ function getBalanceSummary(customer_id) {
 }
 
 module.exports = {
-    appendEntry,
-    chargeCustomer,
-    recordPayment,
+    recordRevenue,
     getHistory,
     getBalanceSummary,
-    // Composable bare-DB (for outer transactions)
-    _appendEntryWork,
     _validateAppendEntry,
     EntryType,
     WeightType,

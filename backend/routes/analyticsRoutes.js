@@ -9,6 +9,48 @@ const HEARTBEAT_FILE = path.join(__dirname, '../db/xrf_heartbeat.json');
 
 router.use(authMiddleware);
 
+// ── GET /api/analytics/pnl (Gap: HARDENING_03 Real-world P&L) ──────────────
+router.get('/pnl', (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        let dateFilter = '';
+        let params = [];
+        if (start_date && end_date) {
+            dateFilter = ' AND date(created) >= date(?) AND date(created) <= date(?) ';
+            params = [start_date, end_date];
+        }
+
+        const grossRevenueRaw = db.prepare(`SELECT SUM(amount) as value FROM credit_history WHERE type = 'CREDIT' ${dateFilter}`).get(...params);
+        const weightLossRaw = db.prepare(`SELECT SUM(amount) as value FROM weight_loss_history WHERE 1=1 ${dateFilter}`).get(...params);
+        
+        let cashParams = params;
+        let cashDateFilter = '';
+        if (start_date && end_date) {
+            cashDateFilter = ' AND date(date) >= date(?) AND date(date) <= date(?) ';
+        }
+        const expensesRaw = db.prepare(`SELECT SUM(amount) as value FROM cash_register WHERE type = 'OUT' ${cashDateFilter}`).get(...cashParams);
+
+        const grossRevenue = grossRevenueRaw?.value || 0;
+        const totalWeightLoss = weightLossRaw?.value || 0;
+        const totalExpenses = expensesRaw?.value || 0;
+
+        const netProfit = grossRevenue - totalWeightLoss - totalExpenses;
+
+        res.json({
+            success: true,
+            data: {
+                formula: 'Profit = (SUM(CREDIT_Ledger)) - (SUM(Weight_Loss)) - (SUM(Expenses))',
+                grossRevenue,
+                totalWeightLoss,
+                totalExpenses,
+                netProfit
+            }
+        });
+    } catch(e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // ── GET /api/analytics/dashboard ─────────────────────────────────────────────
 router.get('/dashboard', (req, res) => {
     try {

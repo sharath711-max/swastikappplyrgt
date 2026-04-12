@@ -80,7 +80,10 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // POST /api/certificates
 router.post('/', authMiddleware, async (req, res) => {
     try {
-        const certificate = await certificateService.generateCertificate(req.body);
+        let type = req.body.type || req.query.type;
+        if (!type) return res.status(400).json({ error: 'Certificate type is required' });
+        
+        const certificate = await certificateService.createCertificate(type, req.body);
         res.status(201).json(certificate);
     } catch (error) {
         handleError(res, error);
@@ -103,7 +106,12 @@ router.post('/with-photo', authMiddleware, upload.single('photo'), async (req, r
             }
         }
 
-        const certificate = await certificateService.generateCertificate(data);
+        let type = data.type || req.query.type || 'gold';
+        if (data.certificate_type) {
+             type = data.certificate_type.toLowerCase();
+        }
+
+        const certificate = await certificateService.createCertificate(type, data);
         res.status(201).json(certificate);
     } catch (error) {
         handleError(res, error);

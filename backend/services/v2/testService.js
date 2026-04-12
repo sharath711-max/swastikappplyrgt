@@ -201,8 +201,8 @@ function _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts) {
             );
         }
         db.prepare(
-            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, created) VALUES (?, ?, ?, ?, ?)'
-        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, ts);
+            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, ref_id, created) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, testId, ts);
     }
 }
 
@@ -223,7 +223,7 @@ function createTest(type, data) {
         const ts         = now();
         const testId     = genId(c.parentPrefix);
         // Sequence inside transaction — race-safe
-        const autoNumber = seqSvc._generateGlobalSequenceWork(type);
+        const autoNumber = seqSvc._generateGlobalSequenceWork(type, { context: 'TEST' });
 
         db.prepare(`
             INSERT INTO ${c.parentTable}
@@ -424,6 +424,7 @@ function completeTest(type, testId, data) {
     const certSvc = _getCertSvc();
 
     const _txn = transaction(() => {
+        const tx = db; // architecture requirement
         const ts              = now();
         const { customer_id } = testRow;
 
@@ -454,27 +455,82 @@ function completeTest(type, testId, data) {
                 gst            : cert.gst            ?? false,
                 gst_bill_number: cert.gst_bill_number ?? '',
                 total_tax      : cert.total_tax       ?? 0,
-            }, ts);
+            }, ts, tx);
         }
 
-        // Step 4: Ledger charge — inside same transaction, no try/catch here
-        // If this throws, steps 1-3 also roll back
+        // Step 4: Ledger charge (Split Bill Logic)
+        const TEST_FEE_RATE = 150;
+        const CERT_FEE_RATE = 50;
+        
+        let testFeeTotal = TEST_FEE_RATE * finalItems.length;
+        let certFeeTotal = certificate ? (CERT_FEE_RATE * certItems.length) : 0;
+        
+        // GST Calculation (Inclusive)
+        const applyGst = cert.gst ?? false;
+        
+        let testTax = applyGst ? (testFeeTotal - (testFeeTotal / 1.18)) : 0;
+        let certTax = applyGst ? (certFeeTotal - (certFeeTotal / 1.18)) : 0;
+
+        // Update Test Parent with calculated amount
+        db.prepare(
+            `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
+        ).run(testFeeTotal, testTax, ts, testId);
+        
+        // Also update the cert totals to match our fixed fee if cert was created
+        if (certificate) {
+            db.prepare(
+                `UPDATE ${type === 'gold' ? 'gold_certificate' : 'silver_certificate'} 
+                 SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
+            ).run(certFeeTotal, certTax, ts, certificate.id);
+            certificate.totals.grand_total = certFeeTotal;
+        }
+
         let ledgerEntry = null;
-        if (post_ledger && certificate && certificate.totals.grand_total > 0) {
-            const cap  = type.charAt(0).toUpperCase() + type.slice(1);
-            const desc = `${cap} Certificate ${certificate.auto_number} — lab charges`;
+        let certLedgerEntry = null;
 
-            ledgerEntry = ledgerSvc._appendEntryWork(type, {
-                customer_id,
-                amount             : certificate.totals.grand_total,
-                entry_type         : 'DEBIT',
-                description        : desc,
-                mode_of_payment,
-                post_cash_register : false,
-            });
+        if (post_ledger) {
+            // Split Bill Logic: 1st Bill for Lab Test
+            if (testFeeTotal > 0) {
+                const cap = type.charAt(0).toUpperCase() + type.slice(1);
+                ledgerEntry = ledgerSvc.recordRevenue(type, {
+                    customer_id,
+                    amount: testFeeTotal,
+                    entry_type: 'DEBIT',
+                    description: `${cap} Lab Test ${testRow.auto_number} — charges`,
+                    mode_of_payment,
+                    post_cash_register: false,
+                    reference_type: c.parentTable,
+                    reference_id: testId,
+                }, tx);
+            }
+
+            // Split Bill Logic: 2nd Bill for Certificate
+            if (certificate && certFeeTotal > 0) {
+                const cap = type.charAt(0).toUpperCase() + type.slice(1);
+                certLedgerEntry = ledgerSvc.recordRevenue(type, {
+                    customer_id,
+                    amount: certFeeTotal,
+                    entry_type: 'DEBIT',
+                    description: `${cap} Certificate ${certificate.auto_number} — issuance fee`,
+                    mode_of_payment,
+                    post_cash_register: false,
+                    reference_type: type === 'gold' ? 'gold_certificate' : 'silver_certificate',
+                    reference_id: certificate.id,
+                }, tx);
+            }
         }
 
-        return { test: { id: testId, status: 'DONE' }, certificate, ledger: ledgerEntry };
+        const printSvc = require('./printService');
+        const testSnapshot = JSON.stringify(printSvc.getPrintLayout('test', type, testId));
+        tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ? WHERE id = ?`).run(testSnapshot, testId);
+        
+        if (certificate) {
+            const certSnapshot = JSON.stringify(printSvc.getPrintLayout('certificate', type, certificate.id));
+            const certTable = type === 'gold' ? 'gold_certificate' : 'silver_certificate';
+            tx.prepare(`UPDATE ${certTable} SET print_snapshot = ? WHERE id = ?`).run(certSnapshot, certificate.id);
+        }
+
+        return { test: { id: testId, status: 'DONE', total: testFeeTotal }, certificate, ledger: ledgerEntry?.debit, certLedger: certLedgerEntry?.debit };
     });
 
     try {

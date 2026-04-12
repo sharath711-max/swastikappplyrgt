@@ -24,7 +24,7 @@ const audit = require('./auditLogger');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DATE_KEY  = 'daily_last_date';
-const SEQ_KEY   = 'daily_global_seq';
+// SEQ_KEY is dynamically chosen
 const ALPHA     = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,8 +64,16 @@ function _ensureGlobal(key, defaultValue) {
  * @returns {string}  e.g. "20260411-003"
  * @throws  {SystemError} if the RETURNING row is absent (table corruption)
  */
-function _generateGlobalSequenceWork(_type) {
+function _generateGlobalSequenceWork(_type, opts = {}) {
     const today = _todayStr();
+    const isCert = opts.context === 'CERT';
+    
+    let SEQ_KEY;
+    if (isCert) {
+        SEQ_KEY = opts.isGst ? 'GST_CERT_SEQ' : 'NON_GST_CERT_SEQ';
+    } else {
+        SEQ_KEY = `${_type.toUpperCase()}_TEST_SEQ`;
+    }
 
     // 1. Ensure rows exist (INSERT OR IGNORE is idempotent)
     _ensureGlobal(DATE_KEY, today);
@@ -77,10 +85,11 @@ function _generateGlobalSequenceWork(_type) {
         db.prepare(
             'UPDATE globals SET value = ?, lastmodified = CURRENT_TIMESTAMP WHERE key = ?'
         ).run(today, DATE_KEY);
-        // Reset to '0' so the RETURNING increment yields '1'
+        // Reset ALL sequences to '0' on a new day
         db.prepare(
-            "UPDATE globals SET value = '0', lastmodified = CURRENT_TIMESTAMP WHERE key = ?"
-        ).run(SEQ_KEY);
+            `UPDATE globals SET value = '0', lastmodified = CURRENT_TIMESTAMP 
+             WHERE key IN ('GST_CERT_SEQ', 'NON_GST_CERT_SEQ', 'GOLD_TEST_SEQ', 'SILVER_TEST_SEQ')`
+        ).run();
     }
 
     // 3. Atomic increment — RETURNING gives updated value in one statement
@@ -100,7 +109,17 @@ function _generateGlobalSequenceWork(_type) {
         );
     }
 
-    const autoNumber = `${today}-${String(row.new_seq).padStart(3, '0')}`;
+    const yy = String(new Date().getFullYear()).slice(-2);
+    let typePrefix;
+
+    if (isCert) {
+        typePrefix = opts.isGst ? 'G' : 'N';
+    } else {
+        typePrefix = _type === 'gold' ? 'GT' : 'ST';
+    }
+    
+    // Format: G24-001 or N24-001, or GT24-001/ST24-001
+    const autoNumber = `${typePrefix}${yy}-${String(row.new_seq).padStart(3, '0')}`;
     return autoNumber;
 }
 

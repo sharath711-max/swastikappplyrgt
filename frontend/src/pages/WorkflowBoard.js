@@ -86,12 +86,24 @@ const WorkflowBoard = () => {
                 const detail = res.data.data || res.data;
                 const cardItems = detail.items || [];
 
-                await api.post(resultsEndpoint, {
-                    items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned })),
-                    mode_of_payment: card.mode_of_payment,
-                    total: Number(card.total || 0)
-                });
-                await api.patch(statusEndpoint, { status: 'DONE' });
+                if (card.type === 'gold' || card.type === 'silver') {
+                    const totalWtLoss = cardItems.reduce((acc, it) => acc + (
+                        Number(it.gross_weight || it.sample_weight || 0) - (Number(it.test_weight || it.sample_weight || 0) + Number(it.net_weight || 0))
+                    ), 0);
+                    await api.post(`/${card.type}-tests/${card.id}/finalize`, {
+                        items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned, item_number: i.item_number || i.item_no })),
+                        mode_of_payment: card.mode_of_payment,
+                        weight_loss: Math.max(0, totalWtLoss),
+                        cert: { gst: false }
+                    });
+                } else {
+                    await api.post(resultsEndpoint, {
+                        items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned })),
+                        mode_of_payment: card.mode_of_payment,
+                        total: Number(card.total || 0)
+                    });
+                    await api.patch(statusEndpoint, { status: 'DONE' });
+                }
                 count++;
             } catch (err) {
                 console.error(`Failed to move item ${card.id}:`, err);
@@ -204,7 +216,22 @@ const WorkflowBoard = () => {
                     setDraggedItem(null);
                     return;
                 }
-                await api.patch(`/workflow/${draggedItem.type}/${draggedItem.id}/status`, { status: 'DONE' });
+                if (draggedItem.type === 'gold' || draggedItem.type === 'silver') {
+                    const endpoint = draggedItem.type === 'gold' ? `/gold-tests/${draggedItem.id}` : `/silver-tests/${draggedItem.id}`;
+                    const detailRes = await api.get(endpoint);
+                    const cardItems = detailRes.data?.data?.items || [];
+                    const totalWtLoss = cardItems.reduce((acc, it) => acc + (
+                        Number(it.gross_weight || it.sample_weight || 0) - (Number(it.test_weight || it.sample_weight || 0) + Number(it.net_weight || 0))
+                    ), 0);
+                    await api.post(`/${draggedItem.type}-tests/${draggedItem.id}/finalize`, {
+                        items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned, item_number: i.item_number || i.item_no })),
+                        mode_of_payment: mode,
+                        weight_loss: Math.max(0, totalWtLoss),
+                        cert: { gst: detailRes.data?.data?.gst === 1 }
+                    });
+                } else {
+                    await api.patch(`/workflow/${draggedItem.type}/${draggedItem.id}/status`, { status: 'DONE' });
+                }
                 addToast('Moved to Completed ✓', 'success');
             }
             await fetchData();

@@ -61,6 +61,7 @@ app.use('/api/certificates',     require('./routes/certificateRoutes'));
 app.use('/api/gold-tests',       require('./routes/goldTestRoutes'));
 app.use('/api/silver-tests',     require('./routes/silverTestRoutes'));
 app.use('/api/weight-loss',      require('./routes/weightLossRoutes'));
+app.use('/api/print',            require('./routes/printRoutes'));
 app.use('/api/cash-register',    require('./routes/cashRoutes'));
 app.use('/api/workflow',         require('./routes/workflowRoutes'));
 app.use('/api/credit-history',   require('./routes/creditHistoryRoutes'));
@@ -121,6 +122,25 @@ app.use((err, req, res, next) => {  // eslint-disable-line no-unused-vars
 
     res.status(500).json({ error: 'Something went wrong!', traceId: requestId });
 });
+
+// ── MAINTENANCE POLICE ─────────────────────────────────────────────────────────
+setInterval(() => {
+    try {
+        const { db } = require('./db/db');
+        db.prepare("DELETE FROM request_log WHERE created_at < datetime('now', '-30 days')").run();
+        console.log('🧹 [MAINTENANCE] Cleaned up request_log older than 30 days');
+    } catch (err) {
+        console.error('🧹 [MAINTENANCE] Failed to cleanup request_log', err);
+    }
+}, 24 * 60 * 60 * 1000); // 24 hours (Runs in background)
+
+// Kick off one immediately on startup safely after small delay
+setTimeout(() => {
+    try {
+        const { db } = require('./db/db');
+        db.prepare("DELETE FROM request_log WHERE created_at < datetime('now', '-30 days')").run();
+    } catch(e) {}
+}, 5000);
 
 // ── 8. Start server ───────────────────────────────────────────────────────────
 if (require.main === module) {

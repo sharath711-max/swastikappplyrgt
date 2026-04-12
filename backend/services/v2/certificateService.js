@@ -200,7 +200,7 @@ function _insertItemsWork(type, certId, autoNumber, rawItems, ts, startSeq = 1) 
         ];
         const baseValues = [
             itemId, certId, itemNumber,
-            raw.certificate_number || certLabel,
+            raw.certificate_number || itemNumber,
             raw.name || raw.item_name || normInput.item_name || '',
             raw.item_type || raw.item_name || normInput.item_name || '',
             calc.gross_weight, calc.test_weight, calc.net_weight,
@@ -216,7 +216,7 @@ function _insertItemsWork(type, certId, autoNumber, rawItems, ts, startSeq = 1) 
         insertedItems.push({
             id                : itemId,
             item_number       : itemNumber,
-            certificate_number: raw.certificate_number || certLabel,
+            certificate_number: raw.certificate_number || itemNumber,
             ...calc,
             created           : ts,
         });
@@ -233,9 +233,10 @@ function _insertItemsWork(type, certId, autoNumber, rawItems, ts, startSeq = 1) 
  * @param {MetalType} type
  * @param {Object}    data
  * @param {string}    [ts]  – supply from outer transaction for consistent timestamps
+ * @param {Object}    [tx]  – the active db transaction binding
  * @returns {{ id, auto_number, items, totals, created }}
  */
-function _createCertificateWork(type, data, ts) {
+function _createCertificateWork(type, data, ts, tx = db) {
     const c = _cfg(type);
     const {
         customer_id,
@@ -251,7 +252,7 @@ function _createCertificateWork(type, data, ts) {
 
     const certId     = genId(c.parentIdPrefix);
     // Sequence inside caller's transaction — race-safe, no SAVEPOINT overhead
-    const autoNumber = seqSvc._generateGlobalSequenceWork(type);
+    const autoNumber = seqSvc._generateGlobalSequenceWork(type, { context: 'CERT', isGst: gst });
 
     // Parent INSERT
     const pi = _buildParentInsert(type, certId, autoNumber, customer_id, status, mode_of_payment, gst, gst_bill_number, total_tax, ts);
@@ -315,8 +316,9 @@ function createCertificate(type, data) {
     audit.start('certificateService.createCertificate', { type, customer_id: data.customer_id });
 
     const _txn = transaction(() => {
+        const tx = db;
         const ts   = now();
-        const cert = _createCertificateWork(type, data, ts);
+        const cert = _createCertificateWork(type, data, ts, tx);
 
         // Ledger INSIDE transaction — failure rolls back cert + items
         let ledgerEntry = null;
@@ -324,17 +326,19 @@ function createCertificate(type, data) {
             const cap  = type.charAt(0).toUpperCase() + type.slice(1);
             const desc = `${cap} Certificate ${cert.auto_number} — lab charges`;
 
-            ledgerEntry = ledgerSvc._appendEntryWork(type, {
+            ledgerEntry = ledgerSvc.recordRevenue(type, {
                 customer_id    : data.customer_id,
                 amount         : cert.totals.grand_total,
                 entry_type     : 'DEBIT',
                 description    : desc,
                 mode_of_payment: data.mode_of_payment || 'Cash',
                 post_cash_register: false,
-            });
+                reference_type : c.parentTable,
+                reference_id   : cert.id,
+            }, tx);
         }
 
-        return { ...cert, ledger: ledgerEntry };
+        return { ...cert, ledger: ledgerEntry?.debit };
     });
 
     try {
@@ -456,6 +460,7 @@ function updateStatus(type, id, newStatus) {
     audit.start('certificateService.updateStatus', { type, id, newStatus });
 
     const _txn = transaction(() => {
+        const tx = db;
         const ts = now();
 
         // Final rollup before DONE seal
@@ -485,18 +490,24 @@ function updateStatus(type, id, newStatus) {
                 const cap  = type.charAt(0).toUpperCase() + type.slice(1);
                 const desc = `${cap} Certificate ${finalRow.auto_number} — lab charges`;
 
-                ledgerEntry = ledgerSvc._appendEntryWork(type, {
+                ledgerEntry = ledgerSvc.recordRevenue(type, {
                     customer_id    : finalRow.customer_id,
                     amount         : finalRow.total,
                     entry_type     : 'DEBIT',
                     description    : desc,
                     mode_of_payment: finalRow.mode_of_payment || 'Cash',
                     post_cash_register: false,
-                });
+                    reference_type : c.parentTable,
+                    reference_id   : id,
+                }, tx);
             }
+            
+            const printSvc = require('./printService');
+            const certSnapshot = JSON.stringify(printSvc.getPrintLayout('certificate', type, id));
+            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ? WHERE id = ?`).run(certSnapshot, id);
         }
 
-        return { changes: result.changes, ledger: ledgerEntry };
+        return { changes: result.changes, ledger: ledgerEntry?.debit };
     });
 
     try {

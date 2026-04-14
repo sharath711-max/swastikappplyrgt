@@ -28,6 +28,8 @@ const WorkflowBoard = () => {
     const [dragOverCol, setDragOverCol] = useState(null);
 
     const [phase2Modal, setPhase2Modal] = useState({ show: false, test: null, readOnly: false });
+    const [selected, setSelected]       = useState(new Set());
+    const [bulkLoading, setBulkLoading] = useState(false);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -454,6 +456,69 @@ const WorkflowBoard = () => {
                 </div>
             )}
 
+            {/* ── BULK ACTION BAR ── */}
+            {selected.size > 0 && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '8px 16px', marginBottom: 12,
+                    background: '#eff6ff', borderRadius: 8, fontSize: 13,
+                }}>
+                    <span style={{ fontWeight: 500 }}>{selected.size} selected</span>
+                    <button
+                        className="btn btn-sm btn-primary"
+                        disabled={bulkLoading}
+                        onClick={async () => {
+                            setBulkLoading(true);
+                            try {
+                                const bulkItems = [...selected].map(id => {
+                                    const it = filteredItems.find(i => i.id === id);
+                                    return { type: it?.type, id };
+                                }).filter(i => i.type);
+                                await api.patch('/workflow/bulk-status', { items: bulkItems, status: 'IN_PROGRESS' });
+                                setSelected(new Set());
+                                await fetchData();
+                                addToast(`${bulkItems.length} items moved to In Progress`, 'success');
+                            } catch (e) {
+                                addToast(e.message || 'Bulk update failed', 'error');
+                            } finally {
+                                setBulkLoading(false);
+                            }
+                        }}
+                    >
+                        {bulkLoading ? 'Updating...' : 'Move to In Progress'}
+                    </button>
+                    <button
+                        className="btn btn-sm btn-success"
+                        disabled={bulkLoading}
+                        onClick={async () => {
+                            setBulkLoading(true);
+                            try {
+                                const bulkItems = [...selected].map(id => {
+                                    const it = filteredItems.find(i => i.id === id);
+                                    return { type: it?.type, id };
+                                }).filter(i => i.type);
+                                await api.patch('/workflow/bulk-status', { items: bulkItems, status: 'DONE' });
+                                setSelected(new Set());
+                                await fetchData();
+                                addToast(`${bulkItems.length} items completed`, 'success');
+                            } catch (e) {
+                                addToast(e.message || 'Bulk update failed', 'error');
+                            } finally {
+                                setBulkLoading(false);
+                            }
+                        }}
+                    >
+                        {bulkLoading ? 'Updating...' : 'Mark Done'}
+                    </button>
+                    <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => setSelected(new Set())}
+                    >
+                        Clear
+                    </button>
+                </div>
+            )}
+
             {/* ── KANBAN GRID ── */}
             <div className="kanban-grid">
                 {columnsConfig.map(col => {
@@ -518,7 +583,21 @@ const WorkflowBoard = () => {
                                                 transition: 'opacity 0.2s ease'
                                             }}
                                         >
-                                            <div className="card-top d-flex justify-content-between">
+                                            <input
+                                            type="checkbox"
+                                            checked={selected.has(item.id)}
+                                            onChange={e => {
+                                                e.stopPropagation();
+                                                setSelected(prev => {
+                                                    const next = new Set(prev);
+                                                    e.target.checked ? next.add(item.id) : next.delete(item.id);
+                                                    return next;
+                                                });
+                                            }}
+                                            onClick={e => e.stopPropagation()}
+                                            style={{ marginRight: 8, cursor: 'pointer' }}
+                                        />
+                                        <div className="card-top d-flex justify-content-between">
                                                 <div className="card-customer">{item.customer_name || 'Anonymous'}</div>
                                                 <Badge bg="dark" className="p-2">#{shortId}</Badge>
                                             </div>

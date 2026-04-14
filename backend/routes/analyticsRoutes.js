@@ -254,4 +254,61 @@ router.get('/search', (req, res) => {
     }
 });
 
+// ── GET /api/analytics/rates ─────────────────────────────────────────────────
+// Returns current gold and silver rate-per-gram from globals table.
+router.get('/rates', (req, res) => {
+    try {
+        const gold   = db.prepare(`SELECT value FROM globals WHERE key = 'gold_rate_per_gram'`).get();
+        const silver = db.prepare(`SELECT value FROM globals WHERE key = 'silver_rate_per_gram'`).get();
+        res.json({
+            success: true,
+            data: {
+                gold_rate_per_gram  : gold   ? parseFloat(gold.value)   : 0,
+                silver_rate_per_gram: silver ? parseFloat(silver.value) : 0,
+                updated_at          : new Date().toISOString(),
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// ── PUT /api/analytics/rates ──────────────────────────────────────────────────
+// Admin sets gold and/or silver rate-per-gram. Stored in globals table.
+// Body: { gold_rate_per_gram?: number, silver_rate_per_gram?: number }
+router.put('/rates', (req, res) => {
+    const { gold_rate_per_gram, silver_rate_per_gram } = req.body;
+    if (gold_rate_per_gram === undefined && silver_rate_per_gram === undefined) {
+        return res.status(400).json({ success: false, error: 'At least one rate is required' });
+    }
+
+    const upsert = db.prepare(`
+        INSERT INTO globals (key, value, created, lastmodified)
+        VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, lastmodified = CURRENT_TIMESTAMP
+    `);
+
+    try {
+        const update = db.transaction(() => {
+            const updated = {};
+            if (gold_rate_per_gram !== undefined) {
+                if (typeof gold_rate_per_gram !== 'number' || gold_rate_per_gram < 0)
+                    throw new Error('gold_rate_per_gram must be a non-negative number');
+                upsert.run('gold_rate_per_gram', String(gold_rate_per_gram));
+                updated.gold_rate_per_gram = gold_rate_per_gram;
+            }
+            if (silver_rate_per_gram !== undefined) {
+                if (typeof silver_rate_per_gram !== 'number' || silver_rate_per_gram < 0)
+                    throw new Error('silver_rate_per_gram must be a non-negative number');
+                upsert.run('silver_rate_per_gram', String(silver_rate_per_gram));
+                updated.silver_rate_per_gram = silver_rate_per_gram;
+            }
+            return updated;
+        });
+        res.json({ success: true, data: update() });
+    } catch (e) {
+        res.status(400).json({ success: false, error: e.message });
+    }
+});
+
 module.exports = router;

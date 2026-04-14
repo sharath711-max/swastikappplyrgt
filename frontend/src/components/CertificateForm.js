@@ -44,6 +44,7 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
     const dropdownRef = useRef(null);
 
     const [sampleDraft, setSampleDraft] = useState(emptyDraft);
+    const [defaultRate, setDefaultRate] = useState('');
     const [items, setItems] = useState([]);
     const [photo, setPhoto] = useState(null);
     const currentDate = new Date().toLocaleDateString('en-US');
@@ -67,6 +68,16 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
 
         setType(initialType);
         setSampleDraft({ ...emptyDraft });
+        // Pre-fill rate from globals on every open
+        api.get('/analytics/rates').then(res => {
+            const rate = initialType === 'silver'
+                ? res.data?.data?.silver_rate_per_gram
+                : res.data?.data?.gold_rate_per_gram;
+            if (rate) {
+                setDefaultRate(String(rate));
+                setSampleDraft(d => ({ ...d, rate: String(rate) }));
+            }
+        }).catch(() => {}); // silent — staff can type manually
         setItems([]);
         setPhoto(null);
         setShowSuggestions(false);
@@ -299,13 +310,23 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
 
                 {type === 'gold' && (
                     <Row className="g-2">
-                        <Col md={6}>
+                        <Col md={4}>
                             <Form.Label className="small fw-bold">Gross Wt</Form.Label>
                             <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.gross_weight} onChange={(e) => handleDraftChange('gross_weight', e.target.value)} />
                         </Col>
-                        <Col md={6}>
+                        <Col md={4}>
                             <Form.Label className="small fw-bold">Test Wt</Form.Label>
                             <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.test_weight} onChange={(e) => handleDraftChange('test_weight', e.target.value)} />
+                        </Col>
+                        <Col md={4}>
+                            <Form.Label className="small fw-bold">Rate/g (₹)</Form.Label>
+                            <Form.Control
+                                type="number"
+                                step="0.01"
+                                placeholder={defaultRate || '0.00'}
+                                value={sampleDraft.rate}
+                                onChange={(e) => handleDraftChange('rate', e.target.value)}
+                            />
                         </Col>
                     </Row>
                 )}

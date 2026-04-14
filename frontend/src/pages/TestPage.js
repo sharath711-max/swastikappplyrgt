@@ -39,7 +39,7 @@ export default function TestPage({ endpoint, title, print, modalType }) {
                 weight_loss: 0 
             });
             
-            if (res.data?.data?.idempotent) {
+            if (res.data?.meta?.idempotent || res.data?.data?.idempotent) {
                 addToast('Already processed', 'info');
             } else {
                 addToast('Finalized successfully', 'success');

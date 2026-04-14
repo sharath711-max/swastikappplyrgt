@@ -239,76 +239,18 @@ class GoldTestRepository {
         })();
     }
 
-    finalize(id, items, mode_of_payment, weightLossAmount) {
-        const requestId = buildCompletionRequestId();
-
-        return transaction(() => {
-            const claim = claimCompletion(this.db, 'gold_test', id, requestId);
-            if (claim.state === 'not_found') {
-                throw new Error('Gold test not found');
-            }
-            if (claim.state === 'idempotent') {
-                return {
-                    success     : true,
-                    idempotent  : true,
-                    alreadyDone : true,
-                    requestId   : claim.requestId,
-                };
-            }
-            if (claim.state === 'in_progress' || claim.state === 'blocked') {
-                throw new Error('409: Gold test completion is already in progress');
-            }
-
-            const timestamp = now();
-
-            // 1. Update items with final values and recalculate Charge
-            for (const item of items) {
-                const currentItem = this.db.prepare("SELECT * FROM gold_test_item WHERE id = ?").get(item.id);
-                if (currentItem) {
-                    const calculated = GoldTestCalculationService.calculateItem({
-                        gross_weight: currentItem.gross_weight,
-                        test_weight: currentItem.test_weight,
-                        purity: item.purity,
-                        returned: item.returned == 1 || item.returned === true,
-                        item_type: currentItem.item_type
-                    });
-
-                    this.db.prepare(`
-                        UPDATE gold_test_item 
-                        SET purity = ?, returned = ?, fine_weight = ?, item_total = ?
-                        WHERE id = ? AND gold_test_id = ? AND deletedon IS NULL
-                    `).run(calculated.purity, calculated.returned ? 1 : 0, calculated.fine_weight, calculated.item_total, item.id, id);
-                }
-            }
-
-            // 2. Finalize Parent Roll-up and Status
-            GoldTestCalculationService.updateParentTotals(id, this.db);
-
-            this.db.prepare(`
-                UPDATE gold_test 
-                SET status = 'DONE', mode_of_payment = ?, done_at = ?, lastmodified = ? 
-                WHERE id = ? AND deletedon IS NULL
-            `).run(mode_of_payment, timestamp, timestamp, id);
-
-            // 3. Record Weight Loss if applicable
-            if (weightLossAmount > 0) {
-                const wlhId = genId('WLH');
-                const test = this.db.prepare("SELECT customer_id FROM gold_test WHERE id = ?").get(id);
-
-                if (test) {
-                    this.db.prepare(`
-                        INSERT INTO weight_loss_history (id, customer_id, amount, reason, created)
-                        VALUES (?, ?, ?, ?, ?)
-                    `).run(wlhId, test.customer_id, weightLossAmount, `Gold Test Finalization: ${id}`, timestamp);
-                }
-            }
-
-            return {
-                success    : true,
-                idempotent : false,
-                requestId,
-            };
-        })();
+    /**
+     * @deprecated PHASE_11 — Use v2/testService.completeTest() instead.
+     * This method has been retired in favour of the unified, atomic
+     * completeTest() function which bundles finalization, certificate
+     * creation, ledger posting, and idempotency into a single transaction.
+     * Retaining the signature prevents runtime crashes on stale require();
+     * the throw enforces migration at call-time.
+     */
+    finalize(_id, _items, _mop, _wl) {
+        throw new Error(
+            '[RETIRED] goldTestRepository.finalize() — use services/v2/testService.completeTest() instead'
+        );
     }
 
     softDelete(id) {

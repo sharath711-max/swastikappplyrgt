@@ -11,7 +11,8 @@
  *   5. _finalizeItemsWork / _markTestDoneWork: bare-DB composable helpers.
  */
 
-const { db, genId, now, transaction } = require('../../db/db');
+const { db, genId, now, transaction, readCachedResult } = require('../../db/db');
+const { getRequestId } = require('../../utils/audit');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit      = require('./auditLogger');
 const seqSvc     = require('./sequenceService');
@@ -393,19 +394,28 @@ function finalizeTest(type, id, data) {
 // ─── COMPLETE TEST (finalize + cert + ledger — one transaction) ───────────────
 
 function completeTest(type, testId, data) {
-    // ── Validate BEFORE transaction ─────────────────────────────────────────
+    // ── GATE 0: Field-only validation (pure, no DB reads) ──────────────────
     _validateCompleteTest(type, testId, data);
 
+    // ── GATE 1: Idempotency — ABSOLUTE ENTRY GATE ─────────────────────────
+    const reqId = getRequestId();
+    if (reqId) {
+        const cached = readCachedResult(reqId);
+        if (cached !== null) {
+            audit.info('testService.completeTest', { event: 'IDEMPOTENT_HIT', type, testId, reqId });
+            return { ...cached, _idempotent: true };
+        }
+    }
+
     const c = _cfg(type);
+
+    // ── GATE 2: Business-state validation (now safe — not a duplicate) ────
     const testRow = db.prepare(
         `SELECT status, customer_id FROM ${c.parentTable} WHERE id = ? AND deletedon IS NULL`
     ).get(testId);
 
     if (!testRow) {
         throw new BusinessError(`${type} test not found: ${testId}`, ERR.TEST_NOT_FOUND, 404);
-    }
-    if (testRow.status === 'DONE') {
-        throw new BusinessError(`Test ${testId} is already DONE`, ERR.IMMUTABLE, 409);
     }
 
     audit.validate('testService.completeTest', { type, testId, customer_id: testRow.customer_id });
@@ -433,6 +443,12 @@ function completeTest(type, testId, data) {
     const certSvc = _getCertSvc();
 
     const _txn = transaction(() => {
+        // Check status inside transaction
+        const current = db.prepare(`SELECT status FROM ${c.parentTable} WHERE id = ?`).get(testId);
+        if (current.status === 'DONE') {
+            throw new BusinessError(`Test ${testId} is already DONE`, ERR.IMMUTABLE, 409);
+        }
+
         const tx = db; // architecture requirement
         const ts              = now();
         const { customer_id } = testRow;
@@ -580,7 +596,8 @@ function completeTest(type, testId, data) {
             audit.sequence('testService.completeTest', result.certificate.auto_number, type, result.certificate.id);
         }
         audit.statusChange('testService.completeTest', testId, testRow.status, 'DONE');
-        return result;
+        // Tag as the original (non-duplicate) call
+        return { ...result, _idempotent: false };
     } catch (err) {
         audit.rollback('testService.completeTest', err, { type, testId });
         rethrow(err, 'testService.completeTest', { type, testId });

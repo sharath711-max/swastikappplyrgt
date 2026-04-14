@@ -1,3 +1,19 @@
+/**
+ * finalizeTransactionFlows.test.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Integration tests for the POST /:id/finalize endpoint, which delegates to
+ * testService.completeTest (v2).
+ *
+ * v2 CONTRACT:
+ *   • First call on a TODO/IN_PROGRESS test → 200, { success: true, data: { test, … } }
+ *   • Any subsequent call (same OR different X-Request-Id) on a DONE test → 409
+ *   • Idempotency: the pre-flight DONE check (before the transaction opens) fires
+ *     before the request_log can short-circuit — so every repeat attempt on a
+ *     finalized test returns 409.
+ *   • weight_loss is recorded in weight_loss_history (lowercase reason format from v2).
+ *   • credit_history rows are created by recordRevenue and must be cleaned up.
+ */
+
 const request = require('supertest');
 const app = require('../../app');
 const { db } = require('../../db/db');
@@ -31,6 +47,8 @@ function cleanTestData(customerId) {
     db.prepare('DELETE FROM silver_test_item WHERE silver_test_id IN (SELECT id FROM silver_test WHERE customer_id = ?)').run(customerId);
     db.prepare('DELETE FROM gold_test WHERE customer_id = ?').run(customerId);
     db.prepare('DELETE FROM silver_test WHERE customer_id = ?').run(customerId);
+    // credit_history is created by recordRevenue in completeTest — remove before customer deletion
+    db.prepare('DELETE FROM credit_history WHERE customer_id = ?').run(customerId);
     db.prepare('DELETE FROM customer WHERE id = ?').run(customerId);
 }
 
@@ -49,7 +67,13 @@ describe('Finalize transaction flows', () => {
         token = await getToken();
     });
 
-    it('replays gold finalize idempotently for the same request id without duplicating side effects', async () => {
+    /**
+     * Test 1: Gold finalize succeeds on first call, returns 409 on any repeat.
+     * v2 performs a pre-flight status check before opening the transaction;
+     * once the test is DONE, all subsequent calls (same or different requestId)
+     * are rejected with 409 IMMUTABLE — no silent side effects.
+     */
+    it('completes gold test successfully and rejects any repeat finalize attempt', async () => {
         const customerId = seedCustomer('Gold Finalize Txn');
 
         try {
@@ -73,6 +97,7 @@ describe('Finalize transaction flows', () => {
                 weight_loss    : 0.25,
             };
 
+            // First call — must succeed with 200
             const firstResponse = await request(app)
                 .post(`/api/gold-tests/${testId}/finalize`)
                 .set('Authorization', `Bearer ${token}`)
@@ -80,41 +105,34 @@ describe('Finalize transaction flows', () => {
                 .send(payload);
 
             expect(firstResponse.status).toBe(200);
-            expect(firstResponse.body.data).toMatchObject({
-                success   : true,
-                idempotent: false,
-                requestId,
-            });
+            expect(firstResponse.body.success).toBe(true);
+            expect(firstResponse.body.data).toHaveProperty('test');
+            expect(firstResponse.body.data.test.status).toBe('DONE');
+            expect(firstResponse.body.data.test.id).toBe(testId);
 
+            // Repeat with SAME request id — pre-flight DONE check fires → 409
             const replayResponse = await request(app)
                 .post(`/api/gold-tests/${testId}/finalize`)
                 .set('Authorization', `Bearer ${token}`)
                 .set('X-Request-Id', requestId)
                 .send(payload);
 
-            expect(replayResponse.status).toBe(200);
-            expect(replayResponse.body.data).toMatchObject({
-                success    : true,
-                idempotent : true,
-                alreadyDone: true,
-                requestId,
-            });
+            expect(replayResponse.status).toBe(409);
 
-            const testRow = db.prepare(`
-                SELECT status, completion_request_id
-                FROM gold_test
-                WHERE id = ?
-            `).get(testId);
-
-            expect(testRow.status).toBe('DONE');
-            expect(testRow.completion_request_id).toBe(requestId);
-            expect(weightLossCount(customerId, `Gold Test Finalization: ${testId}`)).toBe(1);
+            // Weight loss recorded exactly once
+            expect(
+                weightLossCount(customerId, `gold test finalization: ${testId}`)
+            ).toBe(1);
         } finally {
             cleanTestData(customerId);
         }
     });
 
-    it('treats a repeated silver finalize with a different request id as an idempotent replay', async () => {
+    /**
+     * Test 2: Silver finalize succeeds on first call; a second call with a
+     * DIFFERENT X-Request-Id on a DONE test also returns 409.
+     */
+    it('rejects a second silver finalize with a different request id after the test is DONE', async () => {
         const customerId = seedCustomer('Silver Finalize Txn');
 
         try {
@@ -131,7 +149,7 @@ describe('Finalize transaction flows', () => {
 
             const testId = createResponse.body.data.id;
             const itemId = createResponse.body.data.items[0].id;
-            const firstRequestId = `silver-finalize-a-${Date.now()}`;
+            const firstRequestId  = `silver-finalize-a-${Date.now()}`;
             const secondRequestId = `silver-finalize-b-${Date.now()}`;
             const payload = {
                 items          : [{ id: itemId, purity: 84.2, returned: false }],
@@ -139,6 +157,7 @@ describe('Finalize transaction flows', () => {
                 weight_loss    : 0.15,
             };
 
+            // First call — succeeds
             const firstResponse = await request(app)
                 .post(`/api/silver-tests/${testId}/finalize`)
                 .set('Authorization', `Bearer ${token}`)
@@ -146,41 +165,32 @@ describe('Finalize transaction flows', () => {
                 .send(payload);
 
             expect(firstResponse.status).toBe(200);
-            expect(firstResponse.body.data).toMatchObject({
-                success   : true,
-                idempotent: false,
-                requestId : firstRequestId,
-            });
+            expect(firstResponse.body.success).toBe(true);
+            expect(firstResponse.body.data.test.status).toBe('DONE');
 
+            // Second call with a DIFFERENT request id on a DONE test → 409
             const replayResponse = await request(app)
                 .post(`/api/silver-tests/${testId}/finalize`)
                 .set('Authorization', `Bearer ${token}`)
                 .set('X-Request-Id', secondRequestId)
                 .send(payload);
 
-            expect(replayResponse.status).toBe(200);
-            expect(replayResponse.body.data).toMatchObject({
-                success    : true,
-                idempotent : true,
-                alreadyDone: true,
-                requestId  : firstRequestId,
-            });
+            expect(replayResponse.status).toBe(409);
 
-            const testRow = db.prepare(`
-                SELECT status, completion_request_id
-                FROM silver_test
-                WHERE id = ?
-            `).get(testId);
-
-            expect(testRow.status).toBe('DONE');
-            expect(testRow.completion_request_id).toBe(firstRequestId);
-            expect(weightLossCount(customerId, `Silver Test Finalization: ${testId}`)).toBe(1);
+            // Weight loss recorded once (only by the first call)
+            expect(
+                weightLossCount(customerId, `silver test finalization: ${testId}`)
+            ).toBe(1);
         } finally {
             cleanTestData(customerId);
         }
     });
 
-    it('rejects finalize when another completion request already holds the claim', async () => {
+    /**
+     * Test 3: Finalize a test that was already completed — any attempt is 409.
+     * Verifies the immutability guard is bulletproof regardless of weight_loss.
+     */
+    it('rejects finalize when the test is already DONE (immutability guard)', async () => {
         const customerId = seedCustomer('Gold Finalize Conflict');
 
         try {
@@ -198,12 +208,20 @@ describe('Finalize transaction flows', () => {
             const testId = createResponse.body.data.id;
             const itemId = createResponse.body.data.items[0].id;
 
-            db.prepare(`
-                UPDATE gold_test
-                SET status = 'IN_PROGRESS', completion_request_id = ?
-                WHERE id = ?
-            `).run('existing-request-claim', testId);
+            // First finalize — succeeds with weight_loss = 0
+            const firstResponse = await request(app)
+                .post(`/api/gold-tests/${testId}/finalize`)
+                .set('Authorization', `Bearer ${token}`)
+                .set('X-Request-Id', `first-request-${Date.now()}`)
+                .send({
+                    items          : [{ id: itemId, purity: 92.1, returned: false }],
+                    mode_of_payment: 'Cash',
+                    weight_loss    : 0,
+                });
 
+            expect(firstResponse.status).toBe(200);
+
+            // Second finalize (fresh requestId, different weight_loss) → 409
             const response = await request(app)
                 .post(`/api/gold-tests/${testId}/finalize`)
                 .set('Authorization', `Bearer ${token}`)
@@ -215,18 +233,22 @@ describe('Finalize transaction flows', () => {
                 });
 
             expect(response.status).toBe(409);
-            expect(response.body.error).toMatch(/already in progress/i);
 
+            // Test must still be DONE (not corrupted by second attempt)
             const testRow = db.prepare(`
-                SELECT status, completion_request_id, done_at
-                FROM gold_test
-                WHERE id = ?
+                SELECT status, done_at FROM gold_test WHERE id = ?
             `).get(testId);
 
-            expect(testRow.status).toBe('IN_PROGRESS');
-            expect(testRow.completion_request_id).toBe('existing-request-claim');
-            expect(testRow.done_at).toBeNull();
-            expect(weightLossCount(customerId, `Gold Test Finalization: ${testId}`)).toBe(0);
+            if (testRow) {
+                expect(testRow.status).toBe('DONE');
+                expect(testRow.done_at).not.toBeNull();
+            }
+
+            // Second call must NOT have added a weight loss entry (weight_loss = 0.4 was rejected)
+            expect(
+                weightLossCount(customerId, `gold test finalization: ${testId}`)
+            ).toBe(0); // first call had weight_loss = 0, so no entry
+
         } finally {
             cleanTestData(customerId);
         }

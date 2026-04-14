@@ -1,4 +1,4 @@
-const { db, transaction } = require('../db/db');
+const { db, rawTransaction } = require('../db/db');
 
 class SequenceService {
     /**
@@ -6,7 +6,7 @@ class SequenceService {
      * Starts from 001 every day.
      */
     static generateGlobalSequence() {
-        return transaction(() => {
+        return rawTransaction(() => {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');

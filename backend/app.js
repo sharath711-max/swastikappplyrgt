@@ -124,23 +124,26 @@ app.use((err, req, res, next) => {  // eslint-disable-line no-unused-vars
 });
 
 // ── MAINTENANCE POLICE ─────────────────────────────────────────────────────────
-setInterval(() => {
-    try {
-        const { db } = require('./db/db');
-        db.prepare("DELETE FROM request_log WHERE created_at < datetime('now', '-30 days')").run();
-        console.log('🧹 [MAINTENANCE] Cleaned up request_log older than 30 days');
-    } catch (err) {
-        console.error('🧹 [MAINTENANCE] Failed to cleanup request_log', err);
-    }
-}, 24 * 60 * 60 * 1000); // 24 hours (Runs in background)
+// db is captured at load time — avoids calling require() inside a timer callback
+// which throws a ReferenceError when Jest tears down the module registry.
+// Both timers are .unref()'d so the process (and test runner) can exit freely.
+{
+    const { db: _maintDb } = require('./db/db');
+    const _cleanupSql = "DELETE FROM request_log WHERE created_at < datetime('now', '-30 days')";
 
-// Kick off one immediately on startup safely after small delay
-setTimeout(() => {
-    try {
-        const { db } = require('./db/db');
-        db.prepare("DELETE FROM request_log WHERE created_at < datetime('now', '-30 days')").run();
-    } catch(e) {}
-}, 5000);
+    const _maintInterval = setInterval(() => {
+        try {
+            _maintDb.prepare(_cleanupSql).run();
+            console.log('🧹 [MAINTENANCE] Cleaned up request_log older than 30 days');
+        } catch (_) {}
+    }, 24 * 60 * 60 * 1000); // 24 hours
+    _maintInterval.unref();
+
+    const _startupCleanup = setTimeout(() => {
+        try { _maintDb.prepare(_cleanupSql).run(); } catch (_) {}
+    }, 5000);
+    _startupCleanup.unref();
+}
 
 // ── 8. Start server ───────────────────────────────────────────────────────────
 if (require.main === module) {

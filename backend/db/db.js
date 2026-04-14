@@ -78,6 +78,12 @@ function applyPostInitMigrations() {
     ensureColumn('gold_certificate', 'print_snapshot', 'TEXT');
     ensureColumn('silver_certificate', 'print_snapshot', 'TEXT');
 
+    // Patch 04b: TOTALS — tax and fee fields added by v2 testService.completeTest
+    ensureColumn('gold_test',   'total_tax', 'REAL DEFAULT 0');
+    ensureColumn('silver_test', 'total_tax', 'REAL DEFAULT 0');
+    ensureColumn('gold_certificate',   'total_tax', 'REAL DEFAULT 0');
+    ensureColumn('silver_certificate', 'total_tax', 'REAL DEFAULT 0');
+
     // Patch 05: OPERATOR_OVERRIDE — cert eligibility flag per test item
     ensureColumn('gold_test_item', 'certificate_required', 'INTEGER DEFAULT 0');
     ensureColumn('silver_test_item', 'certificate_required', 'INTEGER DEFAULT 0');
@@ -132,6 +138,39 @@ function initDb() {
         console.error('❌ Failed to initialize database:', error);
         throw error;
     }
+}
+
+/**
+ * rawTransaction — plain better-sqlite3 transaction with NO idempotency check.
+ * Use ONLY for internal sub-operations (e.g. sequence generation) that are
+ * called from within an outer idempotency-guarded transaction and must NOT
+ * re-trigger the request_log collision check.
+ */
+const rawTransaction = (fn) => db.transaction(fn);
+
+/**
+ * readCachedResult — non-transactional read from request_log.
+ *
+ * Call this BEFORE any business-state validation when you need idempotency
+ * to act as an absolute entry gate.  On a cache-hit the caller should
+ * short-circuit and return the cached payload immediately, skipping all
+ * business logic (including status-based guards such as DONE checks).
+ *
+ * Returns the parsed JSON object if a completed response is stored, or
+ * null if the request is new or still in-flight.
+ *
+ * @param {string|undefined} requestId
+ * @returns {object|null}
+ */
+function readCachedResult(requestId) {
+    if (!requestId) return null;
+    try {
+        const row = db.prepare(
+            'SELECT response_json FROM request_log WHERE request_id = ?'
+        ).get(requestId);
+        if (row && row.response_json) return JSON.parse(row.response_json);
+    } catch (_) { /* malformed JSON — treat as miss */ }
+    return null;
 }
 
 // Transaction helper with Service-Layer Idempotency
@@ -191,6 +230,8 @@ module.exports = {
     db,
     initDb,
     transaction,
+    rawTransaction,
+    readCachedResult,
     genId,
     now,
     getNextSequence

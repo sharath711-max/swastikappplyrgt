@@ -9,7 +9,12 @@ router.use(authMiddleware);
 router.use('/:id', immutabilityGuard('silver_test'));
 
 const handleError = (res, error) => {
-    if (error.message.startsWith('409')) {
+    // BusinessError/SystemError from v2 services carry statusCode directly
+    if (error.statusCode >= 400) {
+        return res.status(error.statusCode).json({ success: false, error: error.message, code: error.code });
+    }
+    // Legacy services throw with '409: ' prefix convention
+    if (error.message && error.message.startsWith('409')) {
         return res.status(409).json({ success: false, error: error.message.replace('409: ', '') });
     }
     res.status(400).json({ success: false, error: error.message });
@@ -62,8 +67,12 @@ router.patch('/:id/status', async (req, res) => {
 router.post('/:id/finalize', async (req, res) => {
     try {
         const testServiceV2 = require('../services/v2/testService');
-        const result = await testServiceV2.completeTest('silver', req.params.id, req.body);
-        res.json({ success: true, data: result });
+        const { _idempotent, ...data } = await testServiceV2.completeTest('silver', req.params.id, req.body);
+        res.json({
+            success: true,
+            data,
+            meta: { idempotent: !!_idempotent, version: 'v2' },
+        });
     } catch (error) {
         handleError(res, error);
     }

@@ -8,6 +8,7 @@ import NewSilverTestModal from '../components/NewSilverTestModal';
 import NewCertificateModal from '../components/NewCertificateModal';
 import Phase2Modal from '../components/Phase2Modal';
 import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { useSocket } from '../hooks/useSocket';
 import './WorkflowBoard.css';
 
 const WorkflowBoard = () => {
@@ -49,6 +50,19 @@ const WorkflowBoard = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    // Real-time updates — refresh board when any item changes on another client
+    useSocket(
+        ['gold_test', 'silver_test', 'gold_cert', 'silver_cert', 'workflow'],
+        {
+            'item:added'   : fetchData,
+            'item:updated' : fetchData,
+            'item:done'    : fetchData,
+            'cert:created' : fetchData,
+            'cert:updated' : fetchData,
+            'cert:done'    : fetchData,
+        }
+    );
 
     // ── BATCH MOVE ────────────────────────────────────────────────────────
     const handleBatchTransferAll = async () => {

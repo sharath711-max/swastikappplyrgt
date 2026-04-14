@@ -5,9 +5,13 @@ const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 
+const http              = require('http');
+const { Server }        = require('socket.io');
+const socketManager     = require('./socket');
+
 const { initDb }              = require('./db/db');
 const logger                  = require('./utils/logger');
-const { getAllowedCorsOrigins } = require('./config/env');
+const { getAllowedCorsOrigins, getJwtSecret } = require('./config/env');
 const { correlationMiddleware, getRequestId } = require('./utils/audit');
 
 const app  = express();
@@ -146,12 +150,36 @@ app.use((err, req, res, next) => {  // eslint-disable-line no-unused-vars
 }
 
 // ── 8. Start server ───────────────────────────────────────────────────────────
+const httpServer = http.createServer(app);
+
+const io = new Server(httpServer, {
+    cors: {
+        origin(origin, cb) { cb(null, isAllowedCorsOrigin(origin)); },
+        methods: ['GET', 'POST'],
+    },
+});
+
+// JWT auth handshake — rejects connections with invalid/missing token.
+// Token is passed as ?token=<jwt> in the connection query or auth object.
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (!token) return next(new Error('Authentication required'));
+    try {
+        const jwt = require('jsonwebtoken');
+        socket.user = jwt.verify(token, getJwtSecret());
+        next();
+    } catch {
+        next(new Error('Invalid token'));
+    }
+});
+
+socketManager.attach(io);
+
 if (require.main === module) {
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
         logger.info(`🚀 Server running on port ${PORT}`);
         console.log(`🚀 Server running on port ${PORT}`);
     });
 }
-// Trigger restart 4
 
 module.exports = app;

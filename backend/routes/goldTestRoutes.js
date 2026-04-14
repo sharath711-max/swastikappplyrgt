@@ -104,6 +104,19 @@ router.post('/:id/finalize', async (req, res) => {
         handleError(res, error);
     }
 });
+// POST /api/gold-tests/:id/convert-to-certificate
+// Staff manually selects item IDs to move from a DONE test into a new certificate.
+// Body: { item_ids: string[], mode_of_payment: string, gst?: boolean }
+router.post('/:id/convert-to-certificate', async (req, res) => {
+    try {
+        const testServiceV2 = require('../services/v2/testService');
+        const result = await testServiceV2.convertToCertificate('gold', req.params.id, req.body);
+        res.status(201).json({ success: true, data: result });
+    } catch (error) {
+        handleError(res, error);
+    }
+});
+
 // PUT /api/gold-tests/:id/save-draft
 router.put('/:id/save-draft', async (req, res) => {
     try {

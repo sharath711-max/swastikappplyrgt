@@ -54,6 +54,8 @@ const CustomerProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('details');
+    const [timeline, setTimeline]   = useState([]);
+    const [timelineLoading, setTimelineLoading] = useState(false);
     const [customer, setCustomer] = useState(null);
     const [loadingCustomer, setLoadingCustomer] = useState(true);
     const [relatedData, setRelatedData] = useState({
@@ -121,10 +123,15 @@ const CustomerProfile = () => {
     }, [fetchCustomer]);
 
     useEffect(() => {
-        if (activeTab === 'related') {
-            fetchRelatedData();
+        if (activeTab === 'related') fetchRelatedData();
+        if (activeTab === 'timeline' && timeline.length === 0) {
+            setTimelineLoading(true);
+            api.get(`/customers/${id}/timeline`)
+                .then(res => setTimeline(res.data?.data?.events || []))
+                .catch(() => addToast('Failed to load timeline', 'error'))
+                .finally(() => setTimelineLoading(false));
         }
-    }, [activeTab, fetchRelatedData]);
+    }, [activeTab, fetchRelatedData, id, timeline.length, addToast]);
 
     if (loadingCustomer) return <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div>;
     if (!customer) return <div className="text-center py-5 text-danger">Customer not found</div>;
@@ -188,6 +195,9 @@ const CustomerProfile = () => {
                             </Nav.Item>
                             <Nav.Item>
                                 <Nav.Link eventKey="related" className="fw-bold px-4 py-3">RELATED</Nav.Link>
+                            </Nav.Item>
+                            <Nav.Item>
+                                <Nav.Link eventKey="timeline" className="fw-bold px-4 py-3">TIMELINE</Nav.Link>
                             </Nav.Item>
                         </Nav>
                     </Card.Header>
@@ -394,6 +404,59 @@ const CustomerProfile = () => {
                                             </Accordion.Body>
                                         </Accordion.Item>
                                     </Accordion>
+                                )}
+                            </Tab.Pane>
+
+                            {/* TAB 3: TIMELINE */}
+                            <Tab.Pane eventKey="timeline">
+                                {timelineLoading ? (
+                                    <div className="text-center py-5">
+                                        <Spinner animation="border" variant="primary" />
+                                    </div>
+                                ) : timeline.length === 0 ? (
+                                    <div className="text-center text-muted py-5 fst-italic">No events found for this customer.</div>
+                                ) : (
+                                    <div className="timeline-feed">
+                                        {timeline.map((ev, idx) => {
+                                            const iconMap = {
+                                                gold_test:   { bg: 'warning',   label: 'Gold Test' },
+                                                silver_test: { bg: 'secondary', label: 'Silver Test' },
+                                                gold_cert:   { bg: 'warning',   label: 'Gold Cert' },
+                                                silver_cert: { bg: 'secondary', label: 'Silver Cert' },
+                                                photo_cert:  { bg: 'info',      label: 'Photo Cert' },
+                                                payment:     { bg: ev.status === 'DEBIT' ? 'danger' : 'success', label: ev.status === 'DEBIT' ? 'Charged' : 'Credited' },
+                                                weight_loss: { bg: 'dark',      label: 'Weight Loss' },
+                                            };
+                                            const meta = iconMap[ev.event_type] || { bg: 'primary', label: ev.event_type };
+                                            return (
+                                                <div key={ev.id + idx} className="d-flex gap-3 mb-3 pb-3 border-bottom">
+                                                    <div className="flex-shrink-0 pt-1">
+                                                        <Badge bg={meta.bg} style={{ minWidth: 90, textAlign: 'center' }}>
+                                                            {meta.label}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex-grow-1">
+                                                        <div className="d-flex justify-content-between align-items-start">
+                                                            <span className="fw-semibold">
+                                                                {ev.reference || '—'}
+                                                                {ev.status && <Badge bg="light" text="dark" className="ms-2 fw-normal">{ev.status}</Badge>}
+                                                            </span>
+                                                            <small className="text-muted ms-3 text-nowrap">
+                                                                {new Date(ev.event_date).toLocaleString('en-IN')}
+                                                            </small>
+                                                        </div>
+                                                        {ev.description && <div className="text-muted small mt-1">{ev.description}</div>}
+                                                        {ev.amount > 0 && (
+                                                            <div className="small mt-1">
+                                                                {formatCurrency(ev.amount)}
+                                                                {ev.mode_of_payment && <span className="text-muted ms-2">via {ev.mode_of_payment}</span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 )}
                             </Tab.Pane>
                         </Tab.Content>

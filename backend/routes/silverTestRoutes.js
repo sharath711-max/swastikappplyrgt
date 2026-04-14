@@ -78,6 +78,18 @@ router.post('/:id/finalize', async (req, res) => {
     }
 });
 
+// POST /api/silver-tests/:id/convert-to-certificate
+// Body: { item_ids: string[], mode_of_payment: string, gst?: boolean }
+router.post('/:id/convert-to-certificate', async (req, res) => {
+    try {
+        const testServiceV2 = require('../services/v2/testService');
+        const result = await testServiceV2.convertToCertificate('silver', req.params.id, req.body);
+        res.status(201).json({ success: true, data: result });
+    } catch (error) {
+        handleError(res, error);
+    }
+});
+
 // PUT /api/silver-tests/:id/save-draft
 router.put('/:id/save-draft', async (req, res) => {
     try {

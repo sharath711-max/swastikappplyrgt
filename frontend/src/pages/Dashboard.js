@@ -49,7 +49,7 @@ export default function Dashboard() {
     const [error, setError] = useState(null);
 
     const load = () => {
-        api.get('/dashboard/summary')
+        api.get('/analytics/summary')
             .then(res => { setData(res.data?.data ?? res.data); setError(null); })
             .catch(e => setError(e.message || 'Failed to load dashboard'))
             .finally(() => setLoading(false));

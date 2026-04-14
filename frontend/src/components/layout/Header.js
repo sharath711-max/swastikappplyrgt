@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaBars, FaGem, FaSearch, FaBell, FaQuestionCircle, FaUser, FaChevronDown, FaUserCog, FaSignOutAlt, FaUsers, FaPrint } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ChangePasswordModal from './ChangePasswordModal';
 import { APP_CONFIG } from '../../utils/Constants';
+import api from '../../services/api';
 
 const Header = ({ sidebarCollapsed, setSidebarCollapsed }) => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+    const [searchQuery, setSearchQuery]     = useState('');
+    const [searchResults, setSearchResults] = useState(null);
+    const [searchOpen, setSearchOpen]       = useState(false);
+    const [searchLoading, setSearchLoading] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (searchQuery.length < 2) { setSearchResults(null); return; }
+        const t = setTimeout(() => {
+            setSearchLoading(true);
+            api.get(`/analytics/search?q=${encodeURIComponent(searchQuery)}`)
+                .then(res => { setSearchResults(res.data?.data || null); setSearchOpen(true); })
+                .catch(() => setSearchResults(null))
+                .finally(() => setSearchLoading(false));
+        }, 280); // 280ms debounce
+        return () => clearTimeout(t);
+    }, [searchQuery]);
 
     return (
         <header className="app-header">
@@ -26,15 +43,68 @@ const Header = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                 </div>
             </div>
 
-            <div className="header-center">
+            <div className="header-center" style={{ position: 'relative' }}>
                 <div className="search-box">
                     <input
                         type="text"
-                        placeholder="Search daily NNN token, tests, customers..."
+                        placeholder="Search customers, tests, certificates..."
                         className="search-input"
+                        value={searchQuery}
+                        onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                        onFocus={() => searchQuery.length >= 2 && setSearchOpen(true)}
+                        onBlur={() => setTimeout(() => setSearchOpen(false), 180)}
                     />
                     <FaSearch />
                 </div>
+                {searchOpen && searchResults && (
+                    <div style={{
+                        position: 'absolute', top: '110%', left: 0, right: 0,
+                        background: 'var(--bg-card, #fff)', border: '1px solid #e0e0e0',
+                        borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                        zIndex: 9999, maxHeight: 420, overflowY: 'auto', padding: '8px 0'
+                    }}>
+                        {searchLoading && (
+                            <div style={{ padding: '12px 16px', color: '#888', fontSize: 13 }}>Searching...</div>
+                        )}
+                        {!searchLoading && !searchResults.customers?.length && !searchResults.tests?.length && !searchResults.certs?.length && (
+                            <div style={{ padding: '12px 16px', color: '#888', fontSize: 13 }}>No results found.</div>
+                        )}
+                        {searchResults.customers?.length > 0 && (
+                            <>
+                                <div style={{ padding: '4px 16px 2px', fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Customers</div>
+                                {searchResults.customers.map(c => (
+                                    <button key={c.id} className="search-result-item" onMouseDown={() => { navigate(`/customers/${c.id}`); setSearchOpen(false); setSearchQuery(''); }}>
+                                        <span style={{ fontWeight: 500 }}>{c.name}</span>
+                                        {c.phone && <span style={{ color: '#888', fontSize: 12, marginLeft: 8 }}>{c.phone}</span>}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {searchResults.tests?.length > 0 && (
+                            <>
+                                <div style={{ padding: '4px 16px 2px', fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Tests</div>
+                                {searchResults.tests.map(t => (
+                                    <button key={t.id} className="search-result-item" onMouseDown={() => { navigate(`/record/${t.metal_type}-tests/${t.id}`); setSearchOpen(false); setSearchQuery(''); }}>
+                                        <span style={{ fontWeight: 500 }}>{t.auto_number}</span>
+                                        <span style={{ color: '#888', fontSize: 12, marginLeft: 8 }}>{t.customer_name}</span>
+                                        <span style={{ marginLeft: 8, fontSize: 11, color: t.status === 'DONE' ? '#2e7d32' : '#f59e0b', fontWeight: 600 }}>{t.status}</span>
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {searchResults.certs?.length > 0 && (
+                            <>
+                                <div style={{ padding: '4px 16px 2px', fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Certificates</div>
+                                {searchResults.certs.map(c => (
+                                    <button key={c.id} className="search-result-item" onMouseDown={() => { navigate(`/record/${c.metal_type}-cert/${c.id}`); setSearchOpen(false); setSearchQuery(''); }}>
+                                        <span style={{ fontWeight: 500 }}>{c.auto_number}</span>
+                                        <span style={{ color: '#888', fontSize: 12, marginLeft: 8 }}>{c.customer_name}</span>
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="header-right">

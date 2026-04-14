@@ -15,6 +15,7 @@ const { db, genId, now, transaction, readCachedResult } = require('../../db/db')
 const { getRequestId } = require('../../utils/audit');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit      = require('./auditLogger');
+const socket     = require('../../socket');
 const seqSvc     = require('./sequenceService');
 const ledgerSvc  = require('./ledgerService');
 const GoldTestCalc   = require('../goldTestCalculationService');
@@ -270,6 +271,8 @@ function createTest(type, data) {
         const result = _txn();
         audit.commit('testService.createTest', { id: result.id, auto_number: result.auto_number, type });
         audit.sequence('testService.createTest', result.auto_number, type, result.id);
+        socket.emit(`${type}_test`, 'item:added', { id: result.id, auto_number: result.auto_number, type });
+        socket.emit('workflow',     'item:added', { id: result.id, type });
         return result;
     } catch (err) {
         audit.rollback('testService.createTest', err, { type, customer_id });
@@ -596,6 +599,12 @@ function completeTest(type, testId, data) {
             audit.sequence('testService.completeTest', result.certificate.auto_number, type, result.certificate.id);
         }
         audit.statusChange('testService.completeTest', testId, testRow.status, 'DONE');
+        socket.emit(`${type}_test`, 'item:done', { id: testId, type });
+        socket.emit('workflow',     'item:done', { id: testId, type });
+        if (result.certificate) {
+            socket.emit(`${type}_cert`, 'cert:created', { id: result.certificate.id, type });
+            socket.emit('workflow',     'cert:created', { id: result.certificate.id, type });
+        }
         // Tag as the original (non-duplicate) call
         return { ...result, _idempotent: false };
     } catch (err) {
@@ -732,6 +741,89 @@ function listTests(type, filters = {}) {
     return { tests, total, pages: Math.ceil(total / limit) };
 }
 
+// ─── MANUAL CONVERT TO CERTIFICATE ───────────────────────────────────────────
+// Python equivalent: PUT /:id/to-gold-certificate/
+// Staff picks specific item IDs from a DONE test to move into a new certificate.
+// Remaining items stay on the test. Audit logged. Atomic transaction.
+function convertToCertificate(type, testId, data) {
+    const c = _cfg(type);
+
+    if (!data.item_ids || !Array.isArray(data.item_ids) || data.item_ids.length === 0)
+        throw new BusinessError('item_ids array is required and cannot be empty', ERR.ITEMS_EMPTY, 422);
+    if (!data.mode_of_payment)
+        throw new BusinessError('mode_of_payment is required', ERR.MISSING_PAYMENT, 422);
+
+    const testRow = db.prepare(
+        `SELECT status, customer_id FROM ${c.parentTable} WHERE id = ? AND deletedon IS NULL`
+    ).get(testId);
+
+    if (!testRow)
+        throw new BusinessError(`${type} test not found: ${testId}`, ERR.TEST_NOT_FOUND, 404);
+    if (testRow.status !== 'DONE')
+        throw new BusinessError(
+            `Test ${testId} must be DONE before manual convert (current: ${testRow.status})`,
+            ERR.STATUS_INVALID, 409
+        );
+
+    audit.validate('testService.convertToCertificate', { type, testId, item_count: data.item_ids.length });
+    audit.start('testService.convertToCertificate', { type, testId });
+
+    const certSvc = _getCertSvc();
+
+    const _txn = transaction(() => {
+        const ts = now();
+        const { customer_id } = testRow;
+        const { item_ids, mode_of_payment, gst = false, gst_bill_number = '', total_tax = 0 } = data;
+
+        const selectedItems = item_ids.map(itemId => {
+            const item = db.prepare(
+                `SELECT * FROM ${c.itemTable} WHERE id = ? AND ${c.fkColumn} = ? AND deletedon IS NULL`
+            ).get(itemId, testId);
+            if (!item) throw new BusinessError(`Item ${itemId} not found on test ${testId}`, ERR.ITEM_NOT_FOUND, 404);
+            if (item.returned) throw new BusinessError(`Item ${itemId} is returned and cannot be certified`, ERR.VALIDATION, 422);
+            return item;
+        });
+
+        const certificate = certSvc._createCertificateWork(type, {
+            customer_id, items: selectedItems, status: 'IN_PROGRESS',
+            mode_of_payment, gst, gst_bill_number, total_tax,
+        }, ts, db);
+
+        // Soft-delete selected items from test — they now live on the certificate
+        const ts2 = now();
+        for (const itemId of item_ids) {
+            db.prepare(
+                `UPDATE ${c.itemTable} SET deletedon = ?, lastmodified = ? WHERE id = ? AND ${c.fkColumn} = ?`
+            ).run(ts2, ts2, itemId, testId);
+        }
+
+        const { remaining } = db.prepare(
+            `SELECT COUNT(*) AS remaining FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
+        ).get(testId);
+
+        return { certificate, remaining_item_count: remaining };
+    });
+
+    try {
+        const result = _txn();
+        audit.commit('testService.convertToCertificate', {
+            testId, type,
+            certId: result.certificate?.id,
+            auto_number: result.certificate?.auto_number,
+            bill_number: result.certificate?.bill_number,
+            remaining: result.remaining_item_count,
+        });
+        if (result.certificate)
+            audit.sequence('testService.convertToCertificate', result.certificate.auto_number, type, result.certificate.id);
+        socket.emit(`${type}_cert`, 'cert:created', { id: result.certificate?.id, type });
+        socket.emit('workflow',     'cert:created', { id: result.certificate?.id, type });
+        return result;
+    } catch (err) {
+        audit.rollback('testService.convertToCertificate', err, { type, testId });
+        rethrow(err, 'testService.convertToCertificate', { type, testId });
+    }
+}
+
 function splitToCertAndNonCert(type, id) {
     const test = getTest(type, id);
     if (!test) throw new BusinessError(`${type} test not found`, ERR.TEST_NOT_FOUND, 404);
@@ -779,6 +871,7 @@ module.exports = {
     completeTest,
     deleteTest,
     splitToCertAndNonCert,
+    convertToCertificate,
     getStats,
     HALLMARK_THRESHOLD,
 };

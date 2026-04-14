@@ -9,7 +9,7 @@ function immutabilityGuard(tableName, idParamName = 'id') {
     return (req, res, next) => {
         const isIdempotentCompletionReplay =
             req.method === 'POST' &&
-            /^\/(finalize|complete)\/?$/.test(req.path);
+            /^\/(finalize|complete|convert-to-certificate)\/?$/.test(req.path);
 
         if (isIdempotentCompletionReplay) {
             return next();

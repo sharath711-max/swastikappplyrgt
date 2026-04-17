@@ -1,22 +1,56 @@
 @echo off
-title Upload to Git
-color 0f
+title Swastik Gold V2 - Production Git Upload
+color 0a
 cls
 
 echo ========================================================
-echo   UPLOAD PROJECT TO NEW GIT REPOSITORY
+echo   SWASTIK GOLD V2: SECURE GIT DEPLOYMENT
 echo ========================================================
+:: Display the current remote if it exists
 echo.
-echo  INSTRUCTIONS:
-echo  1. Create a NEW EMPTY repository on GitHub/GitLab/Bitbucket.
-echo     (Do NOT check "Initialize with README", .gitignore, or license)
-echo  2. Copy the "HTTPS" clone URL (ends in .git).
-echo.
+echo Current Repository Status:
+git remote -v | findstr "(push)" || echo [NO REMOTE CONFIGURED]
 echo --------------------------------------------------------
 echo.
 
+:: 1. GIT INITIALIZATION CHECK
+if not exist .git (
+    echo [*] Initializing new Git repository...
+    git init
+    git checkout -b main
+)
+
+:: 2. INTEGRITY CHECK: .gitignore
+if not exist .gitignore (
+    echo [!] ERROR: .gitignore file not found! 
+    echo Please create the .gitignore file first to protect your DB and Env.
+    pause
+    exit /b
+)
+
+:: 3. CLEANING STAGING AREA
+echo [*] Refreshing staging area...
+git rm -r --cached . >nul 2>&1
+
+:: 4. STAGING HARDENED ARCHITECTURE
+echo [*] Staging hardened SERN v2 files...
+git add .
+
+echo.
+echo --------------------------------------------------------
+echo   COMMIT DETAILS
+echo --------------------------------------------------------
+set /p COMMIT_MSG="Enter Commit Message (default: 'feat: v2 migration - idempotency and gst hardening'): "
+if "%COMMIT_MSG%"=="" set COMMIT_MSG=feat: v2 migration - idempotency and gst hardening
+
+git commit -m "%COMMIT_MSG%"
+
+echo.
+echo --------------------------------------------------------
+echo   DESTINATION CONFIGURATION
+echo --------------------------------------------------------
 :ask_url
-set /p REMOTE_URL="Paste your Repository URL here: "
+set /p REMOTE_URL="Paste your NEW Repository URL (HTTPS): "
 
 if "%REMOTE_URL%"=="" (
     echo.
@@ -24,43 +58,37 @@ if "%REMOTE_URL%"=="" (
     goto ask_url
 )
 
+:: 5. REMOTE ORIGIN SETUP
 echo.
-echo --------------------------------------------------------
-echo  Processing...
-echo --------------------------------------------------------
-echo.
-
-REM Remove existing origin if any (to be safe)
+echo [*] Resetting remote origin...
 git remote remove origin >nul 2>&1
-
-REM Add new origin
-echo 1. Adding remote origin: %REMOTE_URL%
 git remote add origin %REMOTE_URL%
+
 if %ERRORLEVEL% NEQ 0 (
-    echo ❌ Failed to add remote. Please check the URL.
+    echo ❌ Failed to add remote. Please check your URL.
     pause
     exit /b
 )
 
-REM Push to main
+:: 6. THE FINAL PUSH
 echo.
-echo 2. Pushing code to main branch...
-echo    (A browser window or login prompt may appear for authentication)
+echo [*] Pushing code to main...
 echo.
 git push -u origin main
 
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ========================================================
-    echo   ✅ SUCCESS! Project uploaded to Git.
+    echo   ✅ SUCCESS! Project is now live at:
+    echo   %REMOTE_URL%
     echo ========================================================
 ) else (
     echo.
     echo ========================================================
-    echo   ❌ FAILED. Please check the following:
-    echo      - Is the repository empty?
-    echo      - Did you enter the correct URL?
-    echo      - Do you have permission to push?
+    echo   ❌ FAILED. 
+    echo   - Check your internet connection.
+    echo   - Check if the Repository URL is correct.
+    echo   - Ensure you have write permissions.
     echo ========================================================
 )
 

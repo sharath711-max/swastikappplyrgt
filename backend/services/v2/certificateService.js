@@ -528,8 +528,9 @@ function updateStatus(type, id, newStatus) {
             }
             
             const printSvc = require('./printService');
-            const certSnapshot = JSON.stringify(printSvc.getPrintLayout('certificate', type, id));
-            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ? WHERE id = ?`).run(certSnapshot, id);
+            const { getRequestId } = require('../../utils/audit');
+            const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, id, getRequestId() || null);
+            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
         }
 
         return { changes: result.changes, ledger: ledgerEntry?.debit };

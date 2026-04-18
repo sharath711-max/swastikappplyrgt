@@ -78,6 +78,14 @@ function applyPostInitMigrations() {
     ensureColumn('silver_test', 'print_snapshot', 'TEXT');
     ensureColumn('gold_certificate', 'print_snapshot', 'TEXT');
     ensureColumn('silver_certificate', 'print_snapshot', 'TEXT');
+    ensureColumn('gold_test', 'snapshot_hash', 'TEXT');
+    ensureColumn('gold_test', 'snapshot_key_version', 'TEXT');
+    ensureColumn('silver_test', 'snapshot_hash', 'TEXT');
+    ensureColumn('silver_test', 'snapshot_key_version', 'TEXT');
+    ensureColumn('gold_certificate', 'snapshot_hash', 'TEXT');
+    ensureColumn('gold_certificate', 'snapshot_key_version', 'TEXT');
+    ensureColumn('silver_certificate', 'snapshot_hash', 'TEXT');
+    ensureColumn('silver_certificate', 'snapshot_key_version', 'TEXT');
 
     // Patch 04b: TOTALS — tax and fee fields added by v2 testService.completeTest
     ensureColumn('gold_test',   'total_tax', 'REAL DEFAULT 0');

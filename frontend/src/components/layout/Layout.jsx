@@ -7,6 +7,7 @@ const navItems = [
   { to: '/workflow', label: 'Workflow' },
   { to: '/customers', label: 'Customers' },
   { to: '/bills', label: 'Bills' },
+  { to: '/items', label: 'Items' },
   { to: '/print', label: 'Print' },
 ];
 

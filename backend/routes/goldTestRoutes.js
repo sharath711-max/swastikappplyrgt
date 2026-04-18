@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const testServiceV2 = require('../services/v2/testService');
+const calcService = require('../services/v2/calculationService');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { immutabilityGuard } = require('../middleware/immutabilityGuard');
 const { auditMiddleware } = require('../middleware/auditMiddleware');
 
 router.use(authMiddleware);
-router.use('/:id', immutabilityGuard('gold_test'));
 
 const handleError = (res, error) => {
     if (error.statusCode >= 400) {
@@ -17,6 +17,18 @@ const handleError = (res, error) => {
     }
     return res.status(400).json({ success: false, error: error.message });
 };
+
+// POST /api/gold-tests/calculate-item — pure preview, no DB, must be before /:id guard
+router.post('/calculate-item', (req, res) => {
+    try {
+        const result = calcService.calculateItem('gold', req.body);
+        res.json({ success: true, data: result });
+    } catch (err) {
+        handleError(res, err);
+    }
+});
+
+router.use('/:id', immutabilityGuard('gold_test'));
 
 // POST /api/gold-tests
 router.post('/', async (req, res) => {

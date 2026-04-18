@@ -1,0 +1,105 @@
+@media print {
+  body {
+    margin: 0;
+    background: white;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .receipt {
+    width: 80mm;
+    font-family: monospace;
+    font-size: 12px;
+  }
+
+  .certificate {
+    width: 210mm;
+    height: 297mm;
+    padding: 20mm;
+    font-family: serif;
+  }
+}
+
+.receipt-container,
+.certificate-container {
+  background: #f8f9fa;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.receipt {
+  width: 80mm;
+  max-width: 80mm;
+  margin: 0 auto;
+  background: white;
+  padding: 5mm;
+  box-sizing: border-box;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.item-block {
+  margin: 4px 0;
+}
+
+.center {
+  text-align: center;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.divider {
+  border-top: 1px dashed black;
+  margin: 5px 0;
+}
+
+.divider.light {
+  border-top: 1px dotted #999;
+}
+
+.certificate {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: white;
+  padding: 20mm;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.certificate .title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.cert-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cert-table th,
+.cert-table td {
+  border: 1px solid black;
+  padding: 6px;
+  text-align: center;
+}
+
+.footer {
+  position: absolute;
+  bottom: 30mm;
+  left: 20mm;
+  right: 20mm;
+  display: flex;
+  justify-content: space-between;
+}

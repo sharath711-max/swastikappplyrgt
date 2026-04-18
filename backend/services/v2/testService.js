@@ -589,14 +589,14 @@ function completeTest(type, testId, data) {
         const printSvc = require('./printService');
         
         if (!isFullConvert) {
-            const testSnapshot = JSON.stringify(printSvc.getPrintLayout('test', type, testId));
-            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ? WHERE id = ?`).run(testSnapshot, testId);
+            const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('test', type, testId, getRequestId() || null);
+            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`).run(snapshotJson, snapshotHash, snapshotKeyVersion, testId);
         }
         
         if (certificate) {
-            const certSnapshot = JSON.stringify(printSvc.getPrintLayout('certificate', type, certificate.id));
+            const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, certificate.id, getRequestId() || null);
             const certTable = type === 'gold' ? 'gold_certificate' : 'silver_certificate';
-            tx.prepare(`UPDATE ${certTable} SET print_snapshot = ? WHERE id = ?`).run(certSnapshot, certificate.id);
+            tx.prepare(`UPDATE ${certTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certificate.id);
         }
 
         return { test: { id: testId, status: 'DONE', total: testFeeTotal }, certificate, ledger: ledgerEntry?.debit, certLedger: certLedgerEntry?.debit };

@@ -55,24 +55,66 @@ class CreditHistoryRepository {
     }
 
     /**
-     * Find history for a specific customer
+     * Find history for a specific customer with optional filters.
+     * filters: { type, start_date, end_date, min_amount, max_amount }
      */
-    findByCustomerId(customer_id, limit = 50, offset = 0) {
+    findByCustomerId(customer_id, limit = 50, offset = 0, filters = {}) {
+        const { clauses, params } = this._buildFilterClauses(customer_id, filters);
         return this.db.prepare(`
-            SELECT * FROM credit_history 
-            WHERE customer_id = ? 
-            ORDER BY created DESC 
+            SELECT * FROM credit_history
+            WHERE ${clauses}
+            ORDER BY created DESC
             LIMIT ? OFFSET ?
-        `).all(customer_id, limit, offset);
+        `).all(...params, limit, offset);
+    }
+
+    countByCustomerId(customer_id, filters = {}) {
+        const { clauses, params } = this._buildFilterClauses(customer_id, filters);
+        return this.db.prepare(`
+            SELECT COUNT(*) as total FROM credit_history WHERE ${clauses}
+        `).get(...params).total;
     }
 
     /**
-     * Count history records for a customer
+     * Fetch all rows for a customer (no pagination) for CSV export.
+     * filters: same shape as findByCustomerId
      */
-    countByCustomerId(customer_id) {
+    findAllByCustomerId(customer_id, filters = {}) {
+        const { clauses, params } = this._buildFilterClauses(customer_id, filters);
         return this.db.prepare(`
-            SELECT COUNT(*) as total FROM credit_history WHERE customer_id = ?
-        `).get(customer_id).total;
+            SELECT id, created, type, amount, mode_of_payment, description, reference_type, reference_id
+            FROM credit_history
+            WHERE ${clauses}
+            ORDER BY created ASC
+        `).all(...params);
+    }
+
+    _buildFilterClauses(customer_id, filters = {}) {
+        const clauses = ['customer_id = ?'];
+        const params = [customer_id];
+
+        if (filters.type && ['DEBIT', 'CREDIT'].includes(filters.type.toUpperCase())) {
+            clauses.push('type = ?');
+            params.push(filters.type.toUpperCase());
+        }
+        if (filters.start_date) {
+            clauses.push("date(created) >= date(?)");
+            params.push(filters.start_date);
+        }
+        if (filters.end_date) {
+            clauses.push("date(created) <= date(?)");
+            params.push(filters.end_date);
+        }
+        if (filters.min_amount !== undefined && !isNaN(parseFloat(filters.min_amount))) {
+            clauses.push('amount >= ?');
+            params.push(parseFloat(filters.min_amount));
+        }
+        if (filters.max_amount !== undefined && !isNaN(parseFloat(filters.max_amount))) {
+            clauses.push('amount <= ?');
+            params.push(parseFloat(filters.max_amount));
+        }
+
+        return { clauses: clauses.join(' AND '), params };
     }
 
     /**

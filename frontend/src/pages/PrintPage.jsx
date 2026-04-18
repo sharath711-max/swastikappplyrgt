@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Alert, Button, Card } from 'react-bootstrap';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import ThermalReceipt from '../components/print/ThermalReceipt';
 import '../components/print/CertificatePrint.css';
 
@@ -102,6 +102,12 @@ export default function PrintPage() {
           <span>Snapshot data only</span>
         </div>
         <div className="toolbar-actions">
+          <Button as={Link} to="/print/receipt" variant="outline-light">
+            Receipt Page
+          </Button>
+          <Button as={Link} to="/print/certificate" variant="outline-light">
+            Certificate Page
+          </Button>
           <Button variant="dark" onClick={() => window.print()}>
             Print Receipt
           </Button>

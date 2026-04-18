@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const creditHistoryService = require('../services/creditHistoryService');
+const customerRepository = require('../repositories/customerRepository');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
@@ -59,6 +60,44 @@ router.get('/customer/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
+/**
+ * GET /api/credit-history/export
+ * Stream a CSV statement for a customer with optional filters.
+ * Query params: customer_id (required), type, start_date, end_date, min_amount, max_amount
+ */
+router.get('/export', (req, res) => {
+    const { customer_id } = req.query;
+    if (!customer_id) {
+        return res.status(400).json({ error: 'customer_id is required' });
+    }
+
+    const customer = customerRepository.findById(customer_id);
+    if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    const rows = creditHistoryService.getCustomerHistoryAll(customer_id, req.query);
+
+    const safeName = (customer.name || customer_id).replace(/[^a-zA-Z0-9_\- ]/g, '').trim().replace(/\s+/g, '_');
+    const filename = `statement_${safeName}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    const escape = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const header = 'Date,Type,Amount,Mode,Description,Reference Type,Reference ID';
+    const lines = rows.map(r => [
+        r.created, r.type, r.amount, r.mode_of_payment,
+        r.description, r.reference_type || '', r.reference_id || ''
+    ].map(escape).join(','));
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send([header, ...lines].join('\r\n'));
 });
 
 module.exports = router;

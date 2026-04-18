@@ -11,6 +11,9 @@ import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaExclamat
 import { useSocket } from '../hooks/useSocket';
 import './WorkflowBoard.css';
 
+const COLUMN_LIMIT = 50;
+const createRequestId = () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 const WorkflowBoard = () => {
     const { addToast } = useToast();
     const navigate = useNavigate();
@@ -30,6 +33,9 @@ const WorkflowBoard = () => {
     const [phase2Modal, setPhase2Modal] = useState({ show: false, test: null, readOnly: false });
     const [selected, setSelected]       = useState(new Set());
     const [bulkLoading, setBulkLoading] = useState(false);
+    const [board, setBoard] = useState({ TODO: [], IN_PROGRESS: [], DONE: [] });
+    const fetchSequenceRef = React.useRef(0);
+    const actionSequenceRef = React.useRef(0);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -38,20 +44,49 @@ const WorkflowBoard = () => {
     }, [location.search]);
 
     const fetchData = useCallback(async () => {
+        const requestSeq = ++fetchSequenceRef.current;
         setLoading(true);
         try {
-            const response = await api.get('/workflow');
-            setItems(response.data.data || []);
+            const response = await api.get('/workflow/kanban', { params: { limit: COLUMN_LIMIT } });
+            const nextBoard = response.data.data || { TODO: [], IN_PROGRESS: [], DONE: [] };
+            if (requestSeq !== fetchSequenceRef.current) {
+                return;
+            }
+            setBoard(nextBoard);
+            setItems([...(nextBoard.TODO || []), ...(nextBoard.IN_PROGRESS || []), ...(nextBoard.DONE || [])]);
         } catch (error) {
             addToast('Failed to update workflow board', 'error');
         } finally {
-            setLoading(false);
+            if (requestSeq === fetchSequenceRef.current) {
+                setLoading(false);
+            }
         }
     }, [addToast]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    const applyBoardState = useCallback((nextBoard) => {
+        setBoard(nextBoard);
+        setItems([...(nextBoard.TODO || []), ...(nextBoard.IN_PROGRESS || []), ...(nextBoard.DONE || [])]);
+    }, []);
+
+    const moveCardInBoard = useCallback((currentBoard, item, targetStatus) => {
+        const nextBoard = {
+            TODO: [...(currentBoard.TODO || [])],
+            IN_PROGRESS: [...(currentBoard.IN_PROGRESS || [])],
+            DONE: [...(currentBoard.DONE || [])],
+        };
+
+        Object.keys(nextBoard).forEach((columnKey) => {
+            nextBoard[columnKey] = nextBoard[columnKey].filter((entry) => !(entry.id === item.id && entry.type === item.type));
+        });
+
+        const movedItem = { ...item, status: targetStatus };
+        nextBoard[targetStatus] = [movedItem, ...(nextBoard[targetStatus] || [])].slice(0, COLUMN_LIMIT);
+        return nextBoard;
+    }, []);
 
     // Real-time updates — refresh board when any item changes on another client
     useSocket(
@@ -202,7 +237,11 @@ const WorkflowBoard = () => {
             return;
         }
 
+        const previousBoard = board;
         try {
+            const actionSeq = ++actionSequenceRef.current;
+            applyBoardState(moveCardInBoard(previousBoard, draggedItem, targetStatus));
+
             if (targetStatus === 'IN_PROGRESS' && draggedItem.status === 'TODO') {
                 // Check purity for gold/silver tests
                 if (draggedItem.type === 'gold' || draggedItem.type === 'silver') {
@@ -222,7 +261,13 @@ const WorkflowBoard = () => {
                         return;
                     }
                 }
-                await api.patch(`/workflow/${draggedItem.type}/${draggedItem.id}/status`, { status: 'IN_PROGRESS' });
+                await api.post('/workflow/move', {
+                    testId: draggedItem.id,
+                    type: draggedItem.type,
+                    toStatus: 'IN_PROGRESS'
+                }, {
+                    headers: { 'X-Request-Id': createRequestId() }
+                });
                 addToast('Moved to Tested ✓', 'success');
             } else if (targetStatus === 'DONE') {
                 const amount = Number(draggedItem.total || 0);
@@ -244,14 +289,24 @@ const WorkflowBoard = () => {
                         mode_of_payment: mode,
                         weight_loss: Math.max(0, totalWtLoss),
                         cert: { gst: detailRes.data?.data?.gst === 1 }
+                    }, {
+                        headers: { 'X-Request-Id': createRequestId() }
                     });
                 } else {
-                    await api.patch(`/workflow/${draggedItem.type}/${draggedItem.id}/status`, { status: 'DONE' });
+                    await api.post('/workflow/finalize', {
+                        testId: draggedItem.id,
+                        type: draggedItem.type
+                    }, {
+                        headers: { 'X-Request-Id': createRequestId() }
+                    });
                 }
                 addToast('Moved to Completed ✓', 'success');
             }
-            await fetchData();
+            if (actionSeq === actionSequenceRef.current) {
+                await fetchData();
+            }
         } catch (err) {
+            applyBoardState(previousBoard);
             addToast(err.response?.data?.error || 'Move failed', 'error');
         } finally {
             setDraggedItem(null);
@@ -474,7 +529,9 @@ const WorkflowBoard = () => {
                                     const it = filteredItems.find(i => i.id === id);
                                     return { type: it?.type, id };
                                 }).filter(i => i.type);
-                                await api.patch('/workflow/bulk-status', { items: bulkItems, status: 'IN_PROGRESS' });
+                                await api.patch('/workflow/bulk-status', { items: bulkItems, status: 'IN_PROGRESS' }, {
+                                    headers: { 'X-Request-Id': createRequestId() }
+                                });
                                 setSelected(new Set());
                                 await fetchData();
                                 addToast(`${bulkItems.length} items moved to In Progress`, 'success');
@@ -497,7 +554,14 @@ const WorkflowBoard = () => {
                                     const it = filteredItems.find(i => i.id === id);
                                     return { type: it?.type, id };
                                 }).filter(i => i.type);
-                                await api.patch('/workflow/bulk-status', { items: bulkItems, status: 'DONE' });
+                                for (const bulkItem of bulkItems) {
+                                    await api.post('/workflow/finalize', {
+                                        testId: bulkItem.id,
+                                        type: bulkItem.type,
+                                    }, {
+                                        headers: { 'X-Request-Id': createRequestId() }
+                                    });
+                                }
                                 setSelected(new Set());
                                 await fetchData();
                                 addToast(`${bulkItems.length} items completed`, 'success');
@@ -522,7 +586,16 @@ const WorkflowBoard = () => {
             {/* ── KANBAN GRID ── */}
             <div className="kanban-grid">
                 {columnsConfig.map(col => {
-                    const colItems = filteredItems.filter(t => t.status === col.id);
+                    const colItems = (board[col.id] || []).filter(item => {
+                        if (item.type !== activeTab) return false;
+                        if (!searchTerm.trim()) return true;
+                        const q = searchTerm.toLowerCase();
+                        return (
+                            (item.customer_name || '').toLowerCase().includes(q) ||
+                            (item.auto_number || '').toLowerCase().includes(q) ||
+                            (item.id || '').toString().includes(q)
+                        );
+                    });
                     const isDragTarget = dragOverCol === col.id && draggedItem && draggedItem.status !== col.id;
                     return (
                         <div

@@ -36,15 +36,15 @@ class GoldTestCalculationService {
             errors.push('Test weight cannot be negative');
         }
 
-        const gross = new Decimal(gross_weight);
-        const test = new Decimal(test_weight);
-        const pur = new Decimal(purity);
+        const gross = new Decimal(String(gross_weight));
+        const test = new Decimal(String(test_weight));
+        const pur = new Decimal(String(purity));
 
         // Logical Net = Gross - Test
         const logicalNet = gross.minus(test);
 
         // Actual Net (if provided)
-        const netFetch = input_net !== undefined ? new Decimal(input_net) : logicalNet;
+        const netFetch = input_net !== undefined ? new Decimal(String(input_net)) : logicalNet;
 
         if (test.gt(gross)) {
             errors.push('Test weight cannot exceed gross weight');

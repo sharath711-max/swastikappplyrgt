@@ -20,6 +20,29 @@
     padding: 0 !important;
     margin: 0 !important;
   }
+
+  .print-page-shell,
+  .receipt-print-content {
+    background: white !important;
+  }
+
+  .receipt {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    min-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .receipt *,
+  .receipt *::before,
+  .receipt *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background-image: none !important;
+  }
 }
 
 .print-container {
@@ -55,6 +78,15 @@
   padding: 40px 0;
   display: flex;
   justify-content: center;
+}
+
+.print-page-shell {
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.receipt-print-content {
+  padding: 24px 12px 48px;
 }
 
 /* Base Certificate Style */
@@ -248,4 +280,77 @@
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: bold;
+}
+
+.receipt {
+  width: 80mm;
+  max-width: 80mm;
+  min-height: auto;
+  background: #ffffff;
+  color: #000000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 5mm;
+  box-sizing: border-box;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.receipt__header,
+.receipt__section,
+.receipt__footer {
+  margin: 4px 0;
+  padding: 2px 0;
+}
+
+.receipt__brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.receipt__strong {
+  font-weight: 700;
+}
+
+.receipt__subtle {
+  font-size: 11px;
+}
+
+.receipt__item {
+  padding: 4px 0;
+}
+
+.receipt__item + .receipt__item {
+  border-top: 1px dotted #000;
+}
+
+.receipt__item-name {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.receipt__total {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}
+
+.receipt__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+}
+
+.divider {
+  border-top: 1px dashed #000;
+  margin: 5px 0;
 }

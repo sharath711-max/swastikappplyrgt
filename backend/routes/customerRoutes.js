@@ -55,7 +55,7 @@ router.get('/:id/statement', async (req, res) => {
                 created           AS date,
                 'WEIGHT_LOSS'     AS type,
                 amount,
-                NULL              AS mode_of_payment,
+                mode_of_payment,
                 NULL              AS description,
                 reason
             FROM weight_loss_history
@@ -186,7 +186,7 @@ router.get('/:id/timeline', async (req, res) => {
                 'Weight Loss'   AS reference,
                 NULL            AS status,
                 amount,
-                NULL            AS mode_of_payment,
+                mode_of_payment,
                 reason          AS description,
                 created         AS event_date
             FROM weight_loss_history

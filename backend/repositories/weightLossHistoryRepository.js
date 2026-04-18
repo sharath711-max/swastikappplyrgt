@@ -9,18 +9,18 @@ class WeightLossHistoryRepository {
      * Append a new weight loss record
      */
     async create(data) {
-        const { customer_id, amount, reason } = data;
+        const { customer_id, amount, reason, mode_of_payment = null } = data;
 
         return transaction(() => {
             const id = genId('WLH');
             const timestamp = now();
 
             this.db.prepare(`
-                INSERT INTO weight_loss_history (id, customer_id, amount, reason, created)
-                VALUES (?, ?, ?, ?, ?)
-            `).run(id, customer_id, amount, reason, timestamp);
+                INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, created)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `).run(id, customer_id, amount, reason, mode_of_payment, timestamp);
 
-            return { id, customer_id, amount, reason, created: timestamp };
+            return { id, customer_id, amount, reason, mode_of_payment, created: timestamp };
         })();
     }
 

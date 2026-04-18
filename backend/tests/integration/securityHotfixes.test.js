@@ -110,7 +110,7 @@ describe('Security hotfix regression coverage', () => {
             const response = await request(app)
                 .post('/api/auth/register')
                 .set('Authorization', `Bearer ${token}`)
-                .send({ username, password: 'Admin123!', role: 'staff' });
+                .send({ username, password: 'Admin123!', role: 'front_desk' });
 
             expect(response.status).toBe(201);
             expect(response.body.username).toBe(username);

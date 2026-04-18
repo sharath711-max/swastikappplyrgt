@@ -21,6 +21,9 @@ const seqSvc       = require('./sequenceService');
 const ledgerSvc    = require('./ledgerService');
 const customerRepo = require('../../repositories/customerRepository');
 
+// ─── Fee model (canonical, matches testService.completeTest) ─────────────────
+const CERT_FEE_RATE = 50;
+
 // ─── Type config ──────────────────────────────────────────────────────────────
 /** @typedef {'gold'|'silver'} MetalType */
 
@@ -466,7 +469,7 @@ function updateStatus(type, id, newStatus) {
         const tx = db;
         const ts = now();
 
-        // Final rollup before DONE seal
+        // Final rollup before DONE seal — updates total_net_weight / total_fine_weight
         if (newStatus === 'DONE') {
             calcSvc.rollupTotals(type, id, db);
         }
@@ -479,7 +482,7 @@ function updateStatus(type, id, newStatus) {
         let ledgerEntry = null;
         if (newStatus === 'DONE') {
             const finalRow = db.prepare(
-                `SELECT total, customer_id, mode_of_payment, auto_number FROM ${c.parentTable} WHERE id = ?`
+                `SELECT total, gst, customer_id, mode_of_payment, auto_number FROM ${c.parentTable} WHERE id = ?`
             ).get(id);
 
             if (!finalRow) {
@@ -489,13 +492,32 @@ function updateStatus(type, id, newStatus) {
                 );
             }
 
-            if (finalRow.total > 0) {
+            // Apply canonical fee model (CERT_FEE_RATE × item count), overriding the
+            // weight-based total written by rollupTotals above.
+            const itemCount = db.prepare(
+                `SELECT COUNT(*) AS cnt FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
+            ).get(id).cnt;
+
+            const feeTotal = CERT_FEE_RATE * itemCount;
+            const applyGst = Boolean(finalRow.gst);
+            const feeTax   = applyGst ? (feeTotal - feeTotal / 1.18) : 0;
+
+            db.prepare(
+                `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
+            ).run(feeTotal, feeTax, ts, id);
+
+            // Guard: completeTest may have already posted a DEBIT for this cert
+            const alreadyCharged = db.prepare(
+                `SELECT COUNT(*) AS cnt FROM credit_history WHERE reference_type = ? AND reference_id = ? AND type = 'DEBIT'`
+            ).get(c.parentTable, id).cnt > 0;
+
+            if (feeTotal > 0 && !alreadyCharged) {
                 const cap  = type.charAt(0).toUpperCase() + type.slice(1);
                 const desc = `${cap} Certificate ${finalRow.auto_number} — lab charges`;
 
                 ledgerEntry = ledgerSvc.recordRevenue(type, {
                     customer_id    : finalRow.customer_id,
-                    amount         : finalRow.total,
+                    amount         : feeTotal,
                     entry_type     : 'DEBIT',
                     description    : desc,
                     mode_of_payment: finalRow.mode_of_payment || 'Cash',

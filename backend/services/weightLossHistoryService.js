@@ -6,7 +6,7 @@ class WeightLossHistoryService {
      * Records a new material loss entry
      */
     async addEntry(data) {
-        const { customer_id, amount, reason } = data;
+        const { customer_id, amount, reason, mode_of_payment } = data;
 
         // 1. Validation
         if (!customer_id) throw new Error('Customer ID is required');
@@ -25,7 +25,8 @@ class WeightLossHistoryService {
         return await weightLossHistoryRepository.create({
             customer_id,
             amount: parsedAmount,
-            reason
+            reason,
+            mode_of_payment: mode_of_payment || null,
         });
     }
 

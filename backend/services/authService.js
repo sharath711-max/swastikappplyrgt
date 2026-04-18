@@ -11,7 +11,7 @@ class AuthService {
         return Number(row?.count || 0) === 0;
     }
 
-    async register(username, password, role = 'staff') {
+    async register(username, password, role = 'front_desk') {
         const hashedPassword = await bcrypt.hash(password, 10);
         const id = genId('USR');
         const timestamp = now();

@@ -209,8 +209,8 @@ function _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts) {
             );
         }
         db.prepare(
-            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, ref_id, created) VALUES (?, ?, ?, ?, ?, ?)'
-        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, testId, ts);
+            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
     }
 }
 

@@ -71,6 +71,7 @@ function applyPostInitMigrations() {
     ensureColumn('credit_history', 'reference_type', 'TEXT');
     ensureColumn('credit_history', 'reference_id', 'TEXT');
     ensureColumn('weight_loss_history', 'ref_id', 'TEXT');
+    ensureColumn('weight_loss_history', 'mode_of_payment', 'TEXT');
 
     // Patch 04: HISTORICAL_IMMUTABILITY (Snapshot prints)
     ensureColumn('gold_test', 'print_snapshot', 'TEXT');

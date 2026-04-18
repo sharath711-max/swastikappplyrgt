@@ -1,6 +1,5 @@
 const { db } = require('../db/db');
-const goldTestService = require('./goldTestService');
-const silverTestService = require('./silverTestService');
+const testServiceV2 = require('./v2/testService');
 const certificateService = require('./certificateService');
 const documentDeliveryService = require('./documentDeliveryService');
 const logger = require('../utils/logger');
@@ -73,10 +72,10 @@ class WorkflowService {
         let result;
         switch (serviceType) {
             case 'gold':
-                result = type === 'gold' ? await goldTestService.updateStatus(id, status) : await certificateService.updateStatus('gold', id, status);
+                result = type === 'gold' ? await testServiceV2.updateStatus('gold', id, status) : await certificateService.updateStatus('gold', id, status);
                 break;
             case 'silver':
-                result = type === 'silver' ? await silverTestService.updateStatus(id, status) : await certificateService.updateStatus('silver', id, status);
+                result = type === 'silver' ? await testServiceV2.updateStatus('silver', id, status) : await certificateService.updateStatus('silver', id, status);
                 break;
             case 'photo':
                 result = await certificateService.updateStatus('photo', id, status);

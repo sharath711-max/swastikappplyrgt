@@ -1,8 +1,4 @@
-jest.mock('../../services/goldTestService', () => ({
-    updateStatus: jest.fn().mockResolvedValue(true)
-}));
-
-jest.mock('../../services/silverTestService', () => ({
+jest.mock('../../services/v2/testService', () => ({
     updateStatus: jest.fn().mockResolvedValue(true)
 }));
 
@@ -24,7 +20,7 @@ jest.mock('../../utils/logger', () => ({
     debug: jest.fn()
 }));
 
-const goldTestService = require('../../services/goldTestService');
+const testServiceV2 = require('../../services/v2/testService');
 const documentDeliveryService = require('../../services/documentDeliveryService');
 const workflowService = require('../../services/workflowService');
 
@@ -36,7 +32,7 @@ describe('workflowService completion delivery', () => {
     it('returns delivery metadata when a record reaches DONE', async () => {
         const result = await workflowService.updateStatus('gold', 'GTS-100', 'DONE');
 
-        expect(goldTestService.updateStatus).toHaveBeenCalledWith('GTS-100', 'DONE');
+        expect(testServiceV2.updateStatus).toHaveBeenCalledWith('gold', 'GTS-100', 'DONE');
         expect(documentDeliveryService.deliverCompletedRecord).toHaveBeenCalledWith('gold', 'GTS-100');
         expect(result.delivery).toEqual(expect.objectContaining({ ok: true }));
     });
@@ -44,7 +40,7 @@ describe('workflowService completion delivery', () => {
     it('does not trigger customer delivery for non-DONE status changes', async () => {
         const result = await workflowService.updateStatus('gold', 'GTS-200', 'IN_PROGRESS');
 
-        expect(goldTestService.updateStatus).toHaveBeenCalledWith('GTS-200', 'IN_PROGRESS');
+        expect(testServiceV2.updateStatus).toHaveBeenCalledWith('gold', 'GTS-200', 'IN_PROGRESS');
         expect(documentDeliveryService.deliverCompletedRecord).not.toHaveBeenCalled();
         expect(result.delivery).toBeUndefined();
     });
@@ -54,7 +50,7 @@ describe('workflowService completion delivery', () => {
 
         const result = await workflowService.updateStatus('gold', 'GTS-300', 'DONE');
 
-        expect(goldTestService.updateStatus).toHaveBeenCalledWith('GTS-300', 'DONE');
+        expect(testServiceV2.updateStatus).toHaveBeenCalledWith('gold', 'GTS-300', 'DONE');
         expect(result.updated).toBe(true);
         expect(result.delivery).toEqual(expect.objectContaining({
             ok: false,

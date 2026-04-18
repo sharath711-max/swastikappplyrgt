@@ -459,12 +459,29 @@ function completeTest(type, testId, data) {
         // Step 1: Finalize items
         _finalizeItemsWork(type, testId, items, ts);
 
-        // Step 2: Build cert — get fresh item state post-update
+        // Fetch fresh state post-update
         const finalItems = db.prepare(
             `SELECT * FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
         ).all(testId);
 
+        if (!finalItems || finalItems.length === 0) {
+            throw new BusinessError(`Test must contain at least one item to be finalized.`, ERR.VALIDATION, 422);
+        }
+
+        for (const item of finalItems) {
+            if (item.gross_weight <= 0) {
+                throw new BusinessError(`Item ${item.item_number} has an invalid gross weight.`, ERR.VALIDATION, 422);
+            }
+            if (item.purity < 0 || item.purity > 100) {
+                throw new BusinessError(`Item ${item.item_number} has purity out of bounds (0-100).`, ERR.VALIDATION, 422);
+            }
+            if (item.purity === 0 && !item.returned) {
+                throw new BusinessError(`Item ${item.item_number} must have a valid purity entered, or be marked as returned.`, ERR.VALIDATION, 422);
+            }
+        }
+
         const threshold = HALLMARK_THRESHOLD[type];
+
         // BUSINESS_LOGIC_PIVOT: Operator override (certificate_required=1) takes precedence over auto purity rule
         const certItems = finalItems.filter(item => {
             if (item.returned) return false;

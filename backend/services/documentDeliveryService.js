@@ -1,8 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const goldTestService = require('./goldTestService');
-const silverTestService = require('./silverTestService');
+const testServiceV2 = require('./v2/testService');
 const certificateService = require('./certificateService');
 const whatsappService = require('./whatsappService');
 const logger = require('../utils/logger');
@@ -179,10 +178,8 @@ class DocumentDeliveryService {
 
         switch (type) {
             case 'gold':
-                record = await goldTestService.getTestDetails(id);
-                break;
             case 'silver':
-                record = await silverTestService.getTestDetails(id);
+                record = await testServiceV2.getTest(type, id);
                 break;
             case 'gold_cert':
                 record = await certificateService.getCertificate('gold', id);

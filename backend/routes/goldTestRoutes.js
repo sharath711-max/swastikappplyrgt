@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const goldTestService = require('../services/goldTestService');
+const testServiceV2 = require('../services/v2/testService');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { immutabilityGuard } = require('../middleware/immutabilityGuard');
 const { auditMiddleware } = require('../middleware/auditMiddleware');
@@ -9,11 +9,9 @@ router.use(authMiddleware);
 router.use('/:id', immutabilityGuard('gold_test'));
 
 const handleError = (res, error) => {
-    // BusinessError/SystemError from v2 services carry statusCode directly
     if (error.statusCode >= 400) {
         return res.status(error.statusCode).json({ success: false, error: error.message, code: error.code });
     }
-    // Legacy services throw with '409: ' prefix convention
     if (error.message && error.message.startsWith('409:')) {
         return res.status(409).json({ success: false, error: error.message.replace('409: ', '') });
     }
@@ -23,7 +21,7 @@ const handleError = (res, error) => {
 // POST /api/gold-tests
 router.post('/', async (req, res) => {
     try {
-        const result = await goldTestService.createTest(req.body);
+        const result = await testServiceV2.createTest('gold', req.body);
         res.status(201).json({ success: true, data: result });
     } catch (error) {
         handleError(res, error);
@@ -42,8 +40,8 @@ router.get('/', async (req, res) => {
             customer_id,
             search
         };
-        const result = await goldTestService.getTests(filters);
-        res.json({ success: true, data: result.tests, pagination: { ...result.pagination, page: parseInt(page), limit: parseInt(limit) } });
+        const result = testServiceV2.listTests('gold', filters);
+        res.json({ success: true, data: result.tests, pagination: { total: result.total, pages: result.pages, page: parseInt(page), limit: parseInt(limit) } });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -53,7 +51,7 @@ router.get('/', async (req, res) => {
 router.get('/stats/summary', async (req, res) => {
     try {
         const { start_date, end_date } = req.query;
-        const stats = await goldTestService.getSummaryStats(start_date, end_date);
+        const stats = await testServiceV2.getStats('gold', start_date, end_date);
         res.json({ success: true, data: stats });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -63,7 +61,10 @@ router.get('/stats/summary', async (req, res) => {
 // GET /api/gold-tests/:id
 router.get('/:id', async (req, res) => {
     try {
-        const test = await goldTestService.getTestDetails(req.params.id);
+        const test = await testServiceV2.getTest('gold', req.params.id);
+        if (!test) {
+            return res.status(404).json({ success: false, error: 'Test not found' });
+        }
         res.json({ success: true, data: test });
     } catch (error) {
         res.status(404).json({ success: false, error: error.message });
@@ -73,7 +74,7 @@ router.get('/:id', async (req, res) => {
 // DELETE /api/gold-tests/:id
 router.delete('/:id', async (req, res) => {
     try {
-        await goldTestService.deleteTest(req.params.id);
+        await testServiceV2.deleteTest('gold', req.params.id);
         res.json({ success: true, message: 'Test soft-deleted successfully' });
     } catch (error) {
         handleError(res, error);
@@ -83,7 +84,7 @@ router.delete('/:id', async (req, res) => {
 // PATCH /api/gold-tests/:id/status
 router.patch('/:id/status', async (req, res) => {
     try {
-        await goldTestService.updateStatus(req.params.id, req.body.status);
+        await testServiceV2.updateStatus('gold', req.params.id, req.body.status);
         res.json({ success: true, message: 'Status updated' });
     } catch (error) {
         handleError(res, error);
@@ -93,7 +94,6 @@ router.patch('/:id/status', async (req, res) => {
 // POST /api/gold-tests/:id/finalize
 router.post('/:id/finalize', async (req, res) => {
     try {
-        const testServiceV2 = require('../services/v2/testService');
         const { _idempotent, ...data } = await testServiceV2.completeTest('gold', req.params.id, req.body);
         res.json({
             success: true,
@@ -104,12 +104,10 @@ router.post('/:id/finalize', async (req, res) => {
         handleError(res, error);
     }
 });
+
 // POST /api/gold-tests/:id/convert-to-certificate
-// Staff manually selects item IDs to move from a DONE test into a new certificate.
-// Body: { item_ids: string[], mode_of_payment: string, gst?: boolean }
 router.post('/:id/convert-to-certificate', async (req, res) => {
     try {
-        const testServiceV2 = require('../services/v2/testService');
         const result = await testServiceV2.convertToCertificate('gold', req.params.id, req.body);
         res.status(201).json({ success: true, data: result });
     } catch (error) {
@@ -120,7 +118,6 @@ router.post('/:id/convert-to-certificate', async (req, res) => {
 // PUT /api/gold-tests/:id/save-draft
 router.put('/:id/save-draft', async (req, res) => {
     try {
-        const testServiceV2 = require('../services/v2/testService');
         const result = await testServiceV2.saveTestDraft('gold', req.params.id, req.body);
         res.json({ success: true, data: result });
     } catch (error) {
@@ -134,7 +131,7 @@ router.put('/:id/items/:itemId',
     async (req, res) => {
         try {
             const { id, itemId } = req.params;
-            const result = await goldTestService.updateItem(id, itemId, req.body);
+            const result = await testServiceV2.saveTestDraft('gold', id, { items: [{ id: itemId, ...req.body }] });
             res.json({ success: true, message: 'Item updated successfully', data: result });
         } catch (error) {
             handleError(res, error);

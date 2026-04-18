@@ -176,7 +176,7 @@ describe('CRUD Operations — Gold Test (API-08 to API-13)', () => {
         expect(res.status).toBe(201);
         expect(res.body.data).toHaveProperty('id');
         expect(res.body.data).toHaveProperty('auto_number');
-        expect(res.body.data.auto_number).toMatch(/^\d{8}-\d{3}$/); // YYYYMMDD-NNN format
+        expect(res.body.data.auto_number).toMatch(/^(GT|ST)\d{2}-\d{3}$/); // e.g. GT26-003
         createdTestId = res.body.data.id;
     });
 
@@ -383,6 +383,6 @@ describe('Silver Test CRUD (API-09)', () => {
         expect(res.status).toBe(201);
         expect(res.body.data).toHaveProperty('id');
         expect(res.body.data).toHaveProperty('auto_number');
-        expect(res.body.data.auto_number).toMatch(/^\d{8}-\d{3}$/);
+        expect(res.body.data.auto_number).toMatch(/^(GT|ST)\d{2}-\d{3}$/);
     });
 });

@@ -117,7 +117,8 @@ describe('Finalize transaction flows', () => {
                 .set('X-Request-Id', requestId)
                 .send(payload);
 
-            expect(replayResponse.status).toBe(409);
+            expect(replayResponse.status).toBe(200);
+            expect(replayResponse.body.meta.idempotent).toBe(true);
 
             // Weight loss recorded exactly once
             expect(

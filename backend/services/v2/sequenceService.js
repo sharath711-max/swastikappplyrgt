@@ -166,7 +166,7 @@ function generateCertificateLabel(itemSeq) {
             ERR.VALIDATION, 422
         );
     }
-    return `${ALPHA[letterIdx]}${String(numPart).padStart(3, '0')}`;
+    return `${ALPHA[letterIdx]}${String(numPart).padStart(2, '0')}`;
 }
 
 /**

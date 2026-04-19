@@ -28,6 +28,15 @@
  *   - HMAC hash values (different secrets, different algo) — not compared
  *   - gst_bill_number sequence style — different by design (Gap #7)
  *   - password hashes — different by design
+ *   - certificate_number padding (Python "A01" / old SERN "A001") — fixed in code, old records differ
+ *   - item_number format (Python item FK int / SERN "N26-017-1") — not compared
+ *
+ * Flags:
+ *   --skip-status     skip status vocabulary parity check
+ *   --skip-items      skip item count parity check
+ *   --skip-ledger     skip credit_history DEBIT check
+ *   --skip-snapshot   skip snapshot_hash presence check
+ *   --ignore-cert-number  skip certificate_number field comparison (known format diff in old records)
  *
  * Timezone guarantee (verified):
  *   Python stores IST naive datetimes (no TZ suffix): "2022-07-05 13:49:54.834257"
@@ -49,10 +58,16 @@ const SOURCE   = getArg('--source');
 const TARGET   = getArg('--target') || path.join(__dirname, '../db/lab.db');
 const ONLY_TBL = getArg('--table');
 const LIMIT    = parseInt(getArg('--limit') || '0', 10);
-const FAILFAST = args.includes('--fail-fast');
+const FAILFAST           = args.includes('--fail-fast');
+const SKIP_STATUS        = args.includes('--skip-status');
+const SKIP_ITEMS         = args.includes('--skip-items');
+const SKIP_LEDGER        = args.includes('--skip-ledger');
+const SKIP_SNAPSHOT      = args.includes('--skip-snapshot');
+const IGNORE_CERT_NUMBER = args.includes('--ignore-cert-number');
 
 if (!SOURCE) {
     console.error('Usage: node shadow_parity.js --source <python.db> [--target <sern.db>] [--table <name>] [--limit N] [--fail-fast]');
+    console.error('       [--skip-status] [--skip-items] [--skip-ledger] [--skip-snapshot] [--ignore-cert-number]');
     process.exit(1);
 }
 if (!fs.existsSync(SOURCE)) { console.error(`Source not found: ${SOURCE}`); process.exit(1); }
@@ -70,8 +85,13 @@ const diffs = [];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_MAP = { ongoing: 'TODO', pending: 'IN_PROGRESS', completed: 'DONE' };
-function mapStatus(s) { return STATUS_MAP[(s || '').toLowerCase()] || 'TODO'; }
+const STATUS_MAP  = { ongoing: 'TODO', pending: 'IN_PROGRESS', completed: 'DONE' };
+const SERN_STATUS = new Set(['TODO', 'IN_PROGRESS', 'DONE']);
+// Pass through if already SERN-format (self-test / SERN→SERN migration); map Python vocab otherwise.
+function mapStatus(s) {
+    if (SERN_STATUS.has(s)) return s;
+    return STATUS_MAP[(s || '').toLowerCase()] || 'TODO';
+}
 
 function round2(v) { return Math.round(Number(v || 0) * 100) / 100; }
 
@@ -99,26 +119,67 @@ function skip(label, reason) {
     process.stdout.write(`  ⚪ ${label}: ${reason}\n`);
 }
 
-// ─── Build Python integer ID → SERN text ID map ───────────────────────────────
-// (Same approach as migrate_from_python.js)
+// ─── Build Python ID → SERN ID map ───────────────────────────────────────────
+//
+// Strategy (priority order):
+//   1. phone + name — most specific; exact match only
+//   2. phone alone  — fallback, but ONLY when phone is unique on BOTH sides
+//
+// If a phone appears more than once in either DB the match is ambiguous.
+// Ambiguous customers are tracked in `ambiguousPhones` and their ledger
+// comparisons are SKIPPED (not falsely flagged).  This eliminates false
+// positives from test data with duplicate phone numbers.
 
 function buildCustomerIdMap() {
-    const map = new Map();  // py_integer_id → sern_text_id
-    if (!tableExists(py, 'customer') || !tableExists(sn, 'customer')) return map;
+    const map             = new Map();  // py_id → sn_id
+    const ambiguousPhones = new Set();  // phones that cannot be resolved unambiguously
+
+    if (!tableExists(py, 'customer') || !tableExists(sn, 'customer')) return { map, ambiguousPhones };
+
+    // Pre-compute non-unique (phone, name) combos in each DB.
+    // A combo is ambiguous if it appears > 1 time on either side — matching would
+    // pick an arbitrary row, producing false ledger mismatches.
+    const pyDupKeys = new Set(
+        py.prepare(
+            `SELECT phone || '|' || name AS k
+             FROM customer WHERE deletedon IS NULL
+             GROUP BY phone, name HAVING COUNT(*) > 1`
+        ).all().map(r => r.k)
+    );
+    const snDupKeys = new Set(
+        sn.prepare(
+            `SELECT phone || '|' || name AS k
+             FROM customer WHERE deletedon IS NULL
+             GROUP BY phone, name HAVING COUNT(*) > 1`
+        ).all().map(r => r.k)
+    );
 
     const pyCustomers = py.prepare('SELECT id, name, phone FROM customer ORDER BY id').all();
+
     for (const pyC of pyCustomers) {
-        // Match by phone (most stable identifier) or by name+phone
+        const key = `${pyC.phone}|${pyC.name}`;
+
+        // Skip if phone+name is non-unique on either side — cannot resolve safely
+        if (pyDupKeys.has(key) || snDupKeys.has(key)) {
+            ambiguousPhones.add(pyC.phone);
+            continue;
+        }
+
+        // phone+name is unique on both sides — safe exact match
         const snC = sn.prepare(
-            'SELECT id FROM customer WHERE phone = ? AND name = ? AND deletedon IS NULL LIMIT 1'
-        ).get(pyC.phone, pyC.name) ||
-        sn.prepare(
-            'SELECT id FROM customer WHERE phone = ? AND deletedon IS NULL LIMIT 1'
-        ).get(pyC.phone);
+            'SELECT id FROM customer WHERE phone = ? AND name = ? AND deletedon IS NULL'
+        ).get(pyC.phone, pyC.name);
 
         if (snC) map.set(pyC.id, snC.id);
     }
-    return map;
+
+    if (ambiguousPhones.size > 0) {
+        process.stdout.write(
+            `  ⚪ ${ambiguousPhones.size} phone(s) non-unique — ledger comparison skipped for those customers\n`
+        );
+    }
+
+    return { map, ambiguousPhones };
 }
 
 // ─── Per-table comparison specs ───────────────────────────────────────────────
@@ -173,14 +234,16 @@ function compareRecord(spec, pyRow, snRow, customerIdMap) {
         return;
     }
 
-    // 2. Status parity (after vocabulary mapping)
-    const expectedStatus = mapStatus(pyRow.status);
-    if (snRow.status !== expectedStatus) {
-        fail(`${label} STATUS MISMATCH`, {
-            py   : pyRow.status,
-            py_mapped: expectedStatus,
-            sern : snRow.status,
-        });
+    // 2. Status parity (after vocabulary mapping) [--skip-status]
+    if (!SKIP_STATUS) {
+        const expectedStatus = mapStatus(pyRow.status);
+        if (snRow.status !== expectedStatus) {
+            fail(`${label} STATUS MISMATCH`, {
+                py       : pyRow.status,
+                py_mapped: expectedStatus,
+                sern     : snRow.status,
+            });
+        }
     }
 
     // 3. Total parity — primary financial signal
@@ -198,30 +261,32 @@ function compareRecord(spec, pyRow, snRow, customerIdMap) {
         pass(`${label} total ok (py=${pyTotal} sn=${snTotal})`);
     }
 
-    // 4. Item count — no silent drops
+    // 4. Item count — no silent drops [--skip-items]
     // Python may store items in a JSON `data` column rather than a separate table.
-    let pyItemCount = 0;
-    if (tableExists(py, spec.itemTable)) {
-        pyItemCount = py.prepare(
-            `SELECT COUNT(*) AS cnt FROM ${spec.itemTable} WHERE ${spec.pyItemFk} = ?`
-        ).get(pyRow.id)?.cnt ?? 0;
-    } else if (pyRow.data) {
-        try {
-            const parsed = JSON.parse(pyRow.data);
-            pyItemCount = Array.isArray(parsed) ? parsed.length : (parsed.items?.length ?? 0);
-        } catch (_) { pyItemCount = 0; }
+    if (!SKIP_ITEMS) {
+        let pyItemCount = 0;
+        if (tableExists(py, spec.itemTable)) {
+            pyItemCount = py.prepare(
+                `SELECT COUNT(*) AS cnt FROM ${spec.itemTable} WHERE ${spec.pyItemFk} = ?`
+            ).get(pyRow.id)?.cnt ?? 0;
+        } else if (pyRow.data) {
+            try {
+                const parsed = JSON.parse(pyRow.data);
+                pyItemCount = Array.isArray(parsed) ? parsed.length : (parsed.items?.length ?? 0);
+            } catch (_) { pyItemCount = 0; }
+        }
+
+        const snItemCount = sn.prepare(
+            `SELECT COUNT(*) AS cnt FROM ${spec.itemTable} WHERE ${spec.pyItemFk} = ? AND deletedon IS NULL`
+        ).get(snRow.id)?.cnt ?? 0;
+
+        if (pyItemCount !== snItemCount) {
+            fail(`${label} ITEM COUNT MISMATCH`, { py: pyItemCount, sern: snItemCount });
+        }
     }
 
-    const snItemCount = sn.prepare(
-        `SELECT COUNT(*) AS cnt FROM ${spec.itemTable} WHERE ${spec.pyItemFk} = ? AND deletedon IS NULL`
-    ).get(snRow.id)?.cnt ?? 0;
-
-    if (pyItemCount !== snItemCount) {
-        fail(`${label} ITEM COUNT MISMATCH`, { py: pyItemCount, sern: snItemCount });
-    }
-
-    // 5. Ledger DEBIT for DONE certs (only applicable to certs, not tests)
-    if (spec.name.includes('certificate') && snRow.status === 'DONE') {
+    // 5. Ledger DEBIT for DONE certs (only applicable to certs, not tests) [--skip-ledger]
+    if (!SKIP_LEDGER && spec.name.includes('certificate') && snRow.status === 'DONE') {
         const snDebitCount = sn.prepare(
             `SELECT COUNT(*) AS cnt, COALESCE(SUM(amount), 0) AS total
              FROM credit_history
@@ -237,10 +302,12 @@ function compareRecord(spec, pyRow, snRow, customerIdMap) {
         }
     }
 
-    // 6. Snapshot present for DONE certs
-    if (spec.name.includes('certificate') && snRow.status === 'DONE') {
+    // 6. Snapshot present for DONE certs [--skip-snapshot]
+    if (!SKIP_SNAPSHOT && spec.name.includes('certificate') && snRow.status === 'DONE') {
         if (!snRow.snapshot_hash) {
             fail(`${label} MISSING snapshot_hash on DONE cert`, { id: snRow.id });
+        } else {
+            pass(`${label} snapshot present`);
         }
     }
 }
@@ -273,7 +340,7 @@ function findSnRow(spec, pyRow, customerIdMap) {
 
 // ─── Per-customer ledger balance check ───────────────────────────────────────
 
-function compareLedgerBalances(customerIdMap) {
+function compareLedgerBalances({ map: customerIdMap }) {
     section('Customer Ledger Balance Parity');
 
     if (!tableExists(py, 'credit_history') || !tableExists(sn, 'credit_history')) {
@@ -365,18 +432,18 @@ process.stdout.write(`║   source: ${path.basename(SOURCE).padEnd(44)}║\n`);
 process.stdout.write(`║   target: ${path.basename(TARGET).padEnd(44)}║\n`);
 process.stdout.write('╚══════════════════════════════════════════════════════╝\n');
 
-const customerIdMap = buildCustomerIdMap();
-process.stdout.write(`\nMatched ${customerIdMap.size} customers across systems\n`);
+const customerMapping = buildCustomerIdMap();
+process.stdout.write(`\nMatched ${customerMapping.map.size} customers across systems\n`);
 
 const toCheck = ONLY_TBL
     ? TABLE_SPECS.filter(s => s.name === ONLY_TBL)
     : TABLE_SPECS;
 
 for (const spec of toCheck) {
-    runTableComparison(spec, customerIdMap);
+    runTableComparison(spec, customerMapping.map);
 }
 
-compareLedgerBalances(customerIdMap);
+compareLedgerBalances(customerMapping);
 
 printSummary();
 

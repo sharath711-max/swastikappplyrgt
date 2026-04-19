@@ -5,7 +5,7 @@ const testService = require('./testService');
 const certificateService = require('./certificateService');
 const { BusinessError, ERR } = require('./errors');
 const customerRepo = require('../../repositories/customerRepository');
-const { db } = require('../../db/db');
+const { db, now } = require('../../db/db');
 const { getRequiredEnv } = require('../../config/env');
 
 // ── Snapshot versioning ───────────────────────────────────────────────────────
@@ -323,7 +323,7 @@ function createSnapshotEnvelope(resourceType, metalType, id, actorId = null) {
         schema_version      : SCHEMA_VERSION,
         serialization_version: SERIALIZATION_VERSION,
         hash_algorithm      : HASH_ALGORITHM,
-        generated_at        : new Date().toISOString(),
+        generated_at        : now(),
         actor_id            : actorId,
         data                : layout,
     };

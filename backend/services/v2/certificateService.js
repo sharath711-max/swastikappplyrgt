@@ -206,7 +206,7 @@ function _insertItemsWork(type, certId, autoNumber, rawItems, ts, startSeq = 1) 
         ];
         const baseValues = [
             itemId, certId, itemNumber,
-            raw.certificate_number || itemNumber,
+            raw.certificate_number || certLabel,
             raw.name || raw.item_name || normInput.item_name || '',
             raw.item_type || raw.item_name || normInput.item_name || '',
             calc.gross_weight, calc.test_weight, calc.net_weight,
@@ -222,7 +222,7 @@ function _insertItemsWork(type, certId, autoNumber, rawItems, ts, startSeq = 1) 
         insertedItems.push({
             id                : itemId,
             item_number       : itemNumber,
-            certificate_number: raw.certificate_number || itemNumber,
+            certificate_number: raw.certificate_number || certLabel,
             ...calc,
             created           : ts,
         });

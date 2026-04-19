@@ -16,13 +16,8 @@ const colors = {
     red: '\x1b[31m',
     green: '\x1b[32m',
     yellow: '\x1b[33m',
-    blue: '\x1b[34m',
-    magenta: '\x1b[35m',
     cyan: '\x1b[36m',
     white: '\x1b[37m',
-    bgRed: '\x1b[41m',
-    bgGreen: '\x1b[42m',
-    bgYellow: '\x1b[43m'
 };
 
 /**
@@ -253,7 +248,6 @@ function startWithPM2(lanIp) {
             log('📊 PM2 MANAGEMENT:', colors.cyan);
             log(`   View status:    npm run pm2:status`, colors.white);
             log(`   View logs:      npm run pm2:logs`, colors.white);
-            log(`   Monitor:        npm run pm2:monitor`, colors.white);
             log(`   Restart:        npm run pm2:restart`, colors.white);
             log(`   Stop:           npm run pm2:stop`, colors.white);
             console.log('\n');
@@ -492,90 +486,6 @@ async function start() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     startBackendProcess(processes, lanIp);
-
-    if (false) {
-    // Start Backend
-    log('🟢 Starting Backend (port 5000)...', colors.green);
-    try {
-        const server = spawn('npm', ['run', 'dev'], {
-            cwd: path.join(__dirname, 'backend'),
-            stdio: 'pipe',
-            shell: true,
-            env: {
-                ...process.env,
-                PORT: '5000',
-                HOST: '0.0.0.0',
-                NODE_ENV: 'development'
-            }
-        });
-
-        processes.push(server);
-
-        server.stdout.on('data', (data) => {
-            const output = data.toString().trim();
-            if (output.includes('Server running')) {
-                log(`✓ Backend started: ${output}`, colors.green);
-            }
-            console.log(`[Backend] ${output}`);
-        });
-
-        server.stderr.on('data', (data) => {
-            console.error(`[Backend Error] ${data.toString().trim()}`);
-        });
-
-        server.on('error', (err) => {
-            log(`❌ Backend failed to start: ${err.message}`, colors.red);
-        });
-
-    } catch (error) {
-        log(`❌ Failed to start backend: ${error.message}`, colors.red);
-    }
-
-    // Wait a bit before starting frontend
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Start Frontend
-    log('\n🟢 Starting Frontend (port 3000)...', colors.green);
-    try {
-        const clientEnv = {
-            ...process.env,
-            HOST: '0.0.0.0', // Bind to all interfaces — localhost AND LAN IP both work
-            PORT: '3000',
-            BROWSER: 'none',
-            REACT_APP_API_URL: `http://${lanIp}:5000/api`,
-            REACT_APP_LAN_IP: lanIp,
-            GENERATE_SOURCEMAP: 'false'
-        };
-
-        const client = spawn('npm', ['start'], {
-            cwd: path.join(__dirname, 'frontend'),
-            stdio: 'pipe',
-            shell: true,
-            env: clientEnv
-        });
-
-        processes.push(client);
-
-        client.stdout.on('data', (data) => {
-            const output = data.toString().trim();
-            if (output.includes('Compiled successfully')) {
-                log(`✓ Frontend started: ${output}`, colors.green);
-            }
-            console.log(`[Frontend] ${output}`);
-        });
-
-        client.stderr.on('data', (data) => {
-            console.error(`[Frontend Error] ${data.toString().trim()}`);
-        });
-
-        client.on('error', (err) => {
-            log(`❌ Frontend failed to start: ${err.message}`, colors.red);
-        });
-
-    } catch (error) {
-        log(`❌ Failed to start frontend: ${error.message}`, colors.red);
-    }
-    }
 
     // Display success message after both services are (hopefully) running
     setTimeout(() => {

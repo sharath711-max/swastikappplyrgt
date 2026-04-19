@@ -40,19 +40,26 @@ router.get('/kanban', async (req, res) => {
 });
 
 // POST /api/workflow/move
+// Body: { testId, type, toStatus, version? }
+// version: optional OCC guard — client passes the version it last read;
+//          if the row was modified concurrently a 409 is returned.
 router.post('/move', async (req, res) => {
     try {
-        const { testId, type, toStatus } = req.body;
+        const { testId, type, toStatus, version = null } = req.body;
         if (!testId || !type || !toStatus) {
             return res.status(400).json({ success: false, error: 'testId, type and toStatus are required' });
         }
 
-        const result = await workflowService.moveItem(type, testId, toStatus, {
-            userId: req.user?.id,
-            username: req.user?.username,
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
-        });
+        const result = await workflowService.moveItem(
+            type, testId, toStatus,
+            {
+                userId   : req.user?.id,
+                username : req.user?.username,
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'],
+            },
+            version !== null && version !== undefined ? Number(version) : null,
+        );
         res.json({ success: true, data: result });
     } catch (error) {
         handleError(res, error);
@@ -60,19 +67,25 @@ router.post('/move', async (req, res) => {
 });
 
 // POST /api/workflow/finalize
+// Body: { testId, type, version? }
+// version: optional OCC guard (same as /move)
 router.post('/finalize', async (req, res) => {
     try {
-        const { testId, type } = req.body;
+        const { testId, type, version = null } = req.body;
         if (!testId || !type) {
             return res.status(400).json({ success: false, error: 'testId and type are required' });
         }
 
-        const result = await workflowService.finalizeItem(type, testId, {
-            userId: req.user?.id,
-            username: req.user?.username,
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
-        });
+        const result = await workflowService.finalizeItem(
+            type, testId,
+            {
+                userId   : req.user?.id,
+                username : req.user?.username,
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'],
+            },
+            version !== null && version !== undefined ? Number(version) : null,
+        );
 
         res.json({ success: true, data: result });
     } catch (error) {

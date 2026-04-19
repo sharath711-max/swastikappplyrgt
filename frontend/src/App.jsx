@@ -1,32 +1,147 @@
 import React from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import Layout from './components/layout/Layout';
-import DashboardPage from './pages/DashboardPage';
-import WorkflowPage from './pages/WorkflowPage';
-import CustomersPage from './pages/CustomersPage';
-import BillsPage from './pages/BillsPage';
-import ItemsPage from './pages/ItemsPage';
-import PrintPage from './pages/PrintPage';
-import ReceiptPage from './pages/Print/ReceiptPage';
-import CertificatePage from './pages/Print/CertificatePage';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ModalProvider } from './contexts/ModalContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+import LoginPage from './auth/LoginPage';
+import ProtectedRoute from './auth/ProtectedRoute';
+import ModalManager from './components/core/ModalManager';
+import AppShell from './components/layout/AppShell';
+
+import Dashboard from './pages/Dashboard';
+import Verify from './pages/public/Verify';
+import Customers from './pages/Customers';
+import CustomerProfile from './pages/CustomerProfile';
+import CertificatePage from './pages/CertificatePage';
+import WorkflowBoard from './pages/WorkflowBoard';
+import ListViewsPage from './pages/ListViewsPage';
+import PrintView from './pages/PrintView';
+import TestPage from './pages/TestPage';
+import WeightLoss from './pages/WeightLoss';
+import CashInHand from './pages/CashInHand';
+import UserManagement from './pages/UserManagement';
+import RecordPage from './pages/RecordPage';
+import BillsReportPage from './pages/BillsReportPage';
+import ItemMasterPage from './pages/ItemMasterPage';
+
+import './index.css';
+import './styles/GlobalStyles.css';
+import './styles/theme.css';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/workflow" element={<WorkflowPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/bills" element={<BillsPage />} />
-          <Route path="/items" element={<ItemsPage />} />
-          <Route path="/print" element={<PrintPage />} />
-          <Route path="/print/receipt" element={<ReceiptPage />} />
-          <Route path="/print/certificate" element={<CertificatePage />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <ToastProvider>
+        <ModalProvider>
+          <ToastContainer />
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/verify/:autoNumber" element={<Verify />} />
+
+              <Route path="/" element={
+                <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk']}>
+                  <AppShell><Dashboard /></AppShell>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/customers" element={
+                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
+                  <AppShell><Customers /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/customers/:id" element={
+                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
+                  <AppShell><CustomerProfile /></AppShell>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/gold-certificates" element={
+                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
+                  <AppShell><CertificatePage type="gold" /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/silver-certificates" element={
+                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
+                  <AppShell><CertificatePage type="silver" /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/photo-certificates" element={
+                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
+                  <AppShell><CertificatePage type="photo" /></AppShell>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/gold-test" element={
+                <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
+                  <AppShell>
+                    <TestPage title="Gold Tests" endpoint="gold-tests" print="gold-certificate" modalType="gold" />
+                  </AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/silver-test" element={
+                <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
+                  <AppShell>
+                    <TestPage title="Silver Tests" endpoint="silver-tests" print="silver-certificate" modalType="silver" />
+                  </AppShell>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/bills" element={
+                <ProtectedRoute roles={['admin', 'manager', 'front_desk']}>
+                  <AppShell><BillsReportPage /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/items" element={
+                <ProtectedRoute roles={['admin', 'manager', 'technician']}>
+                  <AppShell><ItemMasterPage /></AppShell>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/workflow" element={
+                <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
+                  <AppShell><WorkflowBoard /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/list-views" element={
+                <ProtectedRoute roles={['admin', 'manager']}>
+                  <AppShell><ListViewsPage /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/weight-loss" element={
+                <ProtectedRoute roles={['admin', 'manager']}>
+                  <AppShell><WeightLoss /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/cash-in-hand" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppShell><CashInHand /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/users" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppShell><UserManagement /></AppShell>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/record/:type/:id" element={
+                <ProtectedRoute>
+                  <AppShell><RecordPage /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/print/:type/:id" element={
+                <ProtectedRoute><PrintView /></ProtectedRoute>
+              } />
+
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+            <ModalManager />
+          </Router>
+        </ModalProvider>
+      </ToastProvider>
+    </AuthProvider>
   );
 }

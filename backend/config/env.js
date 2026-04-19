@@ -19,6 +19,37 @@ function getRequiredEnv(name) {
     return value.trim();
 }
 
+/**
+ * validateSnapshotSecret()
+ * ─────────────────────────
+ * Called once at server startup — fails fast before any request is served
+ * rather than dying mid-request inside printService.serializeSnapshot.
+ *
+ * Rules:
+ *   • Must be present and non-empty
+ *   • Must not be a known insecure placeholder
+ *   • Must be ≥ 32 characters (128-bit minimum for HMAC-SHA256 key material)
+ */
+function validateSnapshotSecret() {
+    const value = getRequiredEnv('SNAPSHOT_SECRET');
+
+    if (INSECURE_PLACEHOLDER_SECRETS.has(value)) {
+        throw new Error(
+            'SNAPSHOT_SECRET is still using a placeholder value. ' +
+            'Set a strong random secret (≥ 32 chars) in backend/.env before starting the server.'
+        );
+    }
+
+    if (value.length < 32) {
+        throw new Error(
+            `SNAPSHOT_SECRET must be at least 32 characters long (got ${value.length}). ` +
+            'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+        );
+    }
+
+    return value;
+}
+
 function getJwtSecret() {
     const value = getRequiredEnv('JWT_SECRET');
 
@@ -62,5 +93,6 @@ function getAllowedCorsOrigins() {
 module.exports = {
     getAllowedCorsOrigins,
     getJwtSecret,
-    getRequiredEnv
+    getRequiredEnv,
+    validateSnapshotSecret,
 };

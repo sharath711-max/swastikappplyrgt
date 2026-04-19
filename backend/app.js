@@ -13,6 +13,7 @@ const { initDb }              = require('./db/db');
 const logger                  = require('./utils/logger');
 const { getAllowedCorsOrigins, getJwtSecret } = require('./config/env');
 const { correlationMiddleware, getRequestId } = require('./utils/audit');
+const { globalErrorHandler }  = require('./middleware/errorHandler');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -72,6 +73,7 @@ app.use('/api/credit-history',   require('./routes/creditHistoryRoutes'));
 app.use('/api/list',             require('./routes/listRoutes'));
 app.use('/api/records',          require('./routes/recordRoutes'));
 app.use('/api/analytics',        require('./routes/analyticsRoutes'));
+app.use('/api/audit',            require('./routes/auditRoutes'));
 
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', message: 'Swastik API is running' });
@@ -101,44 +103,21 @@ app.get('*', (req, res) => {
 });
 
 // ── 7. Global error handler ───────────────────────────────────────────────────
-//   BusinessError / ValidationError → status from err.statusCode (4xx), with
-//   machine-readable `code` and optional `details` field.
-//   Anything else → 500 with a traceId for the audit log.
-app.use((err, req, res, next) => {  // eslint-disable-line no-unused-vars
-    const requestId  = req.requestId ?? getRequestId();
-    const statusCode = err.statusCode ?? 500;
-
-    logger.error(`Error handling ${req.method} ${req.url}: ${err.message}`, {
-        stack     : err.stack,
-        requestId,
-        errorCode : err.code,
-        statusCode,
-    });
-
-    if (statusCode < 500) {
-        return res.status(statusCode).json({
-            error  : err.message,
-            code   : err.code,
-            ...(err.details != null ? { details: err.details } : {}),
-            requestId,
-        });
-    }
-
-    res.status(500).json({ error: 'Something went wrong!', traceId: requestId });
-});
+app.use(globalErrorHandler);
 
 // ── MAINTENANCE POLICE ─────────────────────────────────────────────────────────
 // db is captured at load time — avoids calling require() inside a timer callback
 // which throws a ReferenceError when Jest tears down the module registry.
 // Both timers are .unref()'d so the process (and test runner) can exit freely.
 {
-    const { db: _maintDb } = require('./db/db');
+    const { db: _maintDb, purgeExpiredIdempotencyKeys } = require('./db/db');
     const _cleanupSql = "DELETE FROM request_log WHERE created_at < datetime('now', '-30 days')";
 
     const _maintInterval = setInterval(() => {
         try {
             _maintDb.prepare(_cleanupSql).run();
-            console.log('🧹 [MAINTENANCE] Cleaned up request_log older than 30 days');
+            const purged = purgeExpiredIdempotencyKeys();
+            console.log(`🧹 [MAINTENANCE] Cleaned up request_log (30d) and ${purged} expired idempotency keys`);
         } catch (_) {}
     }, 24 * 60 * 60 * 1000); // 24 hours
     _maintInterval.unref();

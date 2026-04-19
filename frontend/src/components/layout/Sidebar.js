@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    FaTachometerAlt, FaUsers,
-    FaCheckDouble, FaBars, FaChevronDown
+    FaTachometerAlt, FaUsers, FaCheckDouble, FaBars, FaChevronDown,
+    FaCertificate, FaFlask, FaFileInvoiceDollar, FaBoxes,
+    FaWeight, FaMoneyBillWave, FaUserShield
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
 import { APP_CONFIG } from '../../utils/Constants';
@@ -10,10 +11,13 @@ import { APP_CONFIG } from '../../utils/Constants';
 const Sidebar = ({ sidebarCollapsed }) => {
     const location = useLocation();
 
-    // We duplicate the expanded logic from old AppShell here.
-    const [expandedMenus, setExpandedMenus] = useState({
-        'Workflow Board': location.pathname.startsWith('/workflow')
-    });
+    const [expandedMenus, setExpandedMenus] = useState(() => ({
+        Certificates: location.pathname.startsWith('/gold-certificates')
+            || location.pathname.startsWith('/silver-certificates')
+            || location.pathname.startsWith('/photo-certificates'),
+        Tests: location.pathname.startsWith('/gold-test') || location.pathname.startsWith('/silver-test'),
+        Admin: location.pathname.startsWith('/admin'),
+    }));
 
     const navigation = React.useMemo(() => [
         {
@@ -21,26 +25,80 @@ const Sidebar = ({ sidebarCollapsed }) => {
             path: '/',
             icon: <FaTachometerAlt />,
             exact: true,
-            roles: ['admin', 'manager']
+            roles: ['admin', 'manager'],
         },
         {
             name: 'Customers',
             path: '/customers',
             icon: <FaUsers />,
-            roles: ['admin', 'manager', 'front_desk']
+            roles: ['admin', 'manager', 'front_desk'],
+        },
+        {
+            name: 'Certificates',
+            path: '/gold-certificates',
+            icon: <FaCertificate />,
+            roles: ['admin', 'manager', 'front_desk', 'user'],
+            subItems: [
+                { name: 'Gold', path: '/gold-certificates' },
+                { name: 'Silver', path: '/silver-certificates' },
+                { name: 'Photo', path: '/photo-certificates' },
+            ],
+        },
+        {
+            name: 'Tests',
+            path: '/gold-test',
+            icon: <FaFlask />,
+            roles: ['admin', 'manager', 'technician', 'front_desk', 'user'],
+            subItems: [
+                { name: 'Gold Test', path: '/gold-test' },
+                { name: 'Silver Test', path: '/silver-test' },
+            ],
         },
         {
             name: 'Workflow Board',
             path: '/workflow',
             icon: <FaCheckDouble />,
-            roles: ['admin', 'manager', 'technician', 'front_desk']
+            roles: ['admin', 'manager', 'technician', 'front_desk'],
+        },
+        {
+            name: 'Bills Report',
+            path: '/bills',
+            icon: <FaFileInvoiceDollar />,
+            roles: ['admin', 'manager', 'front_desk'],
+        },
+        {
+            name: 'Item Master',
+            path: '/items',
+            icon: <FaBoxes />,
+            roles: ['admin', 'manager', 'technician'],
         },
         {
             name: 'List Views',
             path: '/list-views',
             icon: <FaBars />,
-            roles: ['admin', 'manager']
-        }
+            roles: ['admin', 'manager'],
+        },
+        {
+            name: 'Weight Loss',
+            path: '/weight-loss',
+            icon: <FaWeight />,
+            roles: ['admin', 'manager'],
+        },
+        {
+            name: 'Cash in Hand',
+            path: '/cash-in-hand',
+            icon: <FaMoneyBillWave />,
+            roles: ['admin'],
+        },
+        {
+            name: 'Admin',
+            path: '/admin/users',
+            icon: <FaUserShield />,
+            roles: ['admin'],
+            subItems: [
+                { name: 'Users', path: '/admin/users' },
+            ],
+        },
     ], []);
 
     const isActive = React.useCallback((path, exact = false) => {
@@ -55,6 +113,11 @@ const Sidebar = ({ sidebarCollapsed }) => {
         if (exact) return location.pathname === path;
         return location.pathname.startsWith(path);
     }, [location.pathname, location.search]);
+
+    const isGroupActive = React.useCallback((item) => {
+        if (!item.subItems) return isActive(item.path, item.exact);
+        return item.subItems.some(sub => isActive(sub.path));
+    }, [isActive]);
 
     const toggleMenu = (name) => {
         setExpandedMenus(prev => ({ ...prev, [name]: !prev[name] }));
@@ -75,7 +138,7 @@ const Sidebar = ({ sidebarCollapsed }) => {
                                     {!sidebarCollapsed && <span className="nav-label">{item.name}</span>}
                                 </Link>
                             ) : (
-                                <div className={`nav-group ${isActive(item.path) ? 'active' : ''}`}>
+                                <div className={`nav-group ${isGroupActive(item) ? 'active' : ''}`}>
                                     <div
                                         className="nav-group-header"
                                         onClick={() => !sidebarCollapsed && toggleMenu(item.name)}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Toast, DataTable } from '../components/SalesforceComponents';
-import { FaWeight, FaPlus } from 'react-icons/fa';
+import { FaWeight, FaPlus, FaDownload } from 'react-icons/fa';
 import api from '../services/api';
 
 const WeightLoss = () => {
@@ -29,6 +29,26 @@ const WeightLoss = () => {
 
     const removeToast = (id) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
+    };
+
+    const handleExport = () => {
+        if (!entries.length) return;
+        const headers = ['Date', 'Customer', 'Amount (INR)', 'Reason', 'Payment Mode'];
+        const rows = entries.map(e => [
+            new Date(e.created || e.date).toLocaleDateString('en-IN'),
+            e.customer_name || '',
+            e.amount || 0,
+            (e.reason || '').replace(/,/g, ';'),
+            e.mode_of_payment || ''
+        ]);
+        const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `weight_loss_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     const fetchCustomers = useCallback(async () => {
@@ -126,9 +146,14 @@ const WeightLoss = () => {
                         </h1>
                         <p className="text-muted" style={{ margin: 0 }}>Track metal loss during testing/processing</p>
                     </div>
-                    <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                        <FaPlus style={{ marginRight: '6px' }} /> Add Record
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="btn btn-outline-success" onClick={handleExport} disabled={!entries.length}>
+                            <FaDownload style={{ marginRight: '6px' }} /> Export CSV
+                        </button>
+                        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                            <FaPlus style={{ marginRight: '6px' }} /> Add Record
+                        </button>
+                    </div>
                 </div>
             </div>
 

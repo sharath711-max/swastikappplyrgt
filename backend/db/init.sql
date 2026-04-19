@@ -2,17 +2,16 @@ PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 PRAGMA synchronous = NORMAL;
 
--- 👤 USERS (Single login)
--- 👤 USERS (Single login)
-
+-- 👤 USERS
 CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  username TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'user', -- 'admin' or 'user'
-  created DATETIME NOT NULL,
+  id           TEXT PRIMARY KEY,
+  username     TEXT NOT NULL UNIQUE,
+  password     TEXT NOT NULL,
+  role         TEXT NOT NULL DEFAULT 'user',
+  version      INTEGER NOT NULL DEFAULT 1,
+  created      DATETIME NOT NULL,
   lastmodified DATETIME NOT NULL,
-  deletedon DATETIME
+  deletedon    DATETIME
 );
 
 -- 🌐 GLOBALS (Auto-number, sequences, config)
@@ -31,50 +30,53 @@ CREATE TABLE IF NOT EXISTS sequences (
 
 -- 👥 CUSTOMER
 CREATE TABLE IF NOT EXISTS customer (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  phone TEXT,
-  balance REAL DEFAULT 0,
-  gold_weight_balance REAL DEFAULT 0,
+  id                    TEXT PRIMARY KEY,
+  name                  TEXT NOT NULL,
+  phone                 TEXT,
+  balance               REAL DEFAULT 0,
+  gold_weight_balance   REAL DEFAULT 0,
   silver_weight_balance REAL DEFAULT 0,
-  notes TEXT,
-  created DATETIME NOT NULL,
-  lastmodified DATETIME NOT NULL,
-  deletedon DATETIME
+  notes                 TEXT,
+  version               INTEGER NOT NULL DEFAULT 1,
+  created               DATETIME NOT NULL,
+  lastmodified          DATETIME NOT NULL,
+  deletedon             DATETIME
 );
 
 CREATE INDEX IF NOT EXISTS idx_customer_phone ON customer(phone);
 
 -- 🧪 TESTS (PARENT)
 CREATE TABLE IF NOT EXISTS gold_test (
-  id TEXT PRIMARY KEY,
-  auto_number TEXT NOT NULL UNIQUE,
-  customer_id TEXT NOT NULL,
-  status TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-  mode_of_payment TEXT,
-  total REAL DEFAULT 0,
-  created DATETIME NOT NULL,
-  in_progress_at DATETIME,
-  done_at DATETIME,
+  id                    TEXT PRIMARY KEY,
+  auto_number           TEXT NOT NULL UNIQUE,
+  customer_id           TEXT NOT NULL,
+  status                TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  mode_of_payment       TEXT,
+  total                 REAL DEFAULT 0,
+  version               INTEGER NOT NULL DEFAULT 1,
+  created               DATETIME NOT NULL,
+  in_progress_at        DATETIME,
+  done_at               DATETIME,
   completion_request_id TEXT,
-  lastmodified DATETIME NOT NULL,
-  deletedon DATETIME,
+  lastmodified          DATETIME NOT NULL,
+  deletedon             DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
 CREATE TABLE IF NOT EXISTS silver_test (
-  id TEXT PRIMARY KEY,
-  auto_number TEXT NOT NULL UNIQUE,
-  customer_id TEXT NOT NULL,
-  status TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-  mode_of_payment TEXT,
-  total REAL DEFAULT 0,
-  created DATETIME NOT NULL,
-  in_progress_at DATETIME,
-  done_at DATETIME,
+  id                    TEXT PRIMARY KEY,
+  auto_number           TEXT NOT NULL UNIQUE,
+  customer_id           TEXT NOT NULL,
+  status                TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  mode_of_payment       TEXT,
+  total                 REAL DEFAULT 0,
+  version               INTEGER NOT NULL DEFAULT 1,
+  created               DATETIME NOT NULL,
+  in_progress_at        DATETIME,
+  done_at               DATETIME,
   completion_request_id TEXT,
-  lastmodified DATETIME NOT NULL,
-  deletedon DATETIME,
+  lastmodified          DATETIME NOT NULL,
+  deletedon             DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
@@ -121,63 +123,62 @@ CREATE TABLE IF NOT EXISTS silver_test_item (
 
 -- 📜 CERTIFICATES (PARENT — FINANCIAL OWNER)
 CREATE TABLE IF NOT EXISTS gold_certificate (
-  id TEXT PRIMARY KEY,
-  auto_number TEXT NOT NULL UNIQUE,
-  customer_id TEXT NOT NULL,
-
-  status TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-
-  total REAL DEFAULT 0,
-  total_net_weight REAL DEFAULT 0,
+  id                TEXT PRIMARY KEY,
+  auto_number       TEXT NOT NULL UNIQUE,
+  customer_id       TEXT NOT NULL,
+  status            TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  total             REAL DEFAULT 0,
+  total_net_weight  REAL DEFAULT 0,
   total_fine_weight REAL DEFAULT 0,
-  gst INTEGER DEFAULT 0,              -- 0 / 1
-  total_tax REAL DEFAULT 0,
-  gst_bill_number TEXT,
-  mode_of_payment TEXT,
-
-  created DATETIME NOT NULL,
-  lastmodified DATETIME NOT NULL,
-  deletedon DATETIME,
-
+  gst               INTEGER DEFAULT 0,
+  total_tax         REAL DEFAULT 0,
+  gst_bill_number   TEXT,
+  mode_of_payment   TEXT,
+  version           INTEGER NOT NULL DEFAULT 1,
+  created           DATETIME NOT NULL,
+  in_progress_at    DATETIME,
+  done_at           DATETIME,
+  lastmodified      DATETIME NOT NULL,
+  deletedon         DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
 CREATE TABLE IF NOT EXISTS silver_certificate (
-  id TEXT PRIMARY KEY,
-  auto_number TEXT NOT NULL UNIQUE,
-  customer_id TEXT NOT NULL,
-
-  status TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-
-  total REAL DEFAULT 0,
+  id               TEXT PRIMARY KEY,
+  auto_number      TEXT NOT NULL UNIQUE,
+  customer_id      TEXT NOT NULL,
+  status           TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  total            REAL DEFAULT 0,
   total_net_weight REAL DEFAULT 0,
-  gst INTEGER DEFAULT 0,
-  total_tax REAL DEFAULT 0,
-  gst_bill_number TEXT,
-  mode_of_payment TEXT,
-
-  created DATETIME NOT NULL,
-  lastmodified DATETIME NOT NULL,
-  deletedon DATETIME,
-
+  gst              INTEGER DEFAULT 0,
+  total_tax        REAL DEFAULT 0,
+  gst_bill_number  TEXT,
+  mode_of_payment  TEXT,
+  version          INTEGER NOT NULL DEFAULT 1,
+  created          DATETIME NOT NULL,
+  in_progress_at   DATETIME,
+  done_at          DATETIME,
+  lastmodified     DATETIME NOT NULL,
+  deletedon        DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
 CREATE TABLE IF NOT EXISTS photo_certificate (
-  id TEXT PRIMARY KEY,
-  auto_number TEXT NOT NULL UNIQUE,
-  customer_id TEXT NOT NULL,
-  status TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-  total REAL DEFAULT 0,
-  gst INTEGER DEFAULT 0,
-  total_tax REAL DEFAULT 0,
+  id              TEXT PRIMARY KEY,
+  auto_number     TEXT NOT NULL UNIQUE,
+  customer_id     TEXT NOT NULL,
+  status          TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  total           REAL DEFAULT 0,
+  gst             INTEGER DEFAULT 0,
+  total_tax       REAL DEFAULT 0,
   gst_bill_number TEXT,
   mode_of_payment TEXT,
-  created DATETIME NOT NULL,
-  in_progress_at DATETIME,
-  done_at DATETIME,
-  lastmodified DATETIME NOT NULL,
-  deletedon DATETIME,
+  version         INTEGER NOT NULL DEFAULT 1,
+  created         DATETIME NOT NULL,
+  in_progress_at  DATETIME,
+  done_at         DATETIME,
+  lastmodified    DATETIME NOT NULL,
+  deletedon       DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
@@ -336,3 +337,86 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs (entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_logs (user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_ts     ON audit_logs (created DESC);
+
+-- 🔑 IDEMPOTENCY KEYS (richer per-user duplicate suppression)
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  key         TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL,
+  method      TEXT NOT NULL,
+  path        TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id   TEXT,
+  status_code INTEGER NOT NULL DEFAULT 0,
+  response    TEXT,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at  DATETIME NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_idem_expires   ON idempotency_keys(expires_at);
+CREATE INDEX IF NOT EXISTS idx_idem_user_path ON idempotency_keys(user_id, path, created_at);
+
+-- 📊 ADDITIONAL INDEXES (hot query paths)
+-- Tests: customer profile, date-range analytics
+CREATE INDEX IF NOT EXISTS idx_gt_customer   ON gold_test(customer_id, status, deletedon);
+CREATE INDEX IF NOT EXISTS idx_st_customer   ON silver_test(customer_id, status, deletedon);
+CREATE INDEX IF NOT EXISTS idx_gt_created    ON gold_test(created DESC) WHERE deletedon IS NULL;
+CREATE INDEX IF NOT EXISTS idx_st_created    ON silver_test(created DESC) WHERE deletedon IS NULL;
+
+-- Certs: public verify, search, date-range
+CREATE INDEX IF NOT EXISTS idx_gc_auto_number ON gold_certificate(auto_number)   WHERE deletedon IS NULL;
+CREATE INDEX IF NOT EXISTS idx_sc_auto_number ON silver_certificate(auto_number) WHERE deletedon IS NULL;
+CREATE INDEX IF NOT EXISTS idx_pc_auto_number ON photo_certificate(auto_number)  WHERE deletedon IS NULL;
+CREATE INDEX IF NOT EXISTS idx_gc_created     ON gold_certificate(created DESC)   WHERE deletedon IS NULL;
+CREATE INDEX IF NOT EXISTS idx_sc_created     ON silver_certificate(created DESC) WHERE deletedon IS NULL;
+CREATE INDEX IF NOT EXISTS idx_pc_created     ON photo_certificate(created DESC)  WHERE deletedon IS NULL;
+CREATE INDEX IF NOT EXISTS idx_gc_customer    ON gold_certificate(customer_id, status, deletedon);
+CREATE INDEX IF NOT EXISTS idx_sc_customer    ON silver_certificate(customer_id, status, deletedon);
+
+-- Cert snapshot hash: verification endpoint
+CREATE INDEX IF NOT EXISTS idx_gc_hash ON gold_certificate(snapshot_hash)   WHERE snapshot_hash IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_sc_hash ON silver_certificate(snapshot_hash) WHERE snapshot_hash IS NOT NULL;
+
+-- Items: FK traversal (list items for a test/cert)
+CREATE INDEX IF NOT EXISTS idx_gti_test ON gold_test_item(gold_test_id, deletedon);
+CREATE INDEX IF NOT EXISTS idx_sti_test ON silver_test_item(silver_test_id, deletedon);
+CREATE INDEX IF NOT EXISTS idx_gci_cert ON gold_certificate_item(gold_certificate_id, deletedon);
+CREATE INDEX IF NOT EXISTS idx_sci_cert ON silver_certificate_item(silver_certificate_id, deletedon);
+CREATE INDEX IF NOT EXISTS idx_pci_cert ON photo_certificate_item(photo_certificate_id, deletedon);
+
+-- Credit history: ledger page (customer + date range + type)
+CREATE INDEX IF NOT EXISTS idx_ch_customer_type ON credit_history(customer_id, type, created);
+CREATE INDEX IF NOT EXISTS idx_ch_created       ON credit_history(created DESC);
+CREATE INDEX IF NOT EXISTS idx_wlh_created      ON weight_loss_history(created DESC);
+
+-- Audit: action filter, entity+action compound
+CREATE INDEX IF NOT EXISTS idx_audit_action        ON audit_logs(action, created DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_entity_action ON audit_logs(entity_type, action, created DESC);
+
+-- Users: auth lookups
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role) WHERE deletedon IS NULL;
+
+-- 🔒 VERSION TRIGGERS (OCC — increment when caller forgets to bump explicitly)
+-- Fires only when version is NOT already bumped by the UPDATE statement,
+-- preventing double-increment when withOptimisticLock() sets version = version + 1.
+CREATE TRIGGER IF NOT EXISTS trg_gold_test_version
+  AFTER UPDATE ON gold_test WHEN NEW.version = OLD.version
+  BEGIN UPDATE gold_test SET version = OLD.version + 1 WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_silver_test_version
+  AFTER UPDATE ON silver_test WHEN NEW.version = OLD.version
+  BEGIN UPDATE silver_test SET version = OLD.version + 1 WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_gold_cert_version
+  AFTER UPDATE ON gold_certificate WHEN NEW.version = OLD.version
+  BEGIN UPDATE gold_certificate SET version = OLD.version + 1 WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_silver_cert_version
+  AFTER UPDATE ON silver_certificate WHEN NEW.version = OLD.version
+  BEGIN UPDATE silver_certificate SET version = OLD.version + 1 WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_photo_cert_version
+  AFTER UPDATE ON photo_certificate WHEN NEW.version = OLD.version
+  BEGIN UPDATE photo_certificate SET version = OLD.version + 1 WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_customer_version
+  AFTER UPDATE ON customer WHEN NEW.version = OLD.version
+  BEGIN UPDATE customer SET version = OLD.version + 1 WHERE id = NEW.id; END;

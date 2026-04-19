@@ -51,7 +51,7 @@ const { AsyncLocalStorage } = require('async_hooks');
 const crypto = require('crypto');
 const fs     = require('fs');
 const path   = require('path');
-const { createDailyLogWriter } = require('./logLifecycle');
+// Inline daily log writer (logLifecycle removed)
 
 // ─── Per-request storage ──────────────────────────────────────────────────────
 
@@ -107,15 +107,14 @@ function _normaliseRequestId(rawHeader) {
 const LOG_DIR  = path.join(__dirname, '..', 'logs');
 const _pid     = process.pid;
 const _nodeInst = process.env.NODE_APP_INSTANCE ?? '0';
-const auditWriter = createDailyLogWriter({
-    dir                     : LOG_DIR,
-    filePrefix              : 'audit-',
-    extension               : '.ndjson',
-    envPrefix               : 'AUDIT_LOG',
-    defaultMaxBytes         : 10 * 1024 * 1024,
-    defaultRetentionDays    : 30,
-    defaultCompressAfterDays: 1,
-});
+const auditWriter = {
+    append: (line, cb) => {
+        const d   = new Date();
+        const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        fs.appendFile(path.join(LOG_DIR, `audit-${ymd}.ndjson`), line, cb || (() => {}));
+    },
+    runMaintenance: () => {},
+};
 
 // Ensure log directory exists synchronously at module load (safe — runs once)
 try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch (_) { /* */ }

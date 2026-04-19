@@ -1,0 +1,43 @@
+[2026-04-19T16:10:24.566Z] Migration start — source: c:/Users/pc/OneDrive/Desktop/swastik/app/site.db
+[2026-04-19T16:10:24.570Z] Target: c:/Users/pc/OneDrive/Desktop/Utility/swastik-gold-silver-lab/backend/db/lab.db  DRY_RUN: true
+[2026-04-19T16:10:24.570Z] === DRY RUN — no data will be written ===
+[2026-04-19T16:10:24.571Z] Migrating customers...
+[2026-04-19T16:10:24.598Z]   → 3420 customers
+[2026-04-19T16:10:24.598Z] Migrating users...
+[WARN] All 1 user(s) migrated with temp password: Swastik@Reset1 — CHANGE IMMEDIATELY
+[2026-04-19T16:10:24.698Z]   → 1 users
+[2026-04-19T16:10:24.698Z] Migrating gold tests...
+[2026-04-19T16:10:25.051Z]   → 31899 gold tests, 38559 items
+[2026-04-19T16:10:25.051Z] Migrating silver tests...
+[2026-04-19T16:10:25.051Z]   → No silver_test table in source — skipped
+[2026-04-19T16:10:25.051Z]   → 0 silver tests, 0 items
+[2026-04-19T16:10:25.051Z] Migrating gold certificates...
+[2026-04-19T16:10:25.123Z]   → 6439 gold certificates, 7781 items
+[2026-04-19T16:10:25.123Z] Migrating silver certificates...
+[2026-04-19T16:10:25.129Z]   → 448 silver certificates, 583 items
+[2026-04-19T16:10:25.129Z] Migrating photo certificates...
+[2026-04-19T16:10:25.139Z]   → 794 photo certificates, 794 items
+[2026-04-19T16:10:25.139Z] Migrating credit history...
+[2026-04-19T16:10:25.142Z]   → 678 credit history records
+[2026-04-19T16:10:25.142Z] Migrating weight loss history...
+[2026-04-19T16:10:25.145Z]   → 519 weight loss records
+[2026-04-19T16:10:25.145Z] Seeding sequences...
+[2026-04-19T16:10:25.145Z] 
+[2026-04-19T16:10:25.145Z] === SUMMARY ===
+[2026-04-19T16:10:25.145Z]   customers: 3420
+[2026-04-19T16:10:25.145Z]   users: 1
+[2026-04-19T16:10:25.145Z]   gold_tests: 31899
+[2026-04-19T16:10:25.145Z]   gold_test_items: 38559
+[2026-04-19T16:10:25.145Z]   silver_tests: 0
+[2026-04-19T16:10:25.145Z]   silver_test_items: 0
+[2026-04-19T16:10:25.145Z]   gold_certs: 6439
+[2026-04-19T16:10:25.145Z]   gold_cert_items: 7781
+[2026-04-19T16:10:25.145Z]   silver_certs: 448
+[2026-04-19T16:10:25.145Z]   silver_cert_items: 583
+[2026-04-19T16:10:25.145Z]   photo_certs: 794
+[2026-04-19T16:10:25.145Z]   photo_cert_items: 794
+[2026-04-19T16:10:25.145Z]   credit_history: 678
+[2026-04-19T16:10:25.145Z]   weight_loss: 519
+[2026-04-19T16:10:25.145Z]   skipped: 5
+[2026-04-19T16:10:25.145Z]   warnings: 0
+[2026-04-19T16:10:25.145Z]   log written to: c:\Users\pc\OneDrive\Desktop\Utility\swastik-gold-silver-lab\backend\db\migration.log

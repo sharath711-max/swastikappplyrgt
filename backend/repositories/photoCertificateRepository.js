@@ -2,6 +2,10 @@ const BaseRepository = require('./baseRepository');
 const { db, now, genId, getNextSequence, transaction } = require('../db/db');
 const SequenceService = require('../services/sequenceService');
 const CertificateCalculationService = require('../services/certificateCalculationService');
+const { writeAuditLog } = require('../services/auditLogService');
+const ledgerSvc = require('../services/v2/ledgerService');
+
+const PHOTO_CERT_FEE_RATE = 50;   // canonical fee: same as gold/silver cert
 
 class PhotoCertificateRepository {
     constructor() {
@@ -140,46 +144,106 @@ class PhotoCertificateRepository {
         return { ...cert, items };
     }
 
-    updateStatus(id, status) {
+    updateStatus(id, status, actor = {}, opts = {}) {
         return transaction(() => {
-            const current = this.db.prepare(`SELECT status FROM photo_certificate WHERE id = ? AND deletedon IS NULL`).get(id);
+            const current = this.db.prepare(
+                `SELECT id, status, customer_id, total, mode_of_payment, auto_number
+                 FROM photo_certificate WHERE id = ? AND deletedon IS NULL`
+            ).get(id);
+
             const statusHierarchy = { 'TODO': 1, 'IN_PROGRESS': 2, 'DONE': 3 };
 
-            if (current) {
-                if (statusHierarchy[current.status] > statusHierarchy[status]) {
-                    throw new Error(`Backward move NOT permitted: Cannot move from ${current.status} to ${status}`);
-                }
-                if (current.status === 'DONE') {
-                    throw new Error('409: Cannot update status of a DONE certificate');
-                }
+            if (!current) throw new Error(`Photo certificate not found: ${id}`);
+            if (statusHierarchy[current.status] > statusHierarchy[status]) {
+                throw new Error(`Backward move NOT permitted: Cannot move from ${current.status} to ${status}`);
+            }
+            if (current.status === 'DONE') {
+                throw new Error('409: Cannot update status of a DONE certificate');
             }
 
             const timestamp = now();
-            let query = "UPDATE photo_certificate SET status = ?, lastmodified = ?";
+            let query = 'UPDATE photo_certificate SET status = ?, lastmodified = ?';
             const params = [status, timestamp];
 
             if (status === 'IN_PROGRESS') {
-                query += ", in_progress_at = COALESCE(in_progress_at, ?)";
+                query += ', in_progress_at = COALESCE(in_progress_at, ?)';
                 params.push(timestamp);
             } else if (status === 'DONE') {
-                // Rule: Every item in a Photo Certificate must have an associated photo before it can be moved to the DONE state.
+                // Every item must have a photo before sealing
                 const itemsWithoutPhoto = this.db.prepare(`
-                    SELECT COUNT(*) as count FROM photo_certificate_item 
+                    SELECT COUNT(*) as count FROM photo_certificate_item
                     WHERE photo_certificate_id = ? AND (media_path IS NULL OR media_path = '') AND deletedon IS NULL
                 `).get(id).count;
-
                 if (itemsWithoutPhoto > 0) {
                     throw new Error(`Cannot finalize: ${itemsWithoutPhoto} items are missing photos.`);
                 }
 
-                query += ", done_at = COALESCE(done_at, ?)";
+                // ── Fee + ledger (canonical: PHOTO_CERT_FEE_RATE × item count) ──
+                const itemCount = this.db.prepare(
+                    `SELECT COUNT(*) AS cnt FROM photo_certificate_item WHERE photo_certificate_id = ? AND deletedon IS NULL`
+                ).get(id).cnt;
+
+                const feeTotal = PHOTO_CERT_FEE_RATE * itemCount;
+                if (feeTotal > 0) {
+                    const alreadyCharged = this.db.prepare(
+                        `SELECT COUNT(*) AS cnt FROM credit_history WHERE reference_type = 'photo_certificate' AND reference_id = ? AND type = 'DEBIT'`
+                    ).get(id).cnt > 0;
+
+                    if (!alreadyCharged) {
+                        ledgerSvc.recordRevenue('photo', {
+                            customer_id    : current.customer_id,
+                            amount         : feeTotal,
+                            entry_type     : 'DEBIT',
+                            description    : `Photo Certificate ${current.auto_number} — lab charges`,
+                            mode_of_payment: current.mode_of_payment || 'Cash',
+                            post_cash_register: false,
+                            reference_type : 'photo_certificate',
+                            reference_id   : id,
+                        });
+
+                        // Stamp canonical fee on the parent row
+                        this.db.prepare(
+                            `UPDATE photo_certificate SET total = ?, lastmodified = ? WHERE id = ?`
+                        ).run(feeTotal, timestamp, id);
+                    }
+                }
+
+                query += ', done_at = COALESCE(done_at, ?)';
                 params.push(timestamp);
             }
 
-            query += " WHERE id = ? AND deletedon IS NULL";
+            query += ' WHERE id = ? AND deletedon IS NULL';
             params.push(id);
+            const result = this.db.prepare(query).run(...params);
 
-            return this.db.prepare(query).run(...params);
+            // ── Snapshot + hash (atomic with status change) ───────────────────
+            if (status === 'DONE') {
+                const printSvc = require('../services/v2/printService');
+                const { getRequestId } = require('../utils/audit');
+                const snapshotResult = opts.precomputedSnapshot
+                    || printSvc.serializeSnapshot('certificate', 'photo', id, actor.userId || getRequestId() || null);
+                const { snapshotJson, snapshotHash, snapshotKeyVersion } = snapshotResult;
+                this.db.prepare(
+                    `UPDATE photo_certificate SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`
+                ).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
+            }
+
+            // ── Audit log — same transaction ──────────────────────────────────
+            writeAuditLog({
+                userId    : actor.userId   || 'system',
+                username  : actor.username || 'system',
+                action    : 'STATUS_CHANGE',
+                event     : 'COMMIT',
+                operation : 'photoCertificateRepository.updateStatus',
+                entityType: 'photo_cert',
+                entityId  : id,
+                field     : 'status',
+                oldValue  : current.status,
+                newValue  : status,
+                metadata  : { certId: id, auto_number: current.auto_number },
+            });
+
+            return result;
         })();
     }
 
@@ -199,8 +263,8 @@ class PhotoCertificateRepository {
         return transaction(() => {
             // Check Immutability
             const parent = this.db.prepare(`SELECT status FROM photo_certificate WHERE id = ?`).get(certId);
-            if (parent && parent.status === 'DONE') {
-                throw new Error('409: Cannot edit items of a DONE certificate');
+            if (parent && (parent.status === 'DONE' || parent.status === 'IN_PROGRESS')) {
+                throw new Error(`409: Cannot edit items of a ${parent.status} certificate`);
             }
 
             // Rule: Photo uploads are permitted only for Photo Certificates and are rejected for tests/others.
@@ -223,8 +287,8 @@ class PhotoCertificateRepository {
     updatePayment(certId, mode_of_payment, total, gst) {
         return transaction(() => {
             const parent = this.db.prepare(`SELECT status FROM photo_certificate WHERE id = ?`).get(certId);
-            if (parent && parent.status === 'DONE') {
-                throw new Error('409: Cannot update payment of a DONE certificate');
+            if (parent && (parent.status === 'DONE' || parent.status === 'IN_PROGRESS')) {
+                throw new Error(`409: Cannot update payment of a ${parent.status} certificate`);
             }
 
             const timestamp = now();

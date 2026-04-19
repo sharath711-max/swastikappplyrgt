@@ -84,6 +84,9 @@ function applyPostInitMigrations() {
     ensureColumn('silver_test',       'print_snapshot',         'TEXT');
     ensureColumn('gold_certificate',  'print_snapshot',         'TEXT');
     ensureColumn('silver_certificate','print_snapshot',         'TEXT');
+    ensureColumn('photo_certificate', 'print_snapshot',         'TEXT');
+    ensureColumn('photo_certificate', 'snapshot_hash',          'TEXT');
+    ensureColumn('photo_certificate', 'snapshot_key_version',   'TEXT');
     ensureColumn('gold_test',         'snapshot_hash',          'TEXT');
     ensureColumn('gold_test',         'snapshot_key_version',   'TEXT');
     ensureColumn('silver_test',       'snapshot_hash',          'TEXT');
@@ -149,11 +152,15 @@ function applyPostInitMigrations() {
 
 function initDb() {
     try {
-        // Fail fast on missing / weak SNAPSHOT_SECRET before serving any request.
-        // Lazy validation inside printService.serializeSnapshot is too late —
-        // the server would accept requests and die on the first finalization.
-        const { validateSnapshotSecret } = require('../config/env');
-        validateSnapshotSecret();
+        const { getJwtSecret, validateSnapshotSecret, validateDbPath } = require('../config/env');
+
+        // ── Fail-fast secret + path checks ───────────────────────────────────
+        // All three throw with a descriptive message if the value is absent,
+        // too weak, or points to an unwritable location.  Doing this here means
+        // the server refuses to start rather than crashing mid-request.
+        validateDbPath(DB_PATH);        // parent dir exists + writable
+        getJwtSecret();                 // present, not placeholder, ≥ 32 chars
+        validateSnapshotSecret();       // present, not placeholder, ≥ 32 chars
 
         const sql = fs.readFileSync(INIT_SQL_PATH, 'utf8');
         db.exec(sql);
@@ -419,12 +426,24 @@ function runWithRetry(fn, opts = {}) {
         } catch (err) {
             const isBusy = err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_LOCKED';
             if (!isBusy || attempt >= maxRetries) throw err;
-            // Synchronous sleep — safe because better-sqlite3 already blocks the event loop.
-            // Truncated exponential backoff with uniform jitter, capped at maxDelayMs.
+
             const delayMs = Math.min(
                 baseDelayMs * (2 ** attempt) + Math.floor(Math.random() * baseDelayMs),
                 maxDelayMs,
             );
+
+            // Emit a structured warning so ops can detect lock-contention patterns.
+            // Import lazily to avoid a circular dep at module load time.
+            try {
+                require('../utils/logger').warn('SQLITE_BUSY retry', {
+                    attempt,
+                    maxRetries,
+                    delayMs,
+                    errorCode: err.code,
+                });
+            } catch (_) { /* logger unavailable — swallow silently */ }
+
+            // Synchronous sleep — safe because better-sqlite3 already blocks the event loop.
             Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
         }
     }

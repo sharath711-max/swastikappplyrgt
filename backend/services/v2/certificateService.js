@@ -80,8 +80,11 @@ function _assertMutable(type, id) {
          FROM ${c.parentTable} WHERE id = ? AND deletedon IS NULL`
     ).get(id);
     if (!row) throw new BusinessError(`${type} certificate not found: ${id}`, ERR.CERT_NOT_FOUND, 404);
-    if (row.status === 'DONE') {
-        throw new BusinessError(`Certificate ${id} is DONE and immutable`, ERR.IMMUTABLE, 409);
+    if (row.status === 'DONE' || row.status === 'IN_PROGRESS') {
+        throw new BusinessError(
+            `Certificate ${id} is ${row.status} and immutable — items freeze when work begins`,
+            ERR.IMMUTABLE, 409
+        );
     }
     return row;
 }
@@ -304,7 +307,6 @@ function _createCertificateWork(type, data, ts, tx = db) {
  * @param {boolean}   [data.gst=false]
  * @param {string}    [data.gst_bill_number='']
  * @param {number}    [data.total_tax=0]
- * @param {boolean}   [data.post_ledger=true]
  * @returns {{ id, auto_number, items, totals, created, ledger }}
  */
 function createCertificate(type, data) {
@@ -317,7 +319,9 @@ function createCertificate(type, data) {
         gst        : data.gst ?? false,
     });
 
-    const post_ledger = data.post_ledger !== false;
+    // Canonical rule: charge at DONE only (CERT_FEE_RATE × itemCount via updateStatus).
+    // Creation never posts a ledger entry regardless of what the caller passes.
+    const post_ledger = false;
 
     audit.start('certificateService.createCertificate', { type, customer_id: data.customer_id });
 
@@ -452,7 +456,7 @@ function listCertificates(type, filters = {}) {
  * @param {string}    newStatus
  * @returns {{ changes: number, ledger: Object|null }}
  */
-function updateStatus(type, id, newStatus) {
+function updateStatus(type, id, newStatus, opts = {}) {
     const c       = _cfg(type);
     // Read BEFORE transaction — validate status move
     const current = db.prepare(
@@ -527,9 +531,15 @@ function updateStatus(type, id, newStatus) {
                 }, tx);
             }
             
+            // Use the pre-computed snapshot when the caller resolved it before
+            // acquiring the write lock (workflowService._finalizeCert does this
+            // to move CPU work outside the BEGIN IMMEDIATE window).
+            // Fall back to computing it here when called directly (e.g. CLI, tests).
             const printSvc = require('./printService');
             const { getRequestId } = require('../../utils/audit');
-            const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, id, getRequestId() || null);
+            const snapshotResult = opts.precomputedSnapshot
+                || printSvc.serializeSnapshot('certificate', type, id, getRequestId() || null);
+            const { snapshotJson, snapshotHash, snapshotKeyVersion } = snapshotResult;
             tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
         }
 

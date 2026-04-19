@@ -171,6 +171,20 @@ function migrateIndexes() {
         `CREATE INDEX IF NOT EXISTS idx_gc_hash ON gold_certificate(snapshot_hash) WHERE snapshot_hash IS NOT NULL`);
     ensureIndex('idx_sc_hash',
         `CREATE INDEX IF NOT EXISTS idx_sc_hash ON silver_certificate(snapshot_hash) WHERE snapshot_hash IS NOT NULL`);
+    ensureIndex('idx_pc_hash',
+        `CREATE INDEX IF NOT EXISTS idx_pc_hash ON photo_certificate(snapshot_hash) WHERE snapshot_hash IS NOT NULL`);
+
+    // Unique partial indexes: one DEBIT per cert, enforced at storage level.
+    // Three separate indexes because SQLite partial-index WHERE does not support IN().
+    ensureIndex('ux_gc_debit',
+        `CREATE UNIQUE INDEX IF NOT EXISTS ux_gc_debit ON credit_history(reference_id)
+         WHERE reference_type = 'gold_certificate' AND type = 'DEBIT'`);
+    ensureIndex('ux_sc_debit',
+        `CREATE UNIQUE INDEX IF NOT EXISTS ux_sc_debit ON credit_history(reference_id)
+         WHERE reference_type = 'silver_certificate' AND type = 'DEBIT'`);
+    ensureIndex('ux_pc_debit',
+        `CREATE UNIQUE INDEX IF NOT EXISTS ux_pc_debit ON credit_history(reference_id)
+         WHERE reference_type = 'photo_certificate' AND type = 'DEBIT'`);
 
     // ── Test items: parent FK (cascading reads, item list) ────────────────────
     ensureIndex('idx_gti_test',
@@ -230,13 +244,51 @@ function migrateIndexes() {
     // (index created in migrateIdempotencyKeys — this is a reminder, not duplicate)
 }
 
+// ─── 5. reference_type integrity (belt-and-suspenders over ledgerService enum) ─
+//
+// SQLite does not support ALTER TABLE ADD CONSTRAINT.
+// A BEFORE INSERT / BEFORE UPDATE trigger is the equivalent hard check.
+// NULL is permitted — some ledger entries (e.g. cash adjustments) have no source entity.
+// Actual values in production (confirmed): gold_test, silver_test,
+//   gold_certificate, silver_certificate, photo_certificate.
+
+const VALID_REFERENCE_TYPES = [
+    'gold_test', 'silver_test',
+    'gold_certificate', 'silver_certificate', 'photo_certificate',
+];
+
+function migrateReferenceTypeGuard() {
+    const inLiteral = VALID_REFERENCE_TYPES.map(t => `'${t}'`).join(', ');
+
+    ensureTrigger('chk_credit_history_ref_type_insert', `
+        CREATE TRIGGER IF NOT EXISTS chk_credit_history_ref_type_insert
+        BEFORE INSERT ON credit_history
+        WHEN NEW.reference_type IS NOT NULL
+         AND NEW.reference_type NOT IN (${inLiteral})
+        BEGIN
+            SELECT RAISE(ABORT, 'INVALID_REFERENCE_TYPE');
+        END
+    `);
+
+    ensureTrigger('chk_credit_history_ref_type_update', `
+        CREATE TRIGGER IF NOT EXISTS chk_credit_history_ref_type_update
+        BEFORE UPDATE OF reference_type ON credit_history
+        WHEN NEW.reference_type IS NOT NULL
+         AND NEW.reference_type NOT IN (${inLiteral})
+        BEGIN
+            SELECT RAISE(ABORT, 'INVALID_REFERENCE_TYPE');
+        END
+    `);
+}
+
 // ─── Public entry point ───────────────────────────────────────────────────────
 
 function applyMigrations() {
-    migrateIdempotencyKeys();   // priority 1
-    migrateVersionColumns();    // priority 2
-    migrateForeignKeys();       // priority 3
-    migrateIndexes();           // priority 4
+    migrateIdempotencyKeys();       // priority 1
+    migrateVersionColumns();        // priority 2
+    migrateForeignKeys();           // priority 3
+    migrateIndexes();               // priority 4
+    migrateReferenceTypeGuard();    // priority 5
 }
 
 module.exports = { applyMigrations };

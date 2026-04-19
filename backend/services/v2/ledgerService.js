@@ -180,7 +180,7 @@ function _recordTransaction(source_type, opts, tx = db) {
  * Ensures the DEBIT liability is tracked, and immediately offsets it with a CREDIT if payment is instantaneous.
  */
 function recordRevenue(source_type, opts, tx = db) {
-    if (!opts.reference_type || !['gold_test', 'silver_test', 'gold_certificate', 'silver_certificate'].includes(opts.reference_type)) {
+    if (!opts.reference_type || !['gold_test', 'silver_test', 'gold_certificate', 'silver_certificate', 'photo_certificate'].includes(opts.reference_type)) {
         throw new BusinessError('Invalid or missing reference_type. Must be a TEST or CERT.', ERR.VALIDATION, 400);
     }
 

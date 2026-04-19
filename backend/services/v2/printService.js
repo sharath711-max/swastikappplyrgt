@@ -8,7 +8,24 @@ const customerRepo = require('../../repositories/customerRepository');
 const { db } = require('../../db/db');
 const { getRequiredEnv } = require('../../config/env');
 
-const SNAPSHOT_VERSION = 1;
+// ── Snapshot versioning ───────────────────────────────────────────────────────
+//
+// SNAPSHOT_VERSION      — bump when the envelope structure gains/loses top-level keys.
+// SCHEMA_VERSION        — bump when the data payload shape changes (field renames,
+//                         new required fields in layout).
+// SERIALIZATION_VERSION — bump if _stableSerialize's algorithm changes; the same
+//                         object would produce a different byte string and invalidate
+//                         existing hashes, so old snapshots must be re-sealed.
+// HASH_ALGORITHM        — informational label stored in the envelope; actual key
+//                         selection is controlled by CURRENT_SNAPSHOT_KEY_VERSION.
+//
+// Backward compat: snapshots written before these fields were added are treated
+// as version 1 / hmac-sha256 everywhere they are read.
+
+const SNAPSHOT_VERSION        = 1;
+const SCHEMA_VERSION          = 1;
+const SERIALIZATION_VERSION   = 1;
+const HASH_ALGORITHM          = 'hmac-sha256';
 const CURRENT_SNAPSHOT_KEY_VERSION = 'v1';
 
 /**
@@ -102,6 +119,7 @@ function _snapshotTable(resourceType, metalType) {
     if (resourceType === 'test' && metalType === 'silver') return 'silver_test';
     if (resourceType === 'certificate' && metalType === 'gold') return 'gold_certificate';
     if (resourceType === 'certificate' && metalType === 'silver') return 'silver_certificate';
+    if (resourceType === 'certificate' && metalType === 'photo') return 'photo_certificate';
 
     throw new BusinessError(
         `Unsupported print resource: ${resourceType}/${metalType}`,
@@ -154,6 +172,7 @@ function inferMetalType(resourceType, id) {
     if (resourceType === 'certificate') {
         if (id.startsWith('GCR')) return 'gold';
         if (id.startsWith('SCR')) return 'silver';
+        if (id.startsWith('PCR')) return 'photo';
 
         const goldRow = db.prepare(
             'SELECT id FROM gold_certificate WHERE (id = ? OR auto_number = ? OR gst_bill_number = ?) AND deletedon IS NULL'
@@ -182,6 +201,13 @@ function resolveCanonicalId(resourceType, metalType, id) {
         return row?.id || id;
     }
 
+    if (resourceType === 'certificate' && metalType === 'photo') {
+        const row = db.prepare(
+            `SELECT id FROM photo_certificate WHERE (id = ? OR auto_number = ?) AND deletedon IS NULL`
+        ).get(id, id);
+        return row?.id || id;
+    }
+
     if (resourceType === 'certificate') {
         const table = metalType === 'gold' ? 'gold_certificate' : 'silver_certificate';
         const row = db.prepare(
@@ -200,6 +226,20 @@ function getPrintLayout(resourceType, metalType, id) {
 
     if (resourceType === 'test') {
         data = testService.getTest(resolvedMetalType, resolvedId);
+    } else if (resourceType === 'certificate' && resolvedMetalType === 'photo') {
+        // Direct query — avoids circular dep with photoCertificateRepository
+        const cert = db.prepare(`
+            SELECT pc.*, c.name AS customer_name, c.phone AS customer_phone
+            FROM photo_certificate pc
+            JOIN customer c ON pc.customer_id = c.id
+            WHERE pc.id = ? AND pc.deletedon IS NULL
+        `).get(resolvedId);
+        if (!cert) throw new BusinessError(`photo certificate not found: ${resolvedId}`, ERR.NOT_FOUND, 404);
+        const items = db.prepare(`
+            SELECT * FROM photo_certificate_item
+            WHERE photo_certificate_id = ? AND deletedon IS NULL ORDER BY item_number ASC
+        `).all(resolvedId);
+        data = { ...cert, items };
     } else if (resourceType === 'certificate') {
         data = certificateService.getCertificate(resolvedMetalType, resolvedId);
     } else {
@@ -262,6 +302,7 @@ function getPrintLayout(resourceType, metalType, id) {
             fine_weight: _formatAmount(item.fine_weight),
             item_total: _formatAmount(item.item_total),
             returned: item.returned == 1 || item.returned === true,
+            ...(resolvedMetalType === 'photo' ? { media_path: item.media_path || null } : {}),
         })),
         totals: {
             base: _formatAmount(base),
@@ -276,22 +317,30 @@ function createSnapshotEnvelope(resourceType, metalType, id, actorId = null) {
     validateSnapshotSchema(layout);
 
     return {
-        version: SNAPSHOT_VERSION,
-        generated_at: new Date().toISOString(),
-        actor_id: actorId,
-        data: layout,
+        // Envelope versioning — all three fields are included in the HMAC input
+        // so any version bump also changes the hash, making downgrades detectable.
+        version             : SNAPSHOT_VERSION,
+        schema_version      : SCHEMA_VERSION,
+        serialization_version: SERIALIZATION_VERSION,
+        hash_algorithm      : HASH_ALGORITHM,
+        generated_at        : new Date().toISOString(),
+        actor_id            : actorId,
+        data                : layout,
     };
 }
 
 function serializeSnapshot(resourceType, metalType, id, actorId = null) {
-    const snapshot = createSnapshotEnvelope(resourceType, metalType, id, actorId);
-    const snapshotJson = _stableSerialize(snapshot);
+    const snapshot     = createSnapshotEnvelope(resourceType, metalType, id, actorId);
+    const snapshotJson = _stableSerialize(snapshot);  // sorted keys, deterministic
 
     return {
         snapshot,
         snapshotJson,
-        snapshotHash: hashSnapshot(snapshotJson, CURRENT_SNAPSHOT_KEY_VERSION),
-        snapshotKeyVersion: CURRENT_SNAPSHOT_KEY_VERSION,
+        snapshotHash          : hashSnapshot(snapshotJson, CURRENT_SNAPSHOT_KEY_VERSION),
+        snapshotKeyVersion    : CURRENT_SNAPSHOT_KEY_VERSION,
+        schemaVersion         : SCHEMA_VERSION,
+        serializationVersion  : SERIALIZATION_VERSION,
+        hashAlgorithm         : HASH_ALGORITHM,
     };
 }
 
@@ -306,9 +355,16 @@ function validateAndExtract(snapshotRow, itemIndex = null) {
         throw new BusinessError('SNAPSHOT_NOT_FOUND', ERR.NOT_FOUND, 404);
     }
 
-    const keyVersion = snapshotKeyVersion || CURRENT_SNAPSHOT_KEY_VERSION;
+    const keyVersion     = snapshotKeyVersion || CURRENT_SNAPSHOT_KEY_VERSION;
     const calculatedHash = hashSnapshot(printSnapshot, keyVersion);
-    if (!snapshotHash || calculatedHash !== snapshotHash) {
+    if (!snapshotHash) {
+        throw new BusinessError('SNAPSHOT_INTEGRITY_FAILURE', ERR.DB_CORRUPTION, 500);
+    }
+    // timingSafeEqual prevents timing-oracle attacks on the MAC comparison.
+    // Both buffers must be the same length; length mismatch is also a failure.
+    const aBuffer = Buffer.from(calculatedHash, 'hex');
+    const bBuffer = Buffer.from(snapshotHash,   'hex');
+    if (aBuffer.length !== bBuffer.length || !crypto.timingSafeEqual(aBuffer, bBuffer)) {
         throw new BusinessError('SNAPSHOT_INTEGRITY_FAILURE', ERR.DB_CORRUPTION, 500);
     }
 
@@ -320,14 +376,39 @@ function validateAndExtract(snapshotRow, itemIndex = null) {
     }
 
     const snapshot = parsedSnapshot?.data ? parsedSnapshot : {
-        version: SNAPSHOT_VERSION,
-        generated_at: null,
-        actor_id: null,
-        data: parsedSnapshot,
+        // Legacy snapshot written before envelope versioning — treat as v1
+        version              : SNAPSHOT_VERSION,
+        schema_version       : 1,
+        serialization_version: 1,
+        hash_algorithm       : 'hmac-sha256',
+        generated_at         : null,
+        actor_id             : null,
+        data                 : parsedSnapshot,
     };
 
-    if (snapshot.version !== SNAPSHOT_VERSION) {
-        throw new BusinessError('UNSUPPORTED_SNAPSHOT_VERSION', ERR.DB_CORRUPTION, 500);
+    // Envelope version: reject envelopes from a future server that we can't parse.
+    if ((snapshot.version ?? 1) > SNAPSHOT_VERSION) {
+        throw new BusinessError(
+            `Unsupported snapshot envelope version: ${snapshot.version} (max ${SNAPSHOT_VERSION})`,
+            ERR.DB_CORRUPTION, 500
+        );
+    }
+
+    // Schema version: reject data payloads whose field shape we don't understand.
+    if ((snapshot.schema_version ?? 1) > SCHEMA_VERSION) {
+        throw new BusinessError(
+            `Unsupported snapshot schema version: ${snapshot.schema_version} (max ${SCHEMA_VERSION})`,
+            ERR.DB_CORRUPTION, 500
+        );
+    }
+
+    // Serialization version: a different algorithm means the stored bytes can't
+    // be re-hashed with the current code — treat as integrity failure.
+    if ((snapshot.serialization_version ?? 1) > SERIALIZATION_VERSION) {
+        throw new BusinessError(
+            `Unsupported snapshot serialization version: ${snapshot.serialization_version} (max ${SERIALIZATION_VERSION})`,
+            ERR.DB_CORRUPTION, 500
+        );
     }
 
     const data = snapshot.data;
@@ -360,4 +441,8 @@ module.exports = {
     validateSnapshotSchema,
     hashSnapshot,
     CURRENT_SNAPSHOT_KEY_VERSION,
+    SNAPSHOT_VERSION,
+    SCHEMA_VERSION,
+    SERIALIZATION_VERSION,
+    HASH_ALGORITHM,
 };

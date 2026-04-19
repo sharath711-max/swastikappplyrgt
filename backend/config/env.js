@@ -90,9 +90,42 @@ function getAllowedCorsOrigins() {
     return ['http://localhost:3000'];
 }
 
+/**
+ * validateDbPath(dbPath)
+ * ───────────────────────
+ * Called once at server startup to catch misconfigurations before any query runs.
+ *
+ * Rules:
+ *   • Must be a non-empty string
+ *   • ':memory:' is always valid (used in tests and CI)
+ *   • For file paths: the parent directory must exist and be writable
+ */
+function validateDbPath(dbPath) {
+    if (typeof dbPath !== 'string' || dbPath.trim() === '') {
+        throw new Error('DB_PATH resolved to an empty value — check your environment configuration.');
+    }
+
+    if (dbPath === ':memory:') return;  // in-memory DB is always valid
+
+    const fs   = require('fs');
+    const path = require('path');
+    const dir  = path.dirname(dbPath);
+
+    if (!fs.existsSync(dir)) {
+        throw new Error(`DB directory does not exist: ${dir}`);
+    }
+
+    try {
+        fs.accessSync(dir, fs.constants.W_OK);
+    } catch (_) {
+        throw new Error(`DB directory is not writable: ${dir}`);
+    }
+}
+
 module.exports = {
     getAllowedCorsOrigins,
     getJwtSecret,
     getRequiredEnv,
     validateSnapshotSecret,
+    validateDbPath,
 };

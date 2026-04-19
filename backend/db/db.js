@@ -452,13 +452,27 @@ function runWithRetry(fn, opts = {}) {
 // ─── Misc utilities ───────────────────────────────────────────────────────────
 
 const genId = (prefix) => generateId(prefix);
-const now   = () => new Date().toISOString();
+
+// IST offset is +05:30 (fixed — India does not observe DST).
+const _IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+// Returns current time as an ISO 8601 string with +05:30 offset.
+// Use this for all DB timestamp inserts — never new Date().toISOString() which is always UTC.
+const now = () => {
+    const d = new Date(Date.now() + _IST_OFFSET_MS);
+    return d.toISOString().replace('Z', '+05:30');
+};
+
+// Returns a Date whose UTC accessors (.getUTCFullYear, .getUTCMonth, .getUTCDate, etc.)
+// give the correct IST values regardless of what TZ the process runs under.
+// Always use getUTC* methods on the result — never getFullYear/getMonth/getDate.
+const nowIST = () => new Date(Date.now() + _IST_OFFSET_MS);
 
 function getNextSequence(name) {
     db.prepare('INSERT OR IGNORE INTO sequences (name, value) VALUES (?, 0)').run(name);
     db.prepare('UPDATE sequences SET value = value + 1 WHERE name = ?').run(name);
-    const row = db.prepare('SELECT value FROM sequences WHERE name = ?').get(name);
-    const year = new Date().getFullYear();
+    const row  = db.prepare('SELECT value FROM sequences WHERE name = ?').get(name);
+    const year = nowIST().getUTCFullYear();
     return `${name.split('_')[0].toUpperCase()}-${year}-${String(row.value).padStart(5, '0')}`;
 }
 
@@ -476,6 +490,7 @@ module.exports = {
     runWithRetry,
     genId,
     now,
+    nowIST,
     getNextSequence,
     ensureColumn,
 };

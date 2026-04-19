@@ -80,6 +80,7 @@ if not exist "backend\.env" (
         echo JWT_SECRET=!GENERATED_JWT_SECRET!
         echo CORS_ALLOWED_ORIGINS=http://localhost:3000
         echo NODE_ENV=development
+        echo TZ=Asia/Kolkata
     ) > "backend\.env"
     echo  [OK] backend\.env created
 )

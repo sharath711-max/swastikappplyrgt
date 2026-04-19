@@ -1,5 +1,8 @@
 'use strict';
 
+// Must be set before any Date usage so getFullYear/Month/Date return IST values.
+process.env.TZ = 'Asia/Kolkata';
+
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');

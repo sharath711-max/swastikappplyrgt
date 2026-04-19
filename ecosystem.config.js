@@ -9,11 +9,13 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         PORT: 5000,
-        DB_PATH: './backend/db/lab.db'
+        DB_PATH: './backend/db/lab.db',
+        TZ: 'Asia/Kolkata'
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 5000
+        PORT: 5000,
+        TZ: 'Asia/Kolkata'
       },
       watch: ['backend/app.js', 'backend/routes/', 'backend/services/', 'backend/repositories/', 'backend/middleware/'],
       ignore_watch: ['backend/uploads/', 'backend/logs/', 'backend/db/', 'backend/tests/', 'node_modules/', '.git/', 'logs/'],

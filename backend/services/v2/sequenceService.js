@@ -18,7 +18,7 @@
  * SQLite version requirement: 3.35.0+ for RETURNING (bundled in better-sqlite3 ≥ 7.5).
  */
 
-const { db, transaction } = require('../../db/db');
+const { db, transaction, nowIST } = require('../../db/db');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit = require('./auditLogger');
 
@@ -29,10 +29,10 @@ const ALPHA     = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function _todayStr() {
-    const d  = new Date();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${d.getFullYear()}${mm}${dd}`;
+    const d  = nowIST();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    return `${d.getUTCFullYear()}${mm}${dd}`;
 }
 
 /**
@@ -109,7 +109,7 @@ function _generateGlobalSequenceWork(_type, opts = {}) {
         );
     }
 
-    const yy = String(new Date().getFullYear()).slice(-2);
+    const yy = String(nowIST().getUTCFullYear()).slice(-2);
     let typePrefix;
 
     if (isCert) {
@@ -208,7 +208,7 @@ function peekGlobalSequence() {
 function getNextBillNumber(isGst) {
     const seqKey = isGst ? 'GST_CERT_SEQ' : 'NON_GST_CERT_SEQ';
     const prefix = isGst ? 'G' : 'N';
-    const yy     = String(new Date().getFullYear()).slice(-2);
+    const yy     = String(nowIST().getUTCFullYear()).slice(-2);
 
     // Ensure row exists (idempotent on first call after migration)
     db.prepare(

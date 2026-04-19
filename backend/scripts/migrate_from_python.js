@@ -75,7 +75,10 @@ log(`Target: ${TARGET}  DRY_RUN: ${DRY_RUN}`);
 function genId(prefix) {
     return `${prefix}-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 }
-function now() { return new Date().toISOString(); }
+function now() {
+    const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    return d.toISOString().replace('Z', '+05:30');
+}
 
 // Map: Python integer id → new SERN text id
 const customerIdMap = new Map(); // py_int → sern_text

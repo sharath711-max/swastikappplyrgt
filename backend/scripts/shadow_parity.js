@@ -28,6 +28,13 @@
  *   - HMAC hash values (different secrets, different algo) — not compared
  *   - gst_bill_number sequence style — different by design (Gap #7)
  *   - password hashes — different by design
+ *
+ * Timezone guarantee (verified):
+ *   Python stores IST naive datetimes (no TZ suffix): "2022-07-05 13:49:54.834257"
+ *   SERN stores IST with offset suffix: "2026-04-19T22:31:27.620+05:30"
+ *   migrate_from_python.js copies Python `created` verbatim → both sides have the
+ *   same raw string for migrated records → JULIANDAY comparison gives difference of 0.
+ *   No timezone normalization is needed in this script.
  */
 
 const Database = require('better-sqlite3');

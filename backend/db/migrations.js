@@ -14,6 +14,7 @@
  */
 
 const { db } = require('./db');
+const { ALL_LEDGER_REF_TYPES } = require('../constants/entityTypes');
 
 // ─── Helpers (local, not exported) ───────────────────────────────────────────
 
@@ -252,13 +253,8 @@ function migrateIndexes() {
 // Actual values in production (confirmed): gold_test, silver_test,
 //   gold_certificate, silver_certificate, photo_certificate.
 
-const VALID_REFERENCE_TYPES = [
-    'gold_test', 'silver_test',
-    'gold_certificate', 'silver_certificate', 'photo_certificate',
-];
-
 function migrateReferenceTypeGuard() {
-    const inLiteral = VALID_REFERENCE_TYPES.map(t => `'${t}'`).join(', ');
+    const inLiteral = ALL_LEDGER_REF_TYPES.map(t => `'${t}'`).join(', ');
 
     ensureTrigger('chk_credit_history_ref_type_insert', `
         CREATE TRIGGER IF NOT EXISTS chk_credit_history_ref_type_insert

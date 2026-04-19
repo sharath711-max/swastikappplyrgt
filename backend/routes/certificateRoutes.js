@@ -187,12 +187,17 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     try {
         const id = req.params.id;
         const { status } = req.body;
-        let type;
-        if (id.startsWith('PCR')) type = 'photo';
-        else if (id.startsWith('GCR')) type = 'gold';
-        else if (id.startsWith('SCR')) type = 'silver';
 
-        await certificateService.updateStatus(type, id, status);
+        // Map cert ID prefix to workflow type (workflowService rejects DONE —
+        // use POST /api/workflow/finalize for that transition).
+        let workflowType;
+        if (id.startsWith('PCR'))      workflowType = 'photo_cert';
+        else if (id.startsWith('GCR')) workflowType = 'gold_cert';
+        else if (id.startsWith('SCR')) workflowType = 'silver_cert';
+        else return res.status(400).json({ success: false, error: 'Cannot infer certificate type from ID' });
+
+        const workflowService = require('../services/workflowService');
+        await workflowService.updateStatus(workflowType, id, status);
         res.json({ success: true, message: 'Status updated' });
     } catch (error) {
         handleError(res, error);

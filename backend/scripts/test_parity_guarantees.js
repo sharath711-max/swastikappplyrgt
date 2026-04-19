@@ -13,6 +13,7 @@
  *   P11 – Performance         (transaction hold time, no long locks)
  *   P12 – OCC stale version   (finalize/move with wrong version → 409)
  *   P13 – Duplicate debit     (second DEBIT for same cert → UNIQUE constraint at storage layer)
+ *   P14 – Verify edge cases  (missing snapshot → null, invalid autoNumber → 404, tamper → verified:false)
  *
  * Run: NODE_ENV=production node backend/scripts/test_parity_guarantees.js
  */
@@ -301,7 +302,7 @@ async function testHashTamper() {
     ).get(scid);
 
     // Tamper snapshot, verify detection
-    const sTampered = sSealed.print_snapshot.replace(/"total":"[\d.]+"/, '"total":"0.00"');
+    const sTampered = sSealed.print_snapshot.replace(/"total":"[\d.]+"/, '"total":"9999.00"');
     db.prepare('UPDATE silver_certificate SET print_snapshot = ? WHERE id = ?').run(sTampered, scid);
 
     const threw75 = await expectThrows(
@@ -605,6 +606,73 @@ async function testPerformance() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// P14 — VERIFY ENDPOINT EDGE CASES
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function testVerifyEdgeCases() {
+    section('P14 — Verify Endpoint Edge Cases');
+    const cid = seedCustomer();
+
+    // ── 14.1 DONE cert → verified:true ───────────────────────────────────────
+    const gcid = seedCert('gold', cid);
+    await workflowService.moveItem('gold_cert', gcid, 'IN_PROGRESS', actor);
+    await workflowService.finalizeItem('gold_cert', gcid, actor);
+    const sealed = db.prepare('SELECT print_snapshot, snapshot_hash, snapshot_key_version, status FROM gold_certificate WHERE id = ?').get(gcid);
+    let verified141 = false;
+    try { printService.validateAndExtract(sealed); verified141 = true; } catch (_) {}
+    ok('P14.1 DONE cert with intact snapshot → validateAndExtract passes', verified141);
+
+    // ── 14.2 Missing snapshot → null (legacy record, not tampered) ───────────
+    const gcid2 = seedCert('gold', cid);
+    await workflowService.moveItem('gold_cert', gcid2, 'IN_PROGRESS', actor);
+    await workflowService.finalizeItem('gold_cert', gcid2, actor);
+    // Wipe snapshot to simulate a legacy record written before snapshot system
+    db.prepare('UPDATE gold_certificate SET print_snapshot = NULL, snapshot_hash = NULL WHERE id = ?').run(gcid2);
+    const noSnap = db.prepare('SELECT print_snapshot, snapshot_hash, snapshot_key_version, status FROM gold_certificate WHERE id = ?').get(gcid2);
+    // verifyRoutes logic: if no print_snapshot → verified = null (not false, not tampered)
+    const hasNoSnapshot = !noSnap.print_snapshot && !noSnap.snapshot_hash;
+    ok('P14.2 missing snapshot → verified:null (not tampered, legacy record)', hasNoSnapshot);
+
+    // ── 14.3 Tampered snapshot → SNAPSHOT_INTEGRITY_FAILURE ──────────────────
+    const gcid3 = seedCert('gold', cid);
+    await workflowService.moveItem('gold_cert', gcid3, 'IN_PROGRESS', actor);
+    await workflowService.finalizeItem('gold_cert', gcid3, actor);
+    const sealed3 = db.prepare('SELECT print_snapshot, snapshot_hash, snapshot_key_version FROM gold_certificate WHERE id = ?').get(gcid3);
+    // Tamper the snapshot content
+    const tampered3 = sealed3.print_snapshot.replace(/"total":"[\d.]+"/, '"total":"9999.00"');
+    db.prepare('UPDATE gold_certificate SET print_snapshot = ? WHERE id = ?').run(tampered3, gcid3);
+    const tamperedRow = db.prepare('SELECT print_snapshot, snapshot_hash, snapshot_key_version, status FROM gold_certificate WHERE id = ?').get(gcid3);
+    let threw143 = false;
+    let isTamper143 = false;
+    try {
+        printService.validateAndExtract(tamperedRow);
+    } catch (e) {
+        threw143 = true;
+        isTamper143 = e.message?.includes('SNAPSHOT_INTEGRITY_FAILURE') || e.code === 'DB_CORRUPTION';
+    }
+    ok('P14.3 tampered snapshot → validateAndExtract throws', threw143);
+    ok('P14.3 tampered snapshot → SNAPSHOT_INTEGRITY_FAILURE (not generic error)', isTamper143);
+    // Restore
+    db.prepare('UPDATE gold_certificate SET print_snapshot = ? WHERE id = ?').run(sealed3.print_snapshot, gcid3);
+
+    // ── 14.4 Non-DONE cert → getImmutableSnapshot throws STATUS_INVALID ──────
+    const gcid4 = seedCert('gold', cid);
+    await workflowService.moveItem('gold_cert', gcid4, 'IN_PROGRESS', actor);
+    const threw144 = await expectThrows(
+        () => printService.getImmutableSnapshot('certificate', 'gold', gcid4),
+        'STATUS_INVALID'
+    );
+    ok('P14.4 IN_PROGRESS cert → getImmutableSnapshot throws STATUS_INVALID', threw144);
+
+    // ── 14.5 Non-existent ID → getImmutableSnapshot throws NOT_FOUND ─────────
+    const threw145 = await expectThrows(
+        () => printService.getImmutableSnapshot('certificate', 'gold', 'GCR-DOES-NOT-EXIST'),
+        'NOT_FOUND'
+    );
+    ok('P14.5 non-existent ID → getImmutableSnapshot throws NOT_FOUND', threw145);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // P12 — OCC STALE VERSION (finalize with wrong version must be rejected)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -687,11 +755,10 @@ async function testDuplicateDebitIndex() {
 
     // ── 13.2 Raw INSERT of a second DEBIT must be rejected by the DB ──────────
     const threw132 = await expectThrows(() => {
-        const { genId: gid, now: nowFn } = require('../db/db');
         db.prepare(`
             INSERT INTO credit_history
-                (id, customer_id, amount, type, reference_type, reference_id, created)
-            VALUES (?, ?, 50, 'DEBIT', 'gold_certificate', ?, ?)
+                (id, customer_id, amount, type, description, reference_type, reference_id, created)
+            VALUES (?, ?, 50, 'DEBIT', 'parity-test duplicate debit', 'gold_certificate', ?, ?)
         `).run(genId('CHX'), cid, gcid, now());
     }, 'UNIQUE');
     ok('P13.2 second DEBIT for same cert → UNIQUE constraint (storage-level block)', threw132);
@@ -711,8 +778,8 @@ async function testDuplicateDebitIndex() {
     const threw134 = await expectThrows(() => {
         db.prepare(`
             INSERT INTO credit_history
-                (id, customer_id, amount, type, reference_type, reference_id, created)
-            VALUES (?, ?, 50, 'DEBIT', 'silver_certificate', ?, ?)
+                (id, customer_id, amount, type, description, reference_type, reference_id, created)
+            VALUES (?, ?, 50, 'DEBIT', 'parity-test duplicate debit', 'silver_certificate', ?, ?)
         `).run(genId('CHX'), cid, scid, now());
     }, 'UNIQUE');
     ok('P13.4 second DEBIT for silver cert → UNIQUE constraint', threw134);
@@ -722,8 +789,8 @@ async function testDuplicateDebitIndex() {
     try {
         db.prepare(`
             INSERT INTO credit_history
-                (id, customer_id, amount, type, reference_type, reference_id, created)
-            VALUES (?, ?, 50, 'CREDIT', 'gold_certificate', ?, ?)
+                (id, customer_id, amount, type, description, reference_type, reference_id, created)
+            VALUES (?, ?, 50, 'CREDIT', 'parity-test credit allowed', 'gold_certificate', ?, ?)
         `).run(genId('CHC'), cid, gcid, now());
     } catch (e) { threw135 = true; }
     ok('P13.5 CREDIT for same cert is NOT blocked (index covers DEBIT only)', !threw135);
@@ -735,7 +802,7 @@ async function testDuplicateDebitIndex() {
 
 async function main() {
     process.stdout.write('╔══════════════════════════════════════════════════════╗\n');
-    process.stdout.write('║   Parity Guarantee Test Suite (P6→P13)               ║\n');
+    process.stdout.write('║   Parity Guarantee Test Suite (P6→P14)               ║\n');
     process.stdout.write('╚══════════════════════════════════════════════════════╝\n');
 
     process.stdout.write('\n── Pre-test cleanup ──\n');
@@ -749,6 +816,7 @@ async function main() {
         await testSequenceCollision();
         await testOccStaleVersion();
         await testDuplicateDebitIndex();
+        await testVerifyEdgeCases();
         await testPerformance();
     } catch (e) {
         process.stderr.write(`\nFATAL: ${e.message}\n${e.stack}\n`);

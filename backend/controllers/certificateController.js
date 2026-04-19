@@ -67,14 +67,10 @@ async function updateStatus(req, res, next) {
         const current = await certificateServiceV2.getCertificate(type, id);
         assertTransitionAllowed(`${type}_cert`, current.status, status);
 
+        // v2 updateStatus writes print_snapshot + snapshot_hash inside its own transaction.
+        // Do NOT call stampHash here — it overwrites snapshot_hash with a legacy format
+        // that breaks validateAndExtract (SNAPSHOT_INTEGRITY_FAILURE on every verify).
         const result = await certificateServiceV2.updateStatus(type, id, status);
-
-        // Stamp hash when moving to DONE
-        if (status === 'DONE') {
-            try { stampHash(type, id); } catch (hashErr) {
-                logger.warn(`[certController] Hash stamp failed for ${id}: ${hashErr.message}`);
-            }
-        }
 
         writeAuditLog({
             ..._actor(req),

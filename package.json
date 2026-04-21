@@ -17,12 +17,6 @@
     "test:e2e": "npm --prefix frontend run test:e2e",
     "test:e2e-ui": "npm --prefix frontend run test:e2e-ui",
     "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e",
-    "logs:maintain": "npm --prefix backend run logs:maintain",
-    "pm2:start": "pm2 start ecosystem.config.js",
-    "pm2:start:prod": "pm2 start ecosystem.config.js --env production",
-    "pm2:stop": "pm2 stop all",
-    "pm2:restart": "pm2 restart all",
-    "pm2:logs": "pm2 logs",
-    "pm2:status": "pm2 status"
+    "logs:maintain": "npm --prefix backend run logs:maintain"
   }
 }

@@ -162,14 +162,9 @@ class PhotoCertificateRepository {
             }
 
             const timestamp = now();
-            let query = 'UPDATE photo_certificate SET status = ?, lastmodified = ?';
-            const params = [status, timestamp];
 
-            if (status === 'IN_PROGRESS') {
-                query += ', in_progress_at = COALESCE(in_progress_at, ?)';
-                params.push(timestamp);
-            } else if (status === 'DONE') {
-                // Every item must have a photo before sealing
+            if (status === 'DONE') {
+                // Step 1: Validate — every item must have a photo
                 const itemsWithoutPhoto = this.db.prepare(`
                     SELECT COUNT(*) as count FROM photo_certificate_item
                     WHERE photo_certificate_id = ? AND (media_path IS NULL OR media_path = '') AND deletedon IS NULL
@@ -178,7 +173,7 @@ class PhotoCertificateRepository {
                     throw new Error(`Cannot finalize: ${itemsWithoutPhoto} items are missing photos.`);
                 }
 
-                // ── Fee + ledger (canonical: PHOTO_CERT_FEE_RATE × item count) ──
+                // Step 2: Compute fee
                 const itemCount = this.db.prepare(
                     `SELECT COUNT(*) AS cnt FROM photo_certificate_item WHERE photo_certificate_id = ? AND deletedon IS NULL`
                 ).get(id).cnt;
@@ -190,6 +185,12 @@ class PhotoCertificateRepository {
                     ).get(id).cnt > 0;
 
                     if (!alreadyCharged) {
+                        // Step 3: Stamp canonical fee BEFORE DONE (cert still IN_PROGRESS — no trigger conflict)
+                        this.db.prepare(
+                            `UPDATE photo_certificate SET total = ?, lastmodified = ? WHERE id = ?`
+                        ).run(feeTotal, timestamp, id);
+
+                        // Step 4: Ledger (cert still IN_PROGRESS)
                         ledgerSvc.recordRevenue('photo', {
                             customer_id    : current.customer_id,
                             amount         : feeTotal,
@@ -200,15 +201,47 @@ class PhotoCertificateRepository {
                             reference_type : 'photo_certificate',
                             reference_id   : id,
                         });
-
-                        // Stamp canonical fee on the parent row
-                        this.db.prepare(
-                            `UPDATE photo_certificate SET total = ?, lastmodified = ? WHERE id = ?`
-                        ).run(feeTotal, timestamp, id);
                     }
                 }
 
-                query += ', done_at = COALESCE(done_at, ?)';
+                // Step 5: Compute snapshot (cert still IN_PROGRESS, total already updated)
+                const printSvc = require('../services/v2/printService');
+                const { getRequestId } = require('../utils/audit');
+                const snapshotResult = opts.precomputedSnapshot
+                    || printSvc.serializeSnapshot('certificate', 'photo', id, actor.userId || getRequestId() || null);
+                const { snapshotJson, snapshotHash, snapshotKeyVersion } = snapshotResult;
+
+                // Step 6: Single atomic DONE write — after this, trigger blocks all further UPDATEs
+                const result = this.db.prepare(`
+                    UPDATE photo_certificate
+                    SET status = 'DONE', done_at = COALESCE(done_at, ?),
+                        print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?
+                    WHERE id = ? AND deletedon IS NULL
+                `).run(timestamp, snapshotJson, snapshotHash, snapshotKeyVersion, timestamp, id);
+
+                writeAuditLog({
+                    userId    : actor.userId   || 'system',
+                    username  : actor.username || 'system',
+                    action    : 'STATUS_CHANGE',
+                    event     : 'COMMIT',
+                    operation : 'photoCertificateRepository.updateStatus',
+                    entityType: 'photo_cert',
+                    entityId  : id,
+                    field     : 'status',
+                    oldValue  : current.status,
+                    newValue  : status,
+                    metadata  : { certId: id, auto_number: current.auto_number },
+                });
+
+                return result;
+            }
+
+            // Non-DONE transitions (e.g. TODO → IN_PROGRESS)
+            let query = 'UPDATE photo_certificate SET status = ?, lastmodified = ?';
+            const params = [status, timestamp];
+
+            if (status === 'IN_PROGRESS') {
+                query += ', in_progress_at = COALESCE(in_progress_at, ?)';
                 params.push(timestamp);
             }
 
@@ -216,19 +249,6 @@ class PhotoCertificateRepository {
             params.push(id);
             const result = this.db.prepare(query).run(...params);
 
-            // ── Snapshot + hash (atomic with status change) ───────────────────
-            if (status === 'DONE') {
-                const printSvc = require('../services/v2/printService');
-                const { getRequestId } = require('../utils/audit');
-                const snapshotResult = opts.precomputedSnapshot
-                    || printSvc.serializeSnapshot('certificate', 'photo', id, actor.userId || getRequestId() || null);
-                const { snapshotJson, snapshotHash, snapshotKeyVersion } = snapshotResult;
-                this.db.prepare(
-                    `UPDATE photo_certificate SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`
-                ).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
-            }
-
-            // ── Audit log — same transaction ──────────────────────────────────
             writeAuditLog({
                 userId    : actor.userId   || 'system',
                 username  : actor.username || 'system',

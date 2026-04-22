@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const testServiceV2 = require('./v2/testService');
-const certificateService = require('./certificateService');
+const testServiceV2   = require('./v2/testService');
+const certServiceV2   = require('./v2/certificateService');
+const photoCertRepo   = require('../repositories/photoCertificateRepository');
 const whatsappService = require('./whatsappService');
 const logger = require('../utils/logger');
 const { generateDeliveryDocumentHTML } = require('../utils/deliveryDocumentTemplate');
@@ -182,13 +183,13 @@ class DocumentDeliveryService {
                 record = await testServiceV2.getTest(type, id);
                 break;
             case 'gold_cert':
-                record = await certificateService.getCertificate('gold', id);
+                record = certServiceV2.getCertificate('gold', id);
                 break;
             case 'silver_cert':
-                record = await certificateService.getCertificate('silver', id);
+                record = certServiceV2.getCertificate('silver', id);
                 break;
             case 'photo_cert':
-                record = await certificateService.getCertificate('photo', id);
+                record = photoCertRepo.findById(id);
                 break;
             default:
                 throw new Error(`Unsupported workflow type: ${type}`);

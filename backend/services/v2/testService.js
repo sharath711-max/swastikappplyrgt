@@ -16,6 +16,7 @@ const { getRequestId } = require('../../utils/audit');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit      = require('./auditLogger');
 const socket     = require('../../socket');
+const { assertTransitionAllowed } = require('../workflowStateMachine');
 const seqSvc     = require('./sequenceService');
 const ledgerSvc  = require('./ledgerService');
 const GoldTestCalc   = require('../goldTestCalculationService');
@@ -495,19 +496,43 @@ function completeTest(type, testId, data) {
         
         const isFullConvert = (certItems.length > 0 && nonCertItems.length === 0);
 
+        // Compute fees before any status writes
+        const TEST_FEE_RATE = 150;
+        const CERT_FEE_RATE = 50;
+        const applyGst = cert.gst ?? false;
+
+        const testFeeTotal = TEST_FEE_RATE * finalItems.length;
+        const testTax      = applyGst ? (testFeeTotal - testFeeTotal / 1.18) : 0;
+
         if (isFullConvert) {
-            // IF 100% Cert: Mark DONE first (needed by ledger cross-check), then clean up staging rows
-            _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts);
+            // 100% cert: handle side effects then delete staging rows — no DONE write needed
+            if (weight_loss > 0) {
+                const row = db.prepare(`SELECT customer_id FROM ${c.parentTable} WHERE id = ?`).get(testId);
+                if (!row) throw new SystemError(`completeTest: test ${testId} disappeared mid-transaction`, null, { testId, type });
+                db.prepare(
+                    'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+            }
             db.prepare(`DELETE FROM ${c.itemTable} WHERE ${c.fkColumn} = ?`).run(testId);
             db.prepare(`DELETE FROM ${c.parentTable} WHERE id = ?`).run(testId);
         } else {
-            // IF Mixed or NO_CONVERT: UPDATE parent Test to status='DONE'
-            _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts);
+            // Mixed or no-cert: write total+payment while IN_PROGRESS, handle side effects,
+            // then do a single atomic DONE write at the end (trigger-safe ordering)
+            db.prepare(
+                `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, mode_of_payment = ?, lastmodified = ? WHERE id = ?`
+            ).run(testFeeTotal, testTax, mode_of_payment, ts, testId);
+
+            if (weight_loss > 0) {
+                const row = db.prepare(`SELECT customer_id FROM ${c.parentTable} WHERE id = ?`).get(testId);
+                if (!row) throw new SystemError(`completeTest: test ${testId} disappeared mid-transaction`, null, { testId, type });
+                db.prepare(
+                    'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+            }
         }
 
         let certificate = null;
         if (certItems.length > 0) {
-            // _createCertificateWork: composable bare-DB from certificateService
             certificate = certSvc._createCertificateWork(type, {
                 customer_id,
                 items          : certItems,
@@ -519,81 +544,69 @@ function completeTest(type, testId, data) {
             }, ts, tx);
         }
 
-        // Step 4: Ledger charge (Split Bill Logic)
-        const TEST_FEE_RATE = 150;
-        const CERT_FEE_RATE = 50;
-        
-        let testFeeTotal = TEST_FEE_RATE * finalItems.length;
-        let certFeeTotal = certificate ? (CERT_FEE_RATE * certItems.length) : 0;
-        
-        // GST Calculation (Inclusive)
-        const applyGst = cert.gst ?? false;
-        
-        let testTax = applyGst ? (testFeeTotal - (testFeeTotal / 1.18)) : 0;
-        let certTax = applyGst ? (certFeeTotal - (certFeeTotal / 1.18)) : 0;
+        const certFeeTotal = certificate ? (CERT_FEE_RATE * certItems.length) : 0;
+        const certTax      = applyGst ? (certFeeTotal - certFeeTotal / 1.18) : 0;
 
-        // Update Test Parent with calculated amount ONLY if it wasn't deleted
-        if (!isFullConvert) {
-            db.prepare(
-                `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
-            ).run(testFeeTotal, testTax, ts, testId);
-        }
-        
-        // Also update the cert totals to match our fixed fee if cert was created
+        // Update cert totals while cert is IN_PROGRESS (no trigger conflict)
         if (certificate) {
             db.prepare(
-                `UPDATE ${type === 'gold' ? 'gold_certificate' : 'silver_certificate'} 
+                `UPDATE ${type === 'gold' ? 'gold_certificate' : 'silver_certificate'}
                  SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
             ).run(certFeeTotal, certTax, ts, certificate.id);
             certificate.totals.grand_total = certFeeTotal;
         }
 
-        let ledgerEntry = null;
+        let ledgerEntry    = null;
         let certLedgerEntry = null;
 
         if (post_ledger) {
-            // Split Bill Logic: 1st Bill for Lab Test
-            // skip_status_check=true because full-convert deletes the test row after marking DONE
             if (testFeeTotal > 0 && !isFullConvert) {
                 const cap = type.charAt(0).toUpperCase() + type.slice(1);
                 ledgerEntry = ledgerSvc.recordRevenue(type, {
                     customer_id,
-                    amount: testFeeTotal,
-                    entry_type: 'DEBIT',
-                    description: `${cap} Lab Test ${testRow.auto_number} — charges`,
+                    amount            : testFeeTotal,
+                    entry_type        : 'DEBIT',
+                    description       : `${cap} Lab Test ${testRow.auto_number} — charges`,
                     mode_of_payment,
                     post_cash_register: false,
-                    reference_type: c.parentTable,
-                    reference_id: testId,
-                    skip_status_check: true,  // row is DONE but may have been deleted (full-convert)
+                    reference_type    : c.parentTable,
+                    reference_id      : testId,
+                    skip_status_check : true,
                 }, tx);
             }
 
-            // Split Bill Logic: 2nd Bill for Certificate
             if (certificate && certFeeTotal > 0) {
                 const cap = type.charAt(0).toUpperCase() + type.slice(1);
                 certLedgerEntry = ledgerSvc.recordRevenue(type, {
                     customer_id,
-                    amount: certFeeTotal,
-                    entry_type: 'DEBIT',
-                    description: `${cap} Certificate ${certificate.auto_number} — issuance fee`,
+                    amount            : certFeeTotal,
+                    entry_type        : 'DEBIT',
+                    description       : `${cap} Certificate ${certificate.auto_number} — issuance fee`,
                     mode_of_payment,
                     post_cash_register: false,
-                    reference_type: type === 'gold' ? 'gold_certificate' : 'silver_certificate',
-                    reference_id: certificate.id,
-                    skip_status_check: true,  // cert is IN_PROGRESS at billing time
+                    reference_type    : type === 'gold' ? 'gold_certificate' : 'silver_certificate',
+                    reference_id      : certificate.id,
+                    skip_status_check : true,
                 }, tx);
             }
         }
 
         const printSvc = require('./printService');
-        
+
         if (!isFullConvert) {
+            // Compute snapshot while test is still IN_PROGRESS (total already written above)
             const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('test', type, testId, getRequestId() || null);
-            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`).run(snapshotJson, snapshotHash, snapshotKeyVersion, testId);
+            // Single atomic DONE write — after this, trigger blocks further UPDATEs on this row
+            tx.prepare(`
+                UPDATE ${c.parentTable}
+                SET status = 'DONE', done_at = COALESCE(done_at, ?),
+                    print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?
+                WHERE id = ?
+            `).run(ts, snapshotJson, snapshotHash, snapshotKeyVersion, ts, testId);
         }
-        
+
         if (certificate) {
+            // Cert is still IN_PROGRESS — safe to write snapshot
             const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, certificate.id, getRequestId() || null);
             const certTable = type === 'gold' ? 'gold_certificate' : 'silver_certificate';
             tx.prepare(`UPDATE ${certTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certificate.id);
@@ -639,7 +652,7 @@ function updateStatus(type, id, newStatus) {
     ).get(id);
 
     if (!current) throw new BusinessError(`${type} test not found`, ERR.TEST_NOT_FOUND, 404);
-    _assertStatusMove(current.status, newStatus);  // validates before transaction
+    assertTransitionAllowed(type, current.status, newStatus);
 
     audit.start('testService.updateStatus', { type, id, newStatus });
 

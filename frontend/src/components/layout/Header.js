@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBars, FaGem, FaSearch, FaBell, FaQuestionCircle, FaUser, FaChevronDown, FaUserCog, FaSignOutAlt, FaUsers, FaPrint } from 'react-icons/fa';
+import { FaBars, FaGem, FaSearch, FaUser, FaChevronDown, FaUserCog, FaSignOutAlt, FaUsers } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ChangePasswordModal from './ChangePasswordModal';
@@ -109,17 +109,6 @@ const Header = ({ sidebarCollapsed, setSidebarCollapsed }) => {
 
             <div className="header-right">
                 <div className="header-actions">
-                    <button className="header-action-btn" title="Recent Activity">
-                        <FaPrint />
-                    </button>
-                    <button className="header-action-btn" title="Notifications">
-                        <FaBell />
-                        <span className="notification-badge">3</span>
-                    </button>
-                    <button className="header-action-btn" title="Help Center">
-                        <FaQuestionCircle />
-                    </button>
-
                     <div className="user-menu-container">
                         <button
                             className="user-menu-btn"

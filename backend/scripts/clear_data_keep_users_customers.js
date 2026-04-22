@@ -65,7 +65,7 @@ try {
 
         // Reset balances for customers since transactions are gone
         if (existingTables.has('customer')) {
-            const result = db.prepare('UPDATE customer SET balance = 0, gold_weight_balance = 0, silver_weight_balance = 0').run();
+            const result = db.prepare('UPDATE customer SET balance = 0').run();
             console.log(`Reset balances for ${result.changes} customer(s)`);
         }
     });

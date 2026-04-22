@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserPlus, FaSearch, FaPhone, FaArrowRight, FaSync, FaInbox, FaUserEdit } from 'react-icons/fa';
+import { FaUserPlus, FaSearch, FaPhone, FaSync, FaInbox, FaUserEdit } from 'react-icons/fa';
 import api from '../services/api';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
@@ -14,6 +14,8 @@ const Customers = () => {
     const [filteredCustomers, setFilteredCustomers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [balanceFilter, setBalanceFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('name');
 
     const fetchCustomers = useCallback(async () => {
         setLoading(true);
@@ -34,25 +36,28 @@ const Customers = () => {
 
     useEffect(() => {
         const lowerSearch = searchTerm.toLowerCase();
-        const filtered = customers.filter(c =>
+        let result = customers.filter(c =>
             (c.name && c.name.toLowerCase().includes(lowerSearch)) ||
             (c.phone && c.phone.includes(searchTerm))
         );
-        setFilteredCustomers(filtered);
-    }, [searchTerm, customers]);
+
+        if (balanceFilter === 'due') result = result.filter(c => (c.balance || 0) > 0);
+        else if (balanceFilter === 'advance') result = result.filter(c => (c.balance || 0) < 0);
+        else if (balanceFilter === 'settled') result = result.filter(c => !c.balance || c.balance === 0);
+
+        if (sortBy === 'name') result = [...result].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        else if (sortBy === 'balance') result = [...result].sort((a, b) => Math.abs(b.balance || 0) - Math.abs(a.balance || 0));
+
+        setFilteredCustomers(result);
+    }, [searchTerm, customers, balanceFilter, sortBy]);
 
     const handleEditCustomer = (e, customer) => {
         e.stopPropagation();
-        openModal('customer', {
-            customer,
-            reload: fetchCustomers
-        });
+        openModal('customer', { customer, reload: fetchCustomers });
     };
 
     const handleAddCustomer = () => {
-        openModal('customer', {
-            reload: fetchCustomers
-        });
+        openModal('customer', { reload: fetchCustomers });
     };
 
     const getInitials = (name) => {
@@ -68,43 +73,80 @@ const Customers = () => {
         }).format(amount || 0);
     };
 
+    const getBalanceClass = (balance) => {
+        if (balance > 0) return 'text-danger';
+        if (balance < 0) return 'text-success';
+        return 'text-secondary';
+    };
+
+    const getBalanceLabel = (balance) => {
+        if (balance > 0) return 'DR';
+        if (balance < 0) return 'CR';
+        return 'Settled';
+    };
+
     return (
         <div className="customers-page">
+
+            {/* Header */}
             <div className="customers-header">
-                <div className="header-top">
-                    <div className="header-info">
-                        <h1>Customer Directory</h1>
-                        <p>Centralized ledger and profile management system</p>
+                <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 className="mb-0 fw-bold">Customer Directory</h5>
+                        <small className="text-muted">Centralized ledger and profile management</small>
                     </div>
-                    <div className="d-flex gap-3">
-                        <button className="btn-icon-action" onClick={fetchCustomers} disabled={loading} title="Sync Database">
+                    <div className="d-flex gap-2">
+                        <button className="btn-icon-action" onClick={fetchCustomers} disabled={loading} title="Sync">
                             <FaSync className={loading ? 'fa-spin' : ''} />
                         </button>
-                        <button className="btn-premium-add" onClick={handleAddCustomer}>
-                            <FaUserPlus /> Add New Customer
+                        <button className="btn btn-primary d-flex align-items-center gap-2" onClick={handleAddCustomer}>
+                            <FaUserPlus /> Add Customer
                         </button>
                     </div>
                 </div>
             </div>
 
+            {/* Search + Filter Bar */}
             <div className="search-container">
-                <div className="search-box">
-                    <div className="search-input-wrapper">
+                <div className="d-flex flex-wrap gap-2 align-items-center">
+                    <div className="search-input-wrapper flex-grow-1">
                         <FaSearch className="search-icon" />
                         <input
                             type="text"
                             className="customer-search-input"
-                            placeholder="Find by name, phone or record identification..."
+                            placeholder="Search by name or phone..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+
+                    <select
+                        className="form-select w-auto"
+                        value={balanceFilter}
+                        onChange={(e) => setBalanceFilter(e.target.value)}
+                    >
+                        <option value="all">All</option>
+                        <option value="due">Due (DR)</option>
+                        <option value="advance">Advance (CR)</option>
+                        <option value="settled">Settled</option>
+                    </select>
+
+                    <select
+                        className="form-select w-auto"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                    >
+                        <option value="name">Sort: Name</option>
+                        <option value="balance">Sort: Balance</option>
+                    </select>
+
                     <div className="count-info">
-                        Showing <strong>{filteredCustomers.length}</strong> of <strong>{customers.length}</strong> active profiles
+                        <strong>{filteredCustomers.length}</strong> / <strong>{customers.length}</strong>
                     </div>
                 </div>
             </div>
 
+            {/* Customer Grid */}
             <div className="customers-grid-container">
                 {loading && customers.length === 0 ? (
                     <div className="text-center py-5">
@@ -114,51 +156,60 @@ const Customers = () => {
                 ) : filteredCustomers.length === 0 ? (
                     <div className="empty-customers">
                         <FaInbox className="empty-icon" />
-                        <h3>No Customer Profiles Found</h3>
-                        <p>Try searching with a different name or adding a new record.</p>
+                        <h5>No Customers Found</h5>
+                        <p className="text-muted">Try a different filter or add a new record.</p>
+                        <button className="btn btn-primary mt-2" onClick={handleAddCustomer}>
+                            <FaUserPlus className="me-2" /> Add Customer
+                        </button>
                     </div>
                 ) : (
-                    <div className="customer-card-grid">
+                    <div className="row g-3">
                         {filteredCustomers.map(customer => (
-                            <div
-                                key={customer.id}
-                                className="customer-item-card"
-                                onClick={() => navigate(`/customers/${customer.id}`)}
-                            >
-                                <div className="customer-avatar">
-                                    {getInitials(customer.name)}
-                                </div>
+                            <div key={customer.id} className="col-12 col-md-6 col-xl-4">
+                                <div
+                                    className="card shadow-sm h-100 customer-item-card"
+                                    onClick={() => navigate(`/customers/${customer.id}`)}
+                                >
+                                    <div className="card-body d-flex flex-column">
 
-                                <div className="customer-actions">
-                                    <button
-                                        className="btn-icon-action"
-                                        onClick={(e) => handleEditCustomer(e, customer)}
-                                        title="Secure Edit"
-                                    >
-                                        <FaUserEdit />
-                                    </button>
-                                </div>
-
-                                <h3 className="customer-name">{customer.name}</h3>
-                                <div className="customer-phone">
-                                    <FaPhone className="text-muted small" />
-                                    <span>+91 {customer.phone}</span>
-                                </div>
-
-                                <div className="customer-stats">
-                                    <div className="stat-item">
-                                        <div className="stat-label">Net Balance</div>
-                                        <div className={`stat-value ${customer.balance > 0 ? 'negative' : (customer.balance < 0 ? 'positive' : '')}`}>
-                                            {formatCurrency(Math.abs(customer.balance))}
-                                            <span className="small ms-1 opacity-75">
-                                                {customer.balance > 0 ? 'DR' : (customer.balance < 0 ? 'CR' : '')}
-                                            </span>
+                                        {/* Top row: avatar + name + badge + edit */}
+                                        <div className="d-flex justify-content-between align-items-start mb-3">
+                                            <div className="d-flex align-items-center gap-2">
+                                                <div className="customer-avatar">
+                                                    {getInitials(customer.name)}
+                                                </div>
+                                                <div>
+                                                    <h6 className="mb-0 fw-bold">{customer.name}</h6>
+                                                    <small className="text-muted d-flex align-items-center gap-1">
+                                                        <FaPhone size={10} /> +91 {customer.phone}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <span className={`badge ${customer.deletedon ? 'bg-secondary' : 'bg-success'}`}>
+                                                    {customer.deletedon ? 'Inactive' : 'Active'}
+                                                </span>
+                                                <button
+                                                    className="btn-icon-action"
+                                                    onClick={(e) => handleEditCustomer(e, customer)}
+                                                    title="Edit"
+                                                >
+                                                    <FaUserEdit />
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="stat-item text-end d-flex align-items-end justify-content-end">
-                                        <div className="btn-icon-action border-0 bg-transparent text-primary">
-                                            <FaArrowRight />
+
+                                        {/* Balance */}
+                                        <div className="mt-auto pt-2 border-top">
+                                            <div className="balance-label">Net Balance</div>
+                                            <div className={`fw-bold fs-5 ${getBalanceClass(customer.balance)}`}>
+                                                {formatCurrency(Math.abs(customer.balance || 0))}
+                                                <span className="ms-1 fs-6 opacity-75">
+                                                    {getBalanceLabel(customer.balance)}
+                                                </span>
+                                            </div>
                                         </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -166,6 +217,7 @@ const Customers = () => {
                     </div>
                 )}
             </div>
+
         </div>
     );
 };

@@ -17,6 +17,7 @@ const { db, genId, now, transaction } = require('../../db/db');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit        = require('./auditLogger');
 const calcSvc      = require('./calculationService');
+const { assertTransitionAllowed } = require('../workflowStateMachine');
 const seqSvc       = require('./sequenceService');
 const ledgerSvc    = require('./ledgerService');
 const customerRepo = require('../../repositories/customerRepository');
@@ -465,7 +466,7 @@ function updateStatus(type, id, newStatus, opts = {}) {
     ).get(id);
 
     if (!current) throw new BusinessError(`${type} certificate not found`, ERR.CERT_NOT_FOUND, 404);
-    _assertStatusMove(current.status, newStatus);   // BusinessError if backward
+    assertTransitionAllowed(`${type}_cert`, current.status, newStatus);
 
     audit.start('certificateService.updateStatus', { type, id, newStatus });
 
@@ -473,18 +474,14 @@ function updateStatus(type, id, newStatus, opts = {}) {
         const tx = db;
         const ts = now();
 
-        // Final rollup before DONE seal — updates total_net_weight / total_fine_weight
-        if (newStatus === 'DONE') {
-            calcSvc.rollupTotals(type, id, db);
-        }
-
-        const result = db.prepare(
-            `UPDATE ${c.parentTable} SET status = ?, lastmodified = ? WHERE id = ? AND deletedon IS NULL`
-        ).run(newStatus, ts, id);
-
-        // Ledger — INSIDE transaction, no catch; failure rolls back status too
+        let result;
         let ledgerEntry = null;
+
         if (newStatus === 'DONE') {
+            // Step 1: Rollup while cert is still IN_PROGRESS
+            calcSvc.rollupTotals(type, id, db);
+
+            // Step 2: Read row for fee/ledger calculations
             const finalRow = db.prepare(
                 `SELECT total, gst, customer_id, mode_of_payment, auto_number FROM ${c.parentTable} WHERE id = ?`
             ).get(id);
@@ -496,8 +493,7 @@ function updateStatus(type, id, newStatus, opts = {}) {
                 );
             }
 
-            // Apply canonical fee model (CERT_FEE_RATE × item count), overriding the
-            // weight-based total written by rollupTotals above.
+            // Step 3: Compute fees
             const itemCount = db.prepare(
                 `SELECT COUNT(*) AS cnt FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
             ).get(id).cnt;
@@ -506,11 +502,12 @@ function updateStatus(type, id, newStatus, opts = {}) {
             const applyGst = Boolean(finalRow.gst);
             const feeTax   = applyGst ? (feeTotal - feeTotal / 1.18) : 0;
 
+            // Step 4: Write total BEFORE DONE (cert still IN_PROGRESS — no trigger conflict)
             db.prepare(
                 `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
             ).run(feeTotal, feeTax, ts, id);
 
-            // Guard: completeTest may have already posted a DEBIT for this cert
+            // Step 5: Ledger (cert still IN_PROGRESS)
             const alreadyCharged = db.prepare(
                 `SELECT COUNT(*) AS cnt FROM credit_history WHERE reference_type = ? AND reference_id = ? AND type = 'DEBIT'`
             ).get(c.parentTable, id).cnt > 0;
@@ -518,7 +515,6 @@ function updateStatus(type, id, newStatus, opts = {}) {
             if (feeTotal > 0 && !alreadyCharged) {
                 const cap  = type.charAt(0).toUpperCase() + type.slice(1);
                 const desc = `${cap} Certificate ${finalRow.auto_number} — lab charges`;
-
                 ledgerEntry = ledgerSvc.recordRevenue(type, {
                     customer_id    : finalRow.customer_id,
                     amount         : feeTotal,
@@ -530,17 +526,25 @@ function updateStatus(type, id, newStatus, opts = {}) {
                     reference_id   : id,
                 }, tx);
             }
-            
-            // Use the pre-computed snapshot when the caller resolved it before
-            // acquiring the write lock (workflowService._finalizeCert does this
-            // to move CPU work outside the BEGIN IMMEDIATE window).
-            // Fall back to computing it here when called directly (e.g. CLI, tests).
+
+            // Step 6: Compute snapshot (cert still IN_PROGRESS, total already updated)
             const printSvc = require('./printService');
             const { getRequestId } = require('../../utils/audit');
             const snapshotResult = opts.precomputedSnapshot
                 || printSvc.serializeSnapshot('certificate', type, id, getRequestId() || null);
             const { snapshotJson, snapshotHash, snapshotKeyVersion } = snapshotResult;
-            tx.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ?`).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
+
+            // Step 7: Single atomic DONE write — after this, trigger blocks all further UPDATEs
+            result = db.prepare(
+                `UPDATE ${c.parentTable}
+                 SET status = ?, print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?
+                 WHERE id = ? AND deletedon IS NULL`
+            ).run(newStatus, snapshotJson, snapshotHash, snapshotKeyVersion, ts, id);
+
+        } else {
+            result = db.prepare(
+                `UPDATE ${c.parentTable} SET status = ?, lastmodified = ? WHERE id = ? AND deletedon IS NULL`
+            ).run(newStatus, ts, id);
         }
 
         return { changes: result.changes, ledger: ledgerEntry?.debit };

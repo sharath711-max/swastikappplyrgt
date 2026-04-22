@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const testServiceV2 = require('../services/v2/testService');
-const calcService = require('../services/v2/calculationService');
+const testServiceV2   = require('../services/v2/testService');
+const calcService     = require('../services/v2/calculationService');
+const workflowService = require('../services/workflowService');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { immutabilityGuard } = require('../middleware/immutabilityGuard');
 const { auditMiddleware } = require('../middleware/auditMiddleware');
@@ -79,8 +80,7 @@ router.get('/:id', async (req, res) => {
 
 router.patch('/:id/status', async (req, res) => {
     try {
-        const { status } = req.body;
-        await testServiceV2.updateStatus('silver', req.params.id, status);
+        await workflowService.updateStatus('silver', req.params.id, req.body.status);
         res.json({ success: true, message: 'Status updated' });
     } catch (error) {
         handleError(res, error);

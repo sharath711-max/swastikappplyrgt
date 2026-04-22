@@ -13,10 +13,20 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
     line-height: 1.5;
-    color: var(--text-primary);
+    color: #000000;
     background: var(--primary-bg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Shared utility */
+.balance-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
 }
 
 /* Typography */

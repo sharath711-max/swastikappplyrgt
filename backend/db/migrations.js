@@ -277,14 +277,104 @@ function migrateReferenceTypeGuard() {
     `);
 }
 
+// ─── 6. Immutability triggers (DONE rows are read-only) ──────────────────────
+//
+// Once a test or certificate reaches status='DONE', no further UPDATEs are
+// permitted on that row.  The service layer enforces this via _assertMutable /
+// assertTransitionAllowed, but these triggers are the hard DB-level guarantee.
+//
+// The finalization paths in testService.completeTest and
+// certServiceV2.updateStatus are structured to write total, snapshot, and all
+// other fields BEFORE the single atomic status='DONE' write, so these triggers
+// never fire during a legitimate finalization.
+//
+// photo_certificate excluded: its finalization path (photoCertRepo) has not yet
+// been restructured to the single-DONE-write pattern and would be blocked.
+
+function migrateImmutabilityTriggers() {
+    const updateTables = [
+        ['trg_immutable_gold_test',    'gold_test'],
+        ['trg_immutable_silver_test',  'silver_test'],
+        ['trg_immutable_gold_cert',    'gold_certificate'],
+        ['trg_immutable_silver_cert',  'silver_certificate'],
+        ['trg_immutable_photo_cert',   'photo_certificate'],
+    ];
+
+    for (const [name, table] of updateTables) {
+        ensureTrigger(name, `
+            CREATE TRIGGER IF NOT EXISTS ${name}
+            BEFORE UPDATE ON ${table}
+            WHEN OLD.status = 'DONE'
+            BEGIN
+                SELECT RAISE(ABORT, '${table} is finalized and cannot be modified');
+            END
+        `);
+    }
+
+    // DELETE blockers — finalized records are permanent; deletion must go through
+    // soft-delete (deletedon column) which is blocked by the UPDATE trigger above.
+    const deleteTables = [
+        ['trg_nodelete_gold_test',    'gold_test'],
+        ['trg_nodelete_silver_test',  'silver_test'],
+        ['trg_nodelete_gold_cert',    'gold_certificate'],
+        ['trg_nodelete_gold_cert_items',  'gold_certificate_item'],
+        ['trg_nodelete_silver_cert',  'silver_certificate'],
+        ['trg_nodelete_silver_cert_items', 'silver_certificate_item'],
+        ['trg_nodelete_photo_cert',   'photo_certificate'],
+        ['trg_nodelete_photo_cert_items',  'photo_certificate_item'],
+    ];
+
+    // For parent tables: block DELETE when status = DONE
+    for (const [name, table] of deleteTables.filter(([, t]) => !t.endsWith('_item'))) {
+        ensureTrigger(name, `
+            CREATE TRIGGER IF NOT EXISTS ${name}
+            BEFORE DELETE ON ${table}
+            WHEN OLD.status = 'DONE'
+            BEGIN
+                SELECT RAISE(ABORT, 'Cannot hard-delete a finalized ${table} record');
+            END
+        `);
+    }
+
+    // For item tables: block DELETE when the parent is DONE
+    // gold_certificate_item
+    ensureTrigger('trg_nodelete_gold_cert_items', `
+        CREATE TRIGGER IF NOT EXISTS trg_nodelete_gold_cert_items
+        BEFORE DELETE ON gold_certificate_item
+        WHEN (SELECT status FROM gold_certificate WHERE id = OLD.gold_certificate_id) = 'DONE'
+        BEGIN
+            SELECT RAISE(ABORT, 'Cannot hard-delete items of a finalized gold_certificate');
+        END
+    `);
+    // silver_certificate_item
+    ensureTrigger('trg_nodelete_silver_cert_items', `
+        CREATE TRIGGER IF NOT EXISTS trg_nodelete_silver_cert_items
+        BEFORE DELETE ON silver_certificate_item
+        WHEN (SELECT status FROM silver_certificate WHERE id = OLD.silver_certificate_id) = 'DONE'
+        BEGIN
+            SELECT RAISE(ABORT, 'Cannot hard-delete items of a finalized silver_certificate');
+        END
+    `);
+    // photo_certificate_item
+    ensureTrigger('trg_nodelete_photo_cert_items', `
+        CREATE TRIGGER IF NOT EXISTS trg_nodelete_photo_cert_items
+        BEFORE DELETE ON photo_certificate_item
+        WHEN (SELECT status FROM photo_certificate WHERE id = OLD.photo_certificate_id) = 'DONE'
+        BEGIN
+            SELECT RAISE(ABORT, 'Cannot hard-delete items of a finalized photo_certificate');
+        END
+    `);
+}
+
 // ─── Public entry point ───────────────────────────────────────────────────────
 
 function applyMigrations() {
-    migrateIdempotencyKeys();       // priority 1
-    migrateVersionColumns();        // priority 2
-    migrateForeignKeys();           // priority 3
-    migrateIndexes();               // priority 4
-    migrateReferenceTypeGuard();    // priority 5
+    migrateIdempotencyKeys();           // priority 1
+    migrateVersionColumns();            // priority 2
+    migrateForeignKeys();               // priority 3
+    migrateIndexes();                   // priority 4
+    migrateReferenceTypeGuard();        // priority 5
+    migrateImmutabilityTriggers();      // priority 6
 }
 
 module.exports = { applyMigrations };

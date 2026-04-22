@@ -1,6 +1,5 @@
 const { db, transaction, getNextSequence } = require('../db/db');
 const { v4: uuidv4 } = require('uuid');
-const CertificateService = require('../services/certificateService');
 const CertificateCalculationService = require('../services/certificateCalculationService');
 
 class SilverCertificateItemRepository {

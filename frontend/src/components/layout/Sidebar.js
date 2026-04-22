@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
     FaTachometerAlt, FaUsers, FaCheckDouble, FaBars, FaChevronDown,
-    FaCertificate, FaFlask, FaFileInvoiceDollar, FaBoxes,
-    FaWeight, FaMoneyBillWave, FaUserShield
+    FaUserShield
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
 import { APP_CONFIG } from '../../utils/Constants';
@@ -12,14 +11,11 @@ const Sidebar = ({ sidebarCollapsed }) => {
     const location = useLocation();
 
     const [expandedMenus, setExpandedMenus] = useState(() => ({
-        Certificates: location.pathname.startsWith('/gold-certificates')
-            || location.pathname.startsWith('/silver-certificates')
-            || location.pathname.startsWith('/photo-certificates'),
-        Tests: location.pathname.startsWith('/gold-test') || location.pathname.startsWith('/silver-test'),
         Admin: location.pathname.startsWith('/admin'),
     }));
 
     const navigation = React.useMemo(() => [
+        { type: 'section', label: 'MAIN' },
         {
             name: 'Dashboard',
             path: '/',
@@ -34,62 +30,19 @@ const Sidebar = ({ sidebarCollapsed }) => {
             roles: ['admin', 'manager', 'front_desk'],
         },
         {
-            name: 'Certificates',
-            path: '/gold-certificates',
-            icon: <FaCertificate />,
-            roles: ['admin', 'manager', 'front_desk', 'user'],
-            subItems: [
-                { name: 'Gold', path: '/gold-certificates' },
-                { name: 'Silver', path: '/silver-certificates' },
-                { name: 'Photo', path: '/photo-certificates' },
-            ],
-        },
-        {
-            name: 'Tests',
-            path: '/gold-test',
-            icon: <FaFlask />,
-            roles: ['admin', 'manager', 'technician', 'front_desk', 'user'],
-            subItems: [
-                { name: 'Gold Test', path: '/gold-test' },
-                { name: 'Silver Test', path: '/silver-test' },
-            ],
-        },
-        {
             name: 'Workflow Board',
             path: '/workflow',
             icon: <FaCheckDouble />,
             roles: ['admin', 'manager', 'technician', 'front_desk'],
         },
+        { type: 'section', label: 'TOOLS' },
         {
-            name: 'Bills Report',
-            path: '/bills',
-            icon: <FaFileInvoiceDollar />,
-            roles: ['admin', 'manager', 'front_desk'],
-        },
-        {
-            name: 'Item Master',
-            path: '/items',
-            icon: <FaBoxes />,
-            roles: ['admin', 'manager', 'technician'],
-        },
-        {
-            name: 'List Views',
+            name: 'Reports',
             path: '/list-views',
             icon: <FaBars />,
             roles: ['admin', 'manager'],
         },
-        {
-            name: 'Weight Loss',
-            path: '/weight-loss',
-            icon: <FaWeight />,
-            roles: ['admin', 'manager'],
-        },
-        {
-            name: 'Cash in Hand',
-            path: '/cash-in-hand',
-            icon: <FaMoneyBillWave />,
-            roles: ['admin'],
-        },
+        { type: 'section', label: 'SYSTEM' },
         {
             name: 'Admin',
             path: '/admin/users',
@@ -127,6 +80,17 @@ const Sidebar = ({ sidebarCollapsed }) => {
         <aside className="app-sidebar">
             <nav className="sidebar-nav">
                 {navigation.map((item, index) => {
+                    if (item.type === 'section') {
+                        return (
+                            <div key={index} className="nav-section-label">
+                                {!sidebarCollapsed
+                                    ? <span>{item.label}</span>
+                                    : <hr className="nav-section-divider" />
+                                }
+                            </div>
+                        );
+                    }
+
                     const NavItemContent = (
                         <div className="nav-section">
                             {!item.subItems ? (

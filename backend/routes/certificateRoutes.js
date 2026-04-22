@@ -1,25 +1,26 @@
-const express = require('express');
-const router = express.Router();
-const certificateService = require('../services/certificateService');
-const upload = require('../middleware/uploadMiddleware');
-const { generateCertificateHTML } = require('../utils/certificateTemplate');
-const { authMiddleware } = require('../middleware/authMiddleware');
-const { immutabilityGuard } = require('../middleware/immutabilityGuard');
+'use strict';
 
-// We have 3 distinct tableNames to guard based on ID prefixes. We will create a dynamic guard for certificates:
+const express = require('express');
+const router  = express.Router();
+
+const certServiceV2          = require('../services/v2/certificateService');
+const photoCertRepo          = require('../repositories/photoCertificateRepository');
+const upload                 = require('../middleware/uploadMiddleware');
+const { generateCertificateHTML } = require('../utils/certificateTemplate');
+const { authMiddleware }     = require('../middleware/authMiddleware');
+const { immutabilityGuard }  = require('../middleware/immutabilityGuard');
+const workflowService        = require('../services/workflowService');
+
+// Dynamic immutability guard keyed on cert ID prefix
 const dynamicCertGuard = (req, res, next) => {
+    const id = req.params.id || req.body?.id;
     let tableName = null;
-    const id = req.params.id || req.body.id;
     if (id) {
         if (id.startsWith('GCR') || id.startsWith('GC-')) tableName = 'gold_certificate';
         else if (id.startsWith('SCR') || id.startsWith('SC-')) tableName = 'silver_certificate';
         else if (id.startsWith('PCR') || id.startsWith('PC-')) tableName = 'photo_certificate';
     }
-
-    if (tableName) {
-        return immutabilityGuard(tableName)(req, res, next);
-    }
-    next();
+    return tableName ? immutabilityGuard(tableName)(req, res, next) : next();
 };
 
 router.use(authMiddleware);
@@ -27,14 +28,27 @@ router.use('/:id', dynamicCertGuard);
 
 const handleError = (res, error) => {
     console.error('Certificate API Error:', error);
-    if (error.message.startsWith('409')) {
+    if (error.statusCode >= 400) {
+        return res.status(error.statusCode).json({ success: false, error: error.message, code: error.code });
+    }
+    if (error.message && error.message.startsWith('409')) {
         return res.status(409).json({ success: false, error: error.message.replace('409: ', '') });
     }
     res.status(400).json({ success: false, error: error.message });
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function inferType(id) {
+    if (!id) return null;
+    if (id.startsWith('GCR') || id.startsWith('GC-')) return 'gold';
+    if (id.startsWith('SCR') || id.startsWith('SC-')) return 'silver';
+    if (id.startsWith('PCR') || id.startsWith('PC-')) return 'photo';
+    return null;
+}
+
 // GET /api/certificates
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const { type, customer_id, status, limit, page } = req.query;
         if (!type) {
@@ -44,54 +58,68 @@ router.get('/', authMiddleware, async (req, res) => {
         const filters = {
             customer_id,
             status,
-            limit: limit ? parseInt(limit) : 20,
-            offset: page ? (parseInt(page) - 1) * (parseInt(limit) || 20) : 0
+            limit : limit ? parseInt(limit)  : 20,
+            offset: page  ? (parseInt(page) - 1) * (parseInt(limit) || 20) : 0,
         };
 
-        const result = await certificateService.listCertificates(type, filters);
-        res.json(result);
+        if (type === 'photo') {
+            const result = await photoCertRepo.findAll(filters);
+            return res.json(result);
+        }
+
+        const result = certServiceV2.listCertificates(type, filters);
+        return res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 // GET /api/certificates/:id
-router.get('/:id', authMiddleware, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         const { type } = req.query;
         const id = req.params.id;
-        let inferredType = type;
-
-        if (!inferredType) {
-            if (id.startsWith('GCR') || id.startsWith('GC-')) inferredType = 'gold';
-            else if (id.startsWith('SCR') || id.startsWith('SC-')) inferredType = 'silver';
-            else if (id.startsWith('PCR') || id.startsWith('PC-')) inferredType = 'photo';
-            else return res.status(400).json({ error: 'Cannot infer certificate type from ID' });
+        const resolvedType = type || inferType(id);
+        if (!resolvedType) {
+            return res.status(400).json({ error: 'Cannot infer certificate type from ID' });
         }
 
-        const certificate = await certificateService.getCertificate(inferredType, id);
+        let certificate;
+        if (resolvedType === 'photo') {
+            certificate = await photoCertRepo.findById(id);
+        } else {
+            certificate = certServiceV2.getCertificate(resolvedType, id);
+        }
+
         if (!certificate) return res.status(404).json({ error: 'Certificate not found' });
-        res.json(certificate);
+        return res.json(certificate);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 // POST /api/certificates
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         let type = req.body.type || req.query.type;
         if (!type) return res.status(400).json({ error: 'Certificate type is required' });
-        
-        const certificate = await certificateService.createCertificate(type, req.body);
-        res.status(201).json(certificate);
+
+        let certificate;
+        if (type === 'photo') {
+            const { customer_id, items, mode_of_payment, total, gst, gst_bill_number, total_tax, status } = req.body;
+            certificate = await photoCertRepo.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
+        } else {
+            certificate = certServiceV2.createCertificate(type, req.body);
+        }
+
+        return res.status(201).json(certificate);
     } catch (error) {
         handleError(res, error);
     }
 });
 
 // POST /api/certificates/with-photo
-router.post('/with-photo', authMiddleware, upload.single('photo'), async (req, res) => {
+router.post('/with-photo', upload.single('photo'), async (req, res) => {
     try {
         let data = req.body;
         if (req.body.data) {
@@ -107,12 +135,17 @@ router.post('/with-photo', authMiddleware, upload.single('photo'), async (req, r
         }
 
         let type = data.type || req.query.type || 'gold';
-        if (data.certificate_type) {
-             type = data.certificate_type.toLowerCase();
+        if (data.certificate_type) type = data.certificate_type.toLowerCase();
+
+        let certificate;
+        if (type === 'photo') {
+            const { customer_id, items, mode_of_payment, total, gst, gst_bill_number, total_tax, status } = data;
+            certificate = await photoCertRepo.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
+        } else {
+            certificate = certServiceV2.createCertificate(type, data);
         }
 
-        const certificate = await certificateService.createCertificate(type, data);
-        res.status(201).json(certificate);
+        return res.status(201).json(certificate);
     } catch (error) {
         handleError(res, error);
     }
@@ -121,46 +154,47 @@ router.post('/with-photo', authMiddleware, upload.single('photo'), async (req, r
 // GET /api/certificates/:no/print
 router.get('/:no/print', async (req, res) => {
     try {
-        const certData = await certificateService.getCertificateByNo(req.params.no);
+        const id = req.params.no;
+        const type = inferType(id);
+
+        let certData;
+        if (type === 'photo') {
+            certData = await photoCertRepo.findById(id);
+        } else if (type) {
+            certData = certServiceV2.getCertificate(type, id);
+        } else {
+            return res.status(400).send('Invalid certificate ID');
+        }
+
         if (!certData) return res.status(404).send('Certificate not found');
 
-        // Transform for template
         const photoItem = certData.items?.find(i => i.media);
         const templateData = {
             ...certData,
-            customer: {
-                name: certData.customer_name,
-                phone: certData.customer_phone
-            },
-            photo_path: photoItem ? `${req.protocol}://${req.get('host')}/${photoItem.media}` : null,
-            total_weight: certData.items?.reduce((acc, i) => acc + (parseFloat(i.gross_weight) || 0), 0).toFixed(3),
-            total_amount: certData.total || 0,
-            certificate_no: certData.auto_number,
-            issue_date: certData.created_at,
-            certificate_type: certData.id.startsWith('PCR') ? 'PHOTO' : certData.id.startsWith('GCR') ? 'GOLD' : 'SILVER'
+            customer: { name: certData.customer_name, phone: certData.customer_phone },
+            photo_path        : photoItem ? `${req.protocol}://${req.get('host')}/${photoItem.media}` : null,
+            total_weight      : certData.items?.reduce((acc, i) => acc + (parseFloat(i.gross_weight) || 0), 0).toFixed(3),
+            total_amount      : certData.total || 0,
+            certificate_no    : certData.auto_number,
+            issue_date        : certData.created_at,
+            certificate_type  : type === 'photo' ? 'PHOTO' : type === 'gold' ? 'GOLD' : 'SILVER',
         };
 
-        const html = generateCertificateHTML(templateData);
-        res.send(html);
+        return res.send(generateCertificateHTML(templateData));
     } catch (error) {
         res.status(500).send(error.message);
     }
 });
 
-// POST /api/certificates/:id/results (Handles photo uploads and result saves)
-router.post('/:id/results', authMiddleware, upload.single('photo'), async (req, res) => {
+// POST /api/certificates/:id/results
+router.post('/:id/results', upload.single('photo'), async (req, res) => {
     try {
         const id = req.params.id;
         let data = req.body;
-
-        if (req.body.data) {
-            data = JSON.parse(req.body.data);
-        }
+        if (req.body.data) data = JSON.parse(req.body.data);
 
         if (req.file) {
-            // Normalize path for web storage
             const photoPath = req.file.path.replace(/\\/g, '/').split('backend/')[1] || req.file.path.replace(/\\/g, '/');
-
             if (data.photo_item_id && data.items) {
                 const item = data.items.find(i => i.id === data.photo_item_id);
                 if (item) item.media = photoPath;
@@ -169,36 +203,51 @@ router.post('/:id/results', authMiddleware, upload.single('photo'), async (req, 
             }
         }
 
-        let type = data.type;
-        if (!type) {
-            if (id.startsWith('PCR')) type = 'photo';
-            else if (id.startsWith('GCR')) type = 'gold';
-            else if (id.startsWith('SCR')) type = 'silver';
+        const type = data.type || inferType(id);
+
+        if (type === 'photo') {
+            const { items, mode_of_payment, total, gst } = data;
+            for (const item of items || []) {
+                const updates = {};
+                if (item.media     !== undefined) updates.media_path = item.media;
+                if (item.purity    !== undefined) updates.purity = parseFloat(item.purity);
+                await photoCertRepo.updateItem(id, item.id, updates);
+            }
+            if (mode_of_payment !== undefined || total !== undefined || gst !== undefined) {
+                const cert = await photoCertRepo.findById(id);
+                if (cert) {
+                    await photoCertRepo.updatePayment(
+                        id,
+                        mode_of_payment || cert.mode_of_payment,
+                        total !== undefined ? total : cert.total,
+                        gst   !== undefined ? gst   : cert.gst,
+                    );
+                }
+            }
+        } else {
+            await certServiceV2.saveResults(type, id, data);
         }
 
-        await certificateService.saveResults(type, id, data);
-        res.json({ success: true });
+        return res.json({ success: true });
     } catch (error) {
         handleError(res, error);
     }
 });
 
-router.patch('/:id/status', authMiddleware, async (req, res) => {
+// PATCH /api/certificates/:id/status
+router.patch('/:id/status', async (req, res) => {
     try {
         const id = req.params.id;
         const { status } = req.body;
 
-        // Map cert ID prefix to workflow type (workflowService rejects DONE —
-        // use POST /api/workflow/finalize for that transition).
         let workflowType;
         if (id.startsWith('PCR'))      workflowType = 'photo_cert';
         else if (id.startsWith('GCR')) workflowType = 'gold_cert';
         else if (id.startsWith('SCR')) workflowType = 'silver_cert';
         else return res.status(400).json({ success: false, error: 'Cannot infer certificate type from ID' });
 
-        const workflowService = require('../services/workflowService');
         await workflowService.updateStatus(workflowType, id, status);
-        res.json({ success: true, message: 'Status updated' });
+        return res.json({ success: true, message: 'Status updated' });
     } catch (error) {
         handleError(res, error);
     }

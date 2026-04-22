@@ -18,12 +18,6 @@ const audit = require('./auditLogger');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EntryType    = Object.freeze({ DEBIT: 'DEBIT', CREDIT: 'CREDIT' });
-const WeightType   = Object.freeze({ GOLD: 'GOLD', SILVER: 'SILVER', NONE: 'NONE' });
-const WEIGHT_TYPE_MAP = Object.freeze({
-    gold  : WeightType.GOLD,
-    silver: WeightType.SILVER,
-    cash  : WeightType.NONE,
-});
 
 // ─── Pre-transaction validation ───────────────────────────────────────────────
 
@@ -56,7 +50,7 @@ function _validateAppendEntry(source_type, opts) {
     if (!description || typeof description !== 'string' || !description.trim()) {
         throw new BusinessError('description is required', ERR.MISSING_FIELD, 400);
     }
-    if (!WEIGHT_TYPE_MAP[source_type]) {
+    if (!['gold', 'silver', 'cash'].includes(source_type)) {
         throw new BusinessError(
             `source_type must be 'gold', 'silver', or 'cash', got "${source_type}"`,
             ERR.INVALID_TYPE, 400
@@ -90,25 +84,7 @@ function _rollupBalance(customer_id) {
     return newBalance;
 }
 
-function _rollupWeightBalance(customer_id, source_type) {
-    const wt = WEIGHT_TYPE_MAP[source_type];
-    if (!wt || wt === WeightType.NONE) return 0;
 
-    const agg = db.prepare(`
-        SELECT
-            COALESCE(SUM(CASE WHEN type = 'DEBIT'  THEN weight ELSE 0 END), 0) AS total_debit_w,
-            COALESCE(SUM(CASE WHEN type = 'CREDIT' THEN weight ELSE 0 END), 0) AS total_credit_w
-        FROM credit_history
-        WHERE customer_id = ? AND weight_type = ?
-    `).get(customer_id, wt);
-
-    const newWeightBalance = agg.total_debit_w - agg.total_credit_w;
-    const column = source_type === 'gold' ? 'gold_weight_balance' : 'silver_weight_balance';
-    db.prepare(`UPDATE customer SET ${column} = ?, lastmodified = ? WHERE id = ?`)
-      .run(newWeightBalance, now(), customer_id);
-
-    return newWeightBalance;
-}
 
 // ─── Composable bare-DB core ──────────────────────────────────────────────────
 
@@ -130,31 +106,25 @@ function _recordTransaction(source_type, opts, tx = db) {
         entry_type,
         description,
         mode_of_payment    = 'Cash',
-        weight             = 0,
         post_cash_register = false,
         reference_type     = null,
         reference_id       = null,
     } = opts;
 
-    const weight_type = WEIGHT_TYPE_MAP[source_type] ?? WeightType.NONE;
     const id          = genId('CHS');
     const timestamp   = now();
 
     // 1. Insert ledger row
     tx.prepare(`
         INSERT INTO credit_history
-          (id, customer_id, amount, weight, weight_type, type, mode_of_payment, description, reference_type, reference_id, created)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, customer_id, amount, weight, weight_type, entry_type, mode_of_payment, description, reference_type, reference_id, timestamp);
+          (id, customer_id, amount, type, mode_of_payment, description, reference_type, reference_id, created)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, customer_id, amount, entry_type, mode_of_payment, description, reference_type, reference_id, timestamp);
 
     // 2. Roll-up money balance (throws SystemError if customer vanished)
     const new_balance = _rollupBalance(customer_id);
 
-    // 3. Roll-up weight balance
-    let new_weight_balance = null;
-    if (source_type !== 'cash') {
-        new_weight_balance = _rollupWeightBalance(customer_id, source_type);
-    }
+
 
     // 4. Cash register
     if (post_cash_register && amount > 0) {
@@ -165,13 +135,12 @@ function _recordTransaction(source_type, opts, tx = db) {
     }
 
     return {
-        id, customer_id, amount, weight, weight_type,
+        id, customer_id, amount,
         type            : entry_type,
         mode_of_payment,
         description,
         created         : timestamp,
         new_balance,
-        new_weight_balance,
     };
 }
 
@@ -226,7 +195,7 @@ function getHistory(customer_id, limit = 50, offset = 0) {
 function getBalanceSummary(customer_id) {
     if (!customer_id) throw new BusinessError('customer_id is required', ERR.MISSING_FIELD, 400);
     const row = db.prepare(
-        'SELECT balance, gold_weight_balance, silver_weight_balance FROM customer WHERE id = ?'
+        'SELECT balance FROM customer WHERE id = ?'
     ).get(customer_id);
     if (!row) throw new BusinessError(`Customer not found: ${customer_id}`, ERR.CUSTOMER_NOT_FOUND, 404);
     return row;
@@ -238,5 +207,4 @@ module.exports = {
     getBalanceSummary,
     _validateAppendEntry,
     EntryType,
-    WeightType,
 };

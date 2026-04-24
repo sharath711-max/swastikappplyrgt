@@ -15,6 +15,7 @@ const { db, genId, now, transaction, readCachedResult } = require('../../db/db')
 const { getRequestId } = require('../../utils/audit');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit      = require('./auditLogger');
+const { writeAuditLog } = require('../auditLogService');
 const socket     = require('../../socket');
 const { assertTransitionAllowed } = require('../workflowStateMachine');
 const seqSvc     = require('./sequenceService');
@@ -265,6 +266,7 @@ function createTest(type, data) {
             insertedItems.push({ id: itemId, item_number: itemNumber, ...calc, created: ts });
         }
 
+        writeAuditLog({ action: 'CREATE_TEST', entityType: type, entityId: testId, newValue: autoNumber });
         return { id: testId, auto_number: autoNumber, items: insertedItems, created: ts };
     });
 
@@ -350,6 +352,7 @@ function saveTestDraft(type, id, data) {
             audit.statusChange('testService.saveTestDraft', id, 'TODO', 'IN_PROGRESS');
         }
 
+        writeAuditLog({ action: 'SAVE_TEST_DRAFT', entityType: type, entityId: id });
         return { success: true };
     });
 
@@ -695,6 +698,7 @@ function deleteTest(type, id) {
         const ts = now();
         db.prepare(`UPDATE ${c.parentTable} SET deletedon = ?, lastmodified = ? WHERE id = ?`).run(ts, ts, id);
         db.prepare(`UPDATE ${c.itemTable}   SET deletedon = ? WHERE ${c.fkColumn} = ?`).run(ts, id);
+        writeAuditLog({ action: 'DELETE_TEST', entityType: type, entityId: id });
         return { success: true };
     });
 
@@ -831,6 +835,7 @@ function convertToCertificate(type, testId, data) {
             `SELECT COUNT(*) AS remaining FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
         ).get(testId);
 
+        writeAuditLog({ action: 'CONVERT_TO_CERTIFICATE', entityType: type, entityId: testId, newValue: certificate?.id });
         return { certificate, remaining_item_count: remaining };
     });
 

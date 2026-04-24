@@ -16,6 +16,7 @@
 const { db, genId, now, transaction } = require('../../db/db');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit        = require('./auditLogger');
+const { writeAuditLog } = require('../auditLogService');
 const calcSvc      = require('./calculationService');
 const { assertTransitionAllowed } = require('../workflowStateMachine');
 const seqSvc       = require('./sequenceService');
@@ -349,6 +350,7 @@ function createCertificate(type, data) {
             }, tx);
         }
 
+        writeAuditLog({ action: 'CREATE_CERTIFICATE', entityType: `${type}_cert`, entityId: cert.id, newValue: cert.auto_number });
         return { ...cert, ledger: ledgerEntry?.debit };
     });
 
@@ -527,11 +529,10 @@ function updateStatus(type, id, newStatus, opts = {}) {
                 }, tx);
             }
 
-            // Step 6: Compute snapshot (cert still IN_PROGRESS, total already updated)
+            // Step 6: Compute snapshot — must run after Step 4 so it captures the fee total
             const printSvc = require('./printService');
             const { getRequestId } = require('../../utils/audit');
-            const snapshotResult = opts.precomputedSnapshot
-                || printSvc.serializeSnapshot('certificate', type, id, getRequestId() || null);
+            const snapshotResult = printSvc.serializeSnapshot('certificate', type, id, getRequestId() || null);
             const { snapshotJson, snapshotHash, snapshotKeyVersion } = snapshotResult;
 
             // Step 7: Single atomic DONE write — after this, trigger blocks all further UPDATEs
@@ -598,6 +599,7 @@ function addItems(type, certId, newItems) {
 
         const added  = _insertItemsWork(type, certId, autoNumber, newItems, ts, startSeq);
         const totals = calcSvc.rollupTotals(type, certId, db);
+        writeAuditLog({ action: 'ADD_CERT_ITEM', entityType: `${type}_cert`, entityId: certId, newValue: added.length });
         return { added, totals };
     });
 
@@ -655,6 +657,7 @@ function updateItem(type, certId, itemId, updates) {
         `).run(...Object.values(fields), now(), itemId, certId);
 
         const totals = calcSvc.rollupTotals(type, certId, db);
+        writeAuditLog({ action: 'UPDATE_CERT_ITEM', entityType: `${type}_cert`, entityId: certId, field: 'item', newValue: itemId });
         return { success: true, totals };
     });
 
@@ -684,6 +687,7 @@ function removeItem(type, certId, itemId) {
         if (result.changes === 0) throw new BusinessError('Item not found', ERR.ITEM_NOT_FOUND, 404);
 
         const totals = calcSvc.rollupTotals(type, certId, db);
+        writeAuditLog({ action: 'DELETE_CERT_ITEM', entityType: `${type}_cert`, entityId: certId, oldValue: itemId });
         return { success: true, totals };
     });
 
@@ -755,6 +759,7 @@ function saveResults(type, certId, data) {
             ).run(...vals);
         }
 
+        writeAuditLog({ action: 'SAVE_CERT_RESULTS', entityType: `${type}_cert`, entityId: certId });
         return getCertificate(type, certId);
     });
 

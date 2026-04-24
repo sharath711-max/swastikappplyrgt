@@ -1,0 +1,63 @@
+## TODO — Migration Gap Tracking
+
+### 🔴 Gap 4 — State Transition Enforcement (CRITICAL)
+
+**Status:** ☐ Not Verified
+
+**Objective:**
+Ensure all status transitions are strictly validated through a single centralized rule set.
+
+---
+
+**Required Rule:**
+
+```id="g4a"
+ALL status changes → service layer → assertTransitionAllowed()
+```
+
+---
+
+**Disallowed:**
+
+```id="g4b"
+Direct repo.updateStatus(...)
+Inline SQL status updates
+Service methods that skip validation
+Duplicate or inconsistent transition logic
+```
+
+---
+
+**Verification Steps:**
+
+Search for status updates:
+
+```
+grep -r "updateStatus" backend/
+grep -r "status =" backend/
+```
+
+For each occurrence:
+
+* ☐ Is it inside a service layer?
+* ☐ Does it call `assertTransitionAllowed(...)` before update?
+* ☐ Is the same transition logic used across all modules (test, certificate, workflow)?
+
+---
+
+**Pass Condition:**
+All status transitions are validated by a single centralized function (`assertTransitionAllowed`).
+
+---
+
+**Fail Condition:**
+Any code path allows a status change without validation.
+
+---
+
+**Risk if not fixed:**
+
+* Illegal state transitions (e.g., TODO → DONE)
+* Workflow corruption
+* Invalid audit trails
+* Inconsistent system behavior

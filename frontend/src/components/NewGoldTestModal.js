@@ -43,6 +43,7 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const dropdownRef = useRef(null);
+    const submitReqIdRef = useRef(null);
 
     const [sampleDraft, setSampleDraft] = useState(emptyDraft);
     const [sampleItems, setSampleItems] = useState([]);
@@ -188,6 +189,10 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
                         throw new Error('Duplicate gold test submission blocked');
                     }
 
+                    if (!submitReqIdRef.current) {
+                        submitReqIdRef.current = window.crypto?.randomUUID?.() || Date.now().toString();
+                    }
+
                     const payload = {
                         customer_id: selectedCustomer.id,
                         items: sampleItems.map((s) => ({
@@ -199,11 +204,14 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
                         }))
                     };
 
-                    await api.post('/gold-tests', payload);
+                    await api.post('/gold-tests', payload, {
+                        headers: { 'X-Request-Id': submitReqIdRef.current }
+                    });
                     addToast('Gold Test Created Successfully', 'success');
                 },
                 reload: onSuccess,
                 close: () => {
+                    submitReqIdRef.current = null;
                     resetForm();
                     onHide();
                 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Modal } from 'react-bootstrap';
 import CertificateForm from './CertificateForm';
 import api from '../services/api';
@@ -9,6 +9,7 @@ import runModalSubmit from '../utils/handleSubmit';
 const NewCertificateModal = ({ show, onHide, onSuccess, type }) => {
     const { addToast } = useToast();
     const [loading, setLoading] = React.useState(false);
+    const submitReqIdRef = useRef(null);
 
     const handleCreate = async (formData) => {
         setLoading(true);
@@ -26,12 +27,21 @@ const NewCertificateModal = ({ show, onHide, onSuccess, type }) => {
                         throw new Error('Duplicate certificate submission blocked');
                     }
 
-                    const res = await api.post('/certificates/with-photo', formData);
+                    if (!submitReqIdRef.current) {
+                        submitReqIdRef.current = window.crypto?.randomUUID?.() || Date.now().toString();
+                    }
+
+                    const res = await api.post('/certificates/with-photo', formData, {
+                        headers: { 'X-Request-Id': submitReqIdRef.current }
+                    });
                     addToast('Certificate issued successfully', 'success');
                     return res.data;
                 },
                 reload: onSuccess,
-                close: onHide
+                close: () => {
+                    submitReqIdRef.current = null;
+                    onHide();
+                }
             });
         } catch (error) {
             if (error.message === 'Duplicate certificate submission blocked') {

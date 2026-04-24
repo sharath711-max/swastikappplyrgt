@@ -5,7 +5,11 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    config.headers['X-Request-ID'] = window.crypto?.randomUUID?.() || Date.now().toString();
+    // Only add a correlation ID if the caller hasn't supplied a stable one.
+    // Callers that need idempotency must provide their own X-Request-Id via request config.
+    if (!config.headers['X-Request-Id']) {
+        config.headers['X-Request-Id'] = window.crypto?.randomUUID?.() || Date.now().toString();
+    }
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     if (!['get', 'head', 'options', 'trace'].includes(config.method?.toLowerCase())) {

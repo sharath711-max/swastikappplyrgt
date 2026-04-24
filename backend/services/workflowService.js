@@ -4,7 +4,6 @@ const {
     db, withTransaction,
     readCachedResult, getIdempotencyKey, saveIdempotencyKey,
 } = require('../db/db');
-const printService = require('./v2/printService');
 const { getRequestId }          = require('../utils/audit');
 const testServiceV2             = require('./v2/testService');
 const certServiceV2             = require('./v2/certificateService');
@@ -481,25 +480,12 @@ class WorkflowService {
     _finalizeCert(type, id, certTable, actor, requestId, expectedVersion) {
         const certType = type.replace('_cert', '');
 
-        // ── Pre-compute canonical snapshot BEFORE acquiring the write lock ────
-        //
-        // serializeSnapshot reads cert + items from DB, builds the full print
-        // layout, and runs _stableSerialize + HMAC-SHA256 — all CPU/IO work that
-        // doesn't need the reserved lock.  Computing it here keeps the BEGIN
-        // IMMEDIATE window to pure writes (status, hash stamp, audit), making
-        // contention shorter for future high-throughput deployments.
-        //
-        // TOCTOU note: if cert items were edited between this read and the
-        // transaction commit the stored snapshot would reflect pre-edit state.
-        // This is acceptable for v1 because items are immutable once the cert
-        // reaches IN_PROGRESS.  If that changes, move the call back inside the
-        // transaction body (pass null as precomputedSnapshot).
-        //
-        // photo_cert has no printable layout — skip.
-        const precomputedSnapshot = printService.serializeSnapshot('certificate', certType, id, actor.userId || null);
-
         // ── BEGIN IMMEDIATE: OCC + updateStatus (SAVEPOINT, writes hash) +
         //    idempotency stamp + audit — all in one transaction.
+        //
+        // Snapshot is computed INSIDE updateStatus (after the fee total is written),
+        // not pre-computed here. Pre-computing would capture the pre-fee total and
+        // produce a print_snapshot whose totals.total diverges from the DB total column.
         const certResult = withTransaction(() => {
             // Serialised read — re-confirm state under the reserved lock
             const snap = db.prepare(
@@ -537,12 +523,11 @@ class WorkflowService {
             }
 
             // updateStatus becomes a SAVEPOINT inside our BEGIN IMMEDIATE.
-            // For gold/silver it receives the pre-computed snapshot so it skips
-            // the serialization + HMAC work inside the lock.
-            // photo_cert uses its own repo and has no snapshot.
+            // Snapshot is computed inside updateStatus after the fee write, so it
+            // captures the canonical fee total, not the pre-finalization item sum.
             const result = certType === 'photo'
-                ? photoCertRepo.updateStatus(id, 'DONE', actor, { precomputedSnapshot })
-                : certServiceV2.updateStatus(certType, id, 'DONE', { precomputedSnapshot });
+                ? photoCertRepo.updateStatus(id, 'DONE', actor, {})
+                : certServiceV2.updateStatus(certType, id, 'DONE', {});
 
             // Stamp completion_request_id in the same commit as the status change.
             // If the SAVEPOINT above is rolled back this UPDATE also rolls back.

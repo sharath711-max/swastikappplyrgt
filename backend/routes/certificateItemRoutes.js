@@ -1,11 +1,11 @@
+'use strict';
+
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const GoldCertificateItemRepository = require('../repositories/goldCertificateItemRepository');
-const SilverCertificateItemRepository = require('../repositories/SilverCertificateItemRepository');
+const certServiceV2 = require('../services/v2/certificateService');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { immutabilityGuard } = require('../middleware/immutabilityGuard');
 
-// We have 3 distinct tableNames to guard based on ID prefixes. We will create a dynamic guard for certificates:
 const dynamicCertGuard = (req, res, next) => {
     let tableName = null;
     const id = req.params.id || req.body.id;
@@ -14,24 +14,27 @@ const dynamicCertGuard = (req, res, next) => {
         else if (id.startsWith('SCR')) tableName = 'silver_certificate';
         else if (id.startsWith('PCR')) tableName = 'photo_certificate';
     }
-
-    if (tableName) {
-        return immutabilityGuard(tableName)(req, res, next);
-    }
+    if (tableName) return immutabilityGuard(tableName)(req, res, next);
     next();
 };
 
 router.use(authMiddleware);
 router.use(dynamicCertGuard);
 
-/**
- * Helper to get the correct repository based on certificate ID prefix
- */
-const getRepo = (certificateId) => {
-    if (certificateId.startsWith('GCR')) return GoldCertificateItemRepository;
-    if (certificateId.startsWith('SCR')) return SilverCertificateItemRepository;
-    // Fallback or Photo
-    return GoldCertificateItemRepository;
+function inferType(certId) {
+    if (certId.startsWith('GCR')) return 'gold';
+    if (certId.startsWith('SCR')) return 'silver';
+    return null;
+}
+
+const handleError = (res, error, next) => {
+    if (error.statusCode) {
+        return res.status(error.statusCode).json({ error: error.message, code: error.code });
+    }
+    if (error.message?.startsWith('409')) {
+        return res.status(409).json({ error: error.message.replace('409: ', '') });
+    }
+    next(error);
 };
 
 /**
@@ -41,12 +44,12 @@ router.post('/items', async (req, res, next) => {
     try {
         const { id } = req.params;
         const clientData = req.body;
-        const repo = getRepo(id);
 
-        // Security: REJECT any attempts to send calculated values
+        const type = inferType(id);
+        if (!type) return res.status(400).json({ error: 'Cannot infer certificate type from ID' });
+
         const forbiddenFields = ['net_weight', 'fine_weight', 'item_total', 'amount', 'calculated_at'];
         const detectedForbidden = forbiddenFields.filter(f => clientData[f] !== undefined);
-
         if (detectedForbidden.length > 0) {
             return res.status(400).json({
                 error: 'CALCULATION_ATTEMPT',
@@ -54,21 +57,15 @@ router.post('/items', async (req, res, next) => {
             });
         }
 
-        const result = repo.createItem(id, clientData);
+        const result = certServiceV2.addItems(type, id, [clientData]);
 
         res.status(201).json({
             success: true,
             message: 'Item created with server-side calculations',
-            data: result
+            data: result.added[0] ?? result
         });
     } catch (error) {
-        if (error.message.startsWith('409:')) {
-            return res.status(409).json({ error: error.message.replace('409: ', '') });
-        }
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ error: error.message, details: error.details });
-        }
-        next(error);
+        handleError(res, error, next);
     }
 });
 
@@ -78,9 +75,10 @@ router.post('/items', async (req, res, next) => {
 router.put('/items/:itemId', async (req, res, next) => {
     try {
         const { id, itemId } = req.params;
-        const repo = getRepo(id);
+        const type = inferType(id);
+        if (!type) return res.status(400).json({ error: 'Cannot infer certificate type from ID' });
 
-        const result = repo.updateItem(itemId, req.body);
+        const result = certServiceV2.updateItem(type, id, itemId, req.body);
 
         res.json({
             success: true,
@@ -88,13 +86,7 @@ router.put('/items/:itemId', async (req, res, next) => {
             data: result
         });
     } catch (error) {
-        if (error.message.startsWith('409:')) {
-            return res.status(409).json({ error: error.message.replace('409: ', '') });
-        }
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ error: error.message, details: error.details });
-        }
-        next(error);
+        handleError(res, error, next);
     }
 });
 
@@ -104,9 +96,10 @@ router.put('/items/:itemId', async (req, res, next) => {
 router.delete('/items/:itemId', async (req, res, next) => {
     try {
         const { id, itemId } = req.params;
-        const repo = getRepo(id);
+        const type = inferType(id);
+        if (!type) return res.status(400).json({ error: 'Cannot infer certificate type from ID' });
 
-        const result = repo.deleteItem(itemId);
+        const result = certServiceV2.removeItem(type, id, itemId);
 
         res.json({
             success: true,
@@ -114,10 +107,7 @@ router.delete('/items/:itemId', async (req, res, next) => {
             data: result
         });
     } catch (error) {
-        if (error.message.startsWith('409:')) {
-            return res.status(409).json({ error: error.message.replace('409: ', '') });
-        }
-        next(error);
+        handleError(res, error, next);
     }
 });
 

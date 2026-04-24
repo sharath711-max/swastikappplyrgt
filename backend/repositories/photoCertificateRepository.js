@@ -4,6 +4,7 @@ const SequenceService = require('../services/sequenceService');
 const CertificateCalculationService = require('../services/certificateCalculationService');
 const { writeAuditLog } = require('../services/auditLogService');
 const ledgerSvc = require('../services/v2/ledgerService');
+const { assertTransitionAllowed } = require('../services/workflowStateMachine');
 
 const PHOTO_CERT_FEE_RATE = 50;   // canonical fee: same as gold/silver cert
 
@@ -75,6 +76,7 @@ class PhotoCertificateRepository {
             // 3. Initial Roll-up Calculation
             CertificateCalculationService.updateCertificateTotals(certId, this.db);
 
+            writeAuditLog({ action: 'CREATE_CERTIFICATE', entityType: 'photo_cert', entityId: certId, newValue: parentAutoNumber });
             return { id: certId, auto_number: parentAutoNumber, items: insertedItems, created: timestamp };
         })();
     }
@@ -151,15 +153,8 @@ class PhotoCertificateRepository {
                  FROM photo_certificate WHERE id = ? AND deletedon IS NULL`
             ).get(id);
 
-            const statusHierarchy = { 'TODO': 1, 'IN_PROGRESS': 2, 'DONE': 3 };
-
             if (!current) throw new Error(`Photo certificate not found: ${id}`);
-            if (statusHierarchy[current.status] > statusHierarchy[status]) {
-                throw new Error(`Backward move NOT permitted: Cannot move from ${current.status} to ${status}`);
-            }
-            if (current.status === 'DONE') {
-                throw new Error('409: Cannot update status of a DONE certificate');
-            }
+            assertTransitionAllowed('photo_cert', current.status, status);
 
             const timestamp = now();
 
@@ -204,11 +199,10 @@ class PhotoCertificateRepository {
                     }
                 }
 
-                // Step 5: Compute snapshot (cert still IN_PROGRESS, total already updated)
+                // Step 5: Compute snapshot — must run after Step 3 so it captures the fee total
                 const printSvc = require('../services/v2/printService');
                 const { getRequestId } = require('../utils/audit');
-                const snapshotResult = opts.precomputedSnapshot
-                    || printSvc.serializeSnapshot('certificate', 'photo', id, actor.userId || getRequestId() || null);
+                const snapshotResult = printSvc.serializeSnapshot('certificate', 'photo', id, actor.userId || getRequestId() || null);
                 const { snapshotJson, snapshotHash, snapshotKeyVersion } = snapshotResult;
 
                 // Step 6: Single atomic DONE write — after this, trigger blocks all further UPDATEs

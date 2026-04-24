@@ -4,7 +4,7 @@ const express = require('express');
 const router  = express.Router();
 
 const certServiceV2          = require('../services/v2/certificateService');
-const photoCertRepo          = require('../repositories/photoCertificateRepository');
+const photoCertSvc           = require('../services/v2/photoCertificateService');
 const upload                 = require('../middleware/uploadMiddleware');
 const { generateCertificateHTML } = require('../utils/certificateTemplate');
 const { authMiddleware }     = require('../middleware/authMiddleware');
@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
         };
 
         if (type === 'photo') {
-            const result = await photoCertRepo.findAll(filters);
+            const result = await photoCertSvc.findAll(filters);
             return res.json(result);
         }
 
@@ -86,7 +86,7 @@ router.get('/:id', async (req, res) => {
 
         let certificate;
         if (resolvedType === 'photo') {
-            certificate = await photoCertRepo.findById(id);
+            certificate = await photoCertSvc.findById(id);
         } else {
             certificate = certServiceV2.getCertificate(resolvedType, id);
         }
@@ -107,7 +107,7 @@ router.post('/', async (req, res) => {
         let certificate;
         if (type === 'photo') {
             const { customer_id, items, mode_of_payment, total, gst, gst_bill_number, total_tax, status } = req.body;
-            certificate = await photoCertRepo.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
+            certificate = await photoCertSvc.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
         } else {
             certificate = certServiceV2.createCertificate(type, req.body);
         }
@@ -140,7 +140,7 @@ router.post('/with-photo', upload.single('photo'), async (req, res) => {
         let certificate;
         if (type === 'photo') {
             const { customer_id, items, mode_of_payment, total, gst, gst_bill_number, total_tax, status } = data;
-            certificate = await photoCertRepo.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
+            certificate = await photoCertSvc.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
         } else {
             certificate = certServiceV2.createCertificate(type, data);
         }
@@ -159,7 +159,7 @@ router.get('/:no/print', async (req, res) => {
 
         let certData;
         if (type === 'photo') {
-            certData = await photoCertRepo.findById(id);
+            certData = await photoCertSvc.findById(id);
         } else if (type) {
             certData = certServiceV2.getCertificate(type, id);
         } else {
@@ -206,24 +206,7 @@ router.post('/:id/results', upload.single('photo'), async (req, res) => {
         const type = data.type || inferType(id);
 
         if (type === 'photo') {
-            const { items, mode_of_payment, total, gst } = data;
-            for (const item of items || []) {
-                const updates = {};
-                if (item.media     !== undefined) updates.media_path = item.media;
-                if (item.purity    !== undefined) updates.purity = parseFloat(item.purity);
-                await photoCertRepo.updateItem(id, item.id, updates);
-            }
-            if (mode_of_payment !== undefined || total !== undefined || gst !== undefined) {
-                const cert = await photoCertRepo.findById(id);
-                if (cert) {
-                    await photoCertRepo.updatePayment(
-                        id,
-                        mode_of_payment || cert.mode_of_payment,
-                        total !== undefined ? total : cert.total,
-                        gst   !== undefined ? gst   : cert.gst,
-                    );
-                }
-            }
+            await photoCertSvc.saveResults(id, data);
         } else {
             await certServiceV2.saveResults(type, id, data);
         }

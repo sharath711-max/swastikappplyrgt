@@ -196,7 +196,7 @@ function _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts) {
     db.prepare(`
         UPDATE ${c.parentTable}
         SET status = 'DONE', mode_of_payment = ?,
-            done_at = COALESCE(done_at, ?), lastmodified = ?
+            done_at = COALESCE(done_at, ?), lastmodified = ?, version = version + 1
         WHERE id = ? AND deletedon IS NULL
     `).run(mode_of_payment, ts, ts, testId);
 
@@ -265,6 +265,11 @@ function createTest(type, data) {
 
             insertedItems.push({ id: itemId, item_number: itemNumber, ...calc, created: ts });
         }
+
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('test', type, testId, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, testId);
 
         writeAuditLog({ action: 'CREATE_TEST', entityType: type, entityId: testId, newValue: autoNumber });
         return { id: testId, auto_number: autoNumber, items: insertedItems, created: ts };
@@ -352,6 +357,11 @@ function saveTestDraft(type, id, data) {
             audit.statusChange('testService.saveTestDraft', id, 'TODO', 'IN_PROGRESS');
         }
 
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('test', type, id, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
+
         writeAuditLog({ action: 'SAVE_TEST_DRAFT', entityType: type, entityId: id });
         return { success: true };
     });
@@ -383,7 +393,25 @@ function finalizeTest(type, id, data) {
     const _txn = transaction(() => {
         const ts = now();
         _finalizeItemsWork(type, id, items, ts);
+
+        const c = _cfg(type);
+        const finalItems = db.prepare(
+            `SELECT * FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
+        ).all(id);
+        const TEST_FEE_RATE = 150;
+        const testFeeTotal = TEST_FEE_RATE * finalItems.length;
+
+        db.prepare(
+            `UPDATE ${c.parentTable} SET total = ?, lastmodified = ? WHERE id = ?`
+        ).run(testFeeTotal, ts, id);
+
         _markTestDoneWork(type, id, mode_of_payment, weight_loss, ts);
+
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('test', type, id, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
+
         return { success: true };
     });
 
@@ -603,7 +631,7 @@ function completeTest(type, testId, data) {
             tx.prepare(`
                 UPDATE ${c.parentTable}
                 SET status = 'DONE', done_at = COALESCE(done_at, ?),
-                    print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?
+                    print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?, version = version + 1
                 WHERE id = ?
             `).run(ts, snapshotJson, snapshotHash, snapshotKeyVersion, ts, testId);
         }

@@ -1,6 +1,6 @@
 const { db, initDb } = require('../../db/db');
 const customerService = require('../../services/customerService');
-const certificateService = require('../../services/certificateService');
+const certificateService = require('../../services/v2/certificateService');
 
 describe('certificate generation across certificate types', () => {
     const createdIds = [];

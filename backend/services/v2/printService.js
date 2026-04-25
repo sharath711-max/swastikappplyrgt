@@ -78,40 +78,49 @@ function _assertFiniteNumber(value, code) {
 
 function validateSnapshotSchema(data) {
     if (!data || typeof data !== 'object') {
+        console.error('Validation failed: not an object', data);
         throw new BusinessError('SNAPSHOT_INVALID_DATA', ERR.DB_CORRUPTION, 500);
     }
 
     if (!data.customer || typeof data.customer !== 'object') {
+        console.error('Validation failed: invalid customer', data);
         throw new BusinessError('SNAPSHOT_INVALID_DATA', ERR.DB_CORRUPTION, 500);
     }
 
     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
+        console.error('Validation failed: invalid items', data);
         throw new BusinessError('SNAPSHOT_INVALID_DATA', ERR.DB_CORRUPTION, 500);
     }
 
     if (!data.totals || typeof data.totals !== 'object') {
+        console.error('Validation failed: invalid totals', data);
         throw new BusinessError('SNAPSHOT_INVALID_DATA', ERR.DB_CORRUPTION, 500);
     }
 
     const totalNumber = Number(data.totals.total);
     const baseNumber = Number(data.totals.base);
     const taxNumber = Number(data.totals.tax);
-    _assertFiniteNumber(totalNumber, 'SNAPSHOT_INVALID_TOTAL');
-    _assertFiniteNumber(baseNumber, 'SNAPSHOT_INVALID_BASE');
-    _assertFiniteNumber(taxNumber, 'SNAPSHOT_INVALID_TAX');
+    try {
+        _assertFiniteNumber(totalNumber, 'SNAPSHOT_INVALID_TOTAL');
+        _assertFiniteNumber(baseNumber, 'SNAPSHOT_INVALID_BASE');
+        _assertFiniteNumber(taxNumber, 'SNAPSHOT_INVALID_TAX');
 
-    data.items.forEach((item) => {
-        if (!item || typeof item !== 'object') {
-            throw new BusinessError('SNAPSHOT_INVALID_ITEM', ERR.DB_CORRUPTION, 500);
-        }
+        data.items.forEach((item) => {
+            if (!item || typeof item !== 'object') {
+                throw new BusinessError('SNAPSHOT_INVALID_ITEM', ERR.DB_CORRUPTION, 500);
+            }
 
-        _assertFiniteNumber(Number(item.gross_weight), 'SNAPSHOT_INVALID_GROSS_WEIGHT');
-        _assertFiniteNumber(Number(item.test_weight), 'SNAPSHOT_INVALID_TEST_WEIGHT');
-        _assertFiniteNumber(Number(item.net_weight), 'SNAPSHOT_INVALID_NET_WEIGHT');
-        _assertFiniteNumber(Number(item.purity), 'SNAPSHOT_INVALID_PURITY');
-        _assertFiniteNumber(Number(item.fine_weight), 'SNAPSHOT_INVALID_FINE_WEIGHT');
-        _assertFiniteNumber(Number(item.item_total), 'SNAPSHOT_INVALID_ITEM_TOTAL');
-    });
+            _assertFiniteNumber(Number(item.gross_weight), 'SNAPSHOT_INVALID_GROSS_WEIGHT');
+            _assertFiniteNumber(Number(item.test_weight), 'SNAPSHOT_INVALID_TEST_WEIGHT');
+            _assertFiniteNumber(Number(item.net_weight), 'SNAPSHOT_INVALID_NET_WEIGHT');
+            _assertFiniteNumber(Number(item.purity), 'SNAPSHOT_INVALID_PURITY');
+            _assertFiniteNumber(Number(item.fine_weight), 'SNAPSHOT_INVALID_FINE_WEIGHT');
+            _assertFiniteNumber(Number(item.item_total), 'SNAPSHOT_INVALID_ITEM_TOTAL');
+        });
+    } catch (err) {
+        console.error('Validation failed:', err.message, data);
+        throw err;
+    }
 }
 
 function _snapshotTable(resourceType, metalType) {
@@ -219,7 +228,7 @@ function resolveCanonicalId(resourceType, metalType, id) {
     return id;
 }
 
-function getPrintLayout(resourceType, metalType, id) {
+function getPrintLayout(resourceType, metalType, id, forceRegenerate = false) {
     const resolvedMetalType = metalType || inferMetalType(resourceType, id);
     const resolvedId = resolveCanonicalId(resourceType, resolvedMetalType, id);
     let data;
@@ -255,9 +264,10 @@ function getPrintLayout(resourceType, metalType, id) {
         throw new BusinessError(`Customer not found for ${resourceType} ${id}`, ERR.CUSTOMER_NOT_FOUND, 404);
     }
 
-    if (data.print_snapshot) {
+    if (data.print_snapshot && !forceRegenerate) {
         try {
-            return JSON.parse(data.print_snapshot);
+            const parsed = JSON.parse(data.print_snapshot);
+            return parsed.data ? parsed.data : parsed;
         } catch (e) {
             // Fallthrough to regenerate dynamically if parse fails
         }
@@ -313,7 +323,8 @@ function getPrintLayout(resourceType, metalType, id) {
 }
 
 function createSnapshotEnvelope(resourceType, metalType, id, actorId = null) {
-    const layout = getPrintLayout(resourceType, metalType, id);
+    // Always force regeneration when creating a new snapshot to capture the latest state
+    const layout = getPrintLayout(resourceType, metalType, id, true);
     validateSnapshotSchema(layout);
 
     return {

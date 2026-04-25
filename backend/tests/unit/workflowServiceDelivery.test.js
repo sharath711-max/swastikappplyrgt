@@ -2,7 +2,7 @@ jest.mock('../../services/v2/testService', () => ({
     updateStatus: jest.fn().mockResolvedValue(true)
 }));
 
-jest.mock('../../services/certificateService', () => ({
+jest.mock('../../services/v2/certificateService', () => ({
     updateStatus: jest.fn().mockResolvedValue(true)
 }));
 

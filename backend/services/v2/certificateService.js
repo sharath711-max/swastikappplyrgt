@@ -350,6 +350,11 @@ function createCertificate(type, data) {
             }, tx);
         }
 
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, cert.id, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, cert.id);
+
         writeAuditLog({ action: 'CREATE_CERTIFICATE', entityType: `${type}_cert`, entityId: cert.id, newValue: cert.auto_number });
         return { ...cert, ledger: ledgerEntry?.debit };
     });
@@ -538,13 +543,13 @@ function updateStatus(type, id, newStatus, opts = {}) {
             // Step 7: Single atomic DONE write — after this, trigger blocks all further UPDATEs
             result = db.prepare(
                 `UPDATE ${c.parentTable}
-                 SET status = ?, print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?
+                 SET status = ?, print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?, version = version + 1
                  WHERE id = ? AND deletedon IS NULL`
             ).run(newStatus, snapshotJson, snapshotHash, snapshotKeyVersion, ts, id);
 
         } else {
             result = db.prepare(
-                `UPDATE ${c.parentTable} SET status = ?, lastmodified = ? WHERE id = ? AND deletedon IS NULL`
+                `UPDATE ${c.parentTable} SET status = ?, lastmodified = ?, version = version + 1 WHERE id = ? AND deletedon IS NULL`
             ).run(newStatus, ts, id);
         }
 
@@ -599,6 +604,12 @@ function addItems(type, certId, newItems) {
 
         const added  = _insertItemsWork(type, certId, autoNumber, newItems, ts, startSeq);
         const totals = calcSvc.rollupTotals(type, certId, db);
+
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, certId, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
+
         writeAuditLog({ action: 'ADD_CERT_ITEM', entityType: `${type}_cert`, entityId: certId, newValue: added.length });
         return { added, totals };
     });
@@ -657,6 +668,12 @@ function updateItem(type, certId, itemId, updates) {
         `).run(...Object.values(fields), now(), itemId, certId);
 
         const totals = calcSvc.rollupTotals(type, certId, db);
+
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, certId, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
+
         writeAuditLog({ action: 'UPDATE_CERT_ITEM', entityType: `${type}_cert`, entityId: certId, field: 'item', newValue: itemId });
         return { success: true, totals };
     });
@@ -687,6 +704,12 @@ function removeItem(type, certId, itemId) {
         if (result.changes === 0) throw new BusinessError('Item not found', ERR.ITEM_NOT_FOUND, 404);
 
         const totals = calcSvc.rollupTotals(type, certId, db);
+
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, certId, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
+
         writeAuditLog({ action: 'DELETE_CERT_ITEM', entityType: `${type}_cert`, entityId: certId, oldValue: itemId });
         return { success: true, totals };
     });
@@ -758,6 +781,11 @@ function saveResults(type, certId, data) {
                 `UPDATE ${c.parentTable} SET ${patches.join(', ')}, lastmodified = ? WHERE id = ?`
             ).run(...vals);
         }
+
+        const printSvc = require('./printService');
+        const { getRequestId } = require('../../utils/audit');
+        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', type, certId, getRequestId() || null);
+        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
 
         writeAuditLog({ action: 'SAVE_CERT_RESULTS', entityType: `${type}_cert`, entityId: certId });
         return getCertificate(type, certId);

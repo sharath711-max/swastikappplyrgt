@@ -76,6 +76,11 @@ class PhotoCertificateRepository {
             // 3. Initial Roll-up Calculation
             CertificateCalculationService.updateCertificateTotals(certId, this.db);
 
+            const printSvc = require('../services/v2/printService');
+            const { getRequestId } = require('../utils/audit');
+            const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', 'photo', certId, getRequestId() || null);
+            this.db.prepare(`UPDATE photo_certificate SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
+
             writeAuditLog({ action: 'CREATE_CERTIFICATE', entityType: 'photo_cert', entityId: certId, newValue: parentAutoNumber });
             return { id: certId, auto_number: parentAutoNumber, items: insertedItems, created: timestamp };
         })();
@@ -294,6 +299,11 @@ class PhotoCertificateRepository {
             // Roll-up recalculation
             CertificateCalculationService.updateCertificateTotals(certId, this.db);
 
+            const printSvc = require('../services/v2/printService');
+            const { getRequestId } = require('../utils/audit');
+            const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', 'photo', certId, getRequestId() || null);
+            this.db.prepare(`UPDATE photo_certificate SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
+
             return result;
         })();
     }
@@ -314,6 +324,11 @@ class PhotoCertificateRepository {
             // Note: Recalculation logic in CertificateCalculationService actually SUMS item_total.
             // If the user manually overrides 'total' here, it might get overwritten by the roll-up if triggered later.
             // However, PCR might have different fee structures. We assume roll-up follows item sums.
+
+            const printSvc = require('../services/v2/printService');
+            const { getRequestId } = require('../utils/audit');
+            const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('certificate', 'photo', certId, getRequestId() || null);
+            this.db.prepare(`UPDATE photo_certificate SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
 
             return result;
         })();

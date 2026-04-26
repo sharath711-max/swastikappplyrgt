@@ -7,17 +7,66 @@ import NewGoldTestModal from '../components/NewGoldTestModal';
 import NewSilverTestModal from '../components/NewSilverTestModal';
 import NewCertificateModal from '../components/NewCertificateModal';
 import Phase2Modal from '../components/Phase2Modal';
-import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes } from 'react-icons/fa';
 import { useSocket } from '../hooks/useSocket';
+import { usePrint } from '../contexts/PrintContext';
 import './WorkflowBoard.css';
 
 const COLUMN_LIMIT = 50;
 const createRequestId = () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+// ── Board mutation helpers (pure — take board object, return new board object) ──
+
+function replaceAcrossColumns(board, updated) {
+    const result = {};
+    for (const col of ['TODO', 'IN_PROGRESS', 'DONE']) {
+        result[col] = (board[col] || []).map(item =>
+            item.id === updated.id && item.type === updated.type ? updated : item
+        );
+    }
+    return result;
+}
+
+function moveToDoneColumn(board, id, type) {
+    let found = null;
+    const result = { TODO: [], IN_PROGRESS: [], DONE: [] };
+    for (const col of ['TODO', 'IN_PROGRESS', 'DONE']) {
+        result[col] = (board[col] || []).filter(item => {
+            if (item.id === id && item.type === type) {
+                found = { ...item, status: 'DONE' };
+                return false;
+            }
+            return true;
+        });
+    }
+    if (found) result.DONE = [found, ...result.DONE];
+    return result;
+}
+
+function removeFromAllColumns(board, id, type) {
+    const result = {};
+    for (const col of ['TODO', 'IN_PROGRESS', 'DONE']) {
+        result[col] = (board[col] || []).filter(i => !(i.id === id && i.type === type));
+    }
+    return result;
+}
+
+function prependToColumn(board, newItem) {
+    // Remove any existing entry for this id+type first — prevents duplicate cards
+    // if socket delivers item:added after the item was already moved to another column.
+    const cleaned = removeFromAllColumns(board, newItem.id, newItem.type);
+    const col = newItem.status || 'TODO';
+    return {
+        ...cleaned,
+        [col]: [newItem, ...(cleaned[col] || [])].slice(0, COLUMN_LIMIT),
+    };
+}
+
 const WorkflowBoard = () => {
     const { addToast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
+    const { triggerPrint } = usePrint();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [batchMoving, setBatchMoving] = useState(false);
@@ -34,8 +83,10 @@ const WorkflowBoard = () => {
     const [selected, setSelected]       = useState(new Set());
     const [bulkLoading, setBulkLoading] = useState(false);
     const [board, setBoard] = useState({ TODO: [], IN_PROGRESS: [], DONE: [] });
-    const fetchSequenceRef = React.useRef(0);
+    const fetchSequenceRef  = React.useRef(0);
     const actionSequenceRef = React.useRef(0);
+    const lastVersions      = React.useRef({});   // { id: version } — stale-update guard
+    const pendingIds        = React.useRef(new Set()); // ids of in-flight optimistic writes
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -72,6 +123,40 @@ const WorkflowBoard = () => {
         setItems([...(nextBoard.TODO || []), ...(nextBoard.IN_PROGRESS || []), ...(nextBoard.DONE || [])]);
     }, []);
 
+    // Fetch a single record and normalize it to the kanban board shape
+    const fetchBoardItem = useCallback(async (id, type) => {
+        try {
+            let raw;
+            if (type === 'gold') {
+                const res = await api.get(`/gold-tests/${id}`);
+                raw = res.data.data;
+            } else if (type === 'silver') {
+                const res = await api.get(`/silver-tests/${id}`);
+                raw = res.data.data || res.data;
+            } else {
+                const apiType = type.replace('_cert', '');
+                const res = await api.get(`/certificates/${id}?type=${apiType}`);
+                raw = res.data.data || res.data;
+            }
+            if (!raw) return null;
+            return {
+                type,
+                id           : raw.id,
+                customer_id  : raw.customer_id,
+                auto_number  : raw.auto_number,
+                status       : raw.status,
+                total        : raw.total || 0,
+                mode_of_payment: raw.mode_of_payment,
+                createdon    : raw.created || raw.createdon,
+                customer_name: raw.customer_name,
+                has_snapshot : raw.has_snapshot ?? (raw.print_snapshot ? 1 : 0),
+                version      : raw.version || 0,
+            };
+        } catch {
+            return null;
+        }
+    }, []);
+
     const moveCardInBoard = useCallback((currentBoard, item, targetStatus) => {
         const nextBoard = {
             TODO: [...(currentBoard.TODO || [])],
@@ -88,17 +173,70 @@ const WorkflowBoard = () => {
         return nextBoard;
     }, []);
 
-    // Real-time updates — refresh board when any item changes on another client
+    // Real-time updates — targeted per-ID updates with version guard
     useSocket(
         ['gold_test', 'silver_test', 'gold_cert', 'silver_cert', 'workflow'],
         {
-            'item:added'   : fetchData,
-            'item:updated' : fetchData,
-            'item:done'    : fetchData,
-            'cert:created' : fetchData,
-            'cert:updated' : fetchData,
-            'cert:done'    : fetchData,
-        }
+            'item:added': async ({ id, type }) => {
+                if (!id || !type || pendingIds.current.has(id)) return;
+                const fresh = await fetchBoardItem(id, type);
+                if (!fresh) return;
+                lastVersions.current[id] = fresh.version;
+                setBoard(prev => prependToColumn(prev, fresh));
+                setItems(prev => [fresh, ...prev.filter(i => !(i.id === id && i.type === type))]);
+            },
+            'item:updated': async ({ id, type }) => {
+                if (!id || !type || pendingIds.current.has(id)) return;
+                const prevVer = lastVersions.current[id] || 0;
+                const fresh = await fetchBoardItem(id, type);
+                if (!fresh || fresh.version <= prevVer) return;
+                lastVersions.current[id] = fresh.version;
+                setBoard(prev => replaceAcrossColumns(prev, fresh));
+                setItems(prev => prev.map(i => (i.id === id && i.type === type) ? fresh : i));
+            },
+            'item:done': async ({ id, type }) => {
+                if (!id || !type || pendingIds.current.has(id)) return;
+                const fresh = await fetchBoardItem(id, type);
+                if (!fresh) return;
+                const prevVer = lastVersions.current[id] || 0;
+                if (fresh.version <= prevVer) return;
+                lastVersions.current[id] = fresh.version;
+                setBoard(prev => replaceAcrossColumns(prev, fresh));
+                setItems(prev => prev.map(i => (i.id === id && i.type === type) ? fresh : i));
+            },
+            'cert:created': async ({ id, type }) => {
+                if (!id || !type || pendingIds.current.has(id)) return;
+                // cert:created emits test type ('gold'/'silver'); map to cert type
+                const certType = type.endsWith('_cert') ? type : `${type}_cert`;
+                const fresh = await fetchBoardItem(id, certType);
+                if (!fresh) return;
+                lastVersions.current[id] = fresh.version;
+                setBoard(prev => prependToColumn(prev, fresh));
+                setItems(prev => [fresh, ...prev.filter(i => !(i.id === id && i.type === certType))]);
+            },
+            'cert:updated': async ({ id, type }) => {
+                if (!id || !type || pendingIds.current.has(id)) return;
+                const certType = type.endsWith('_cert') ? type : `${type}_cert`;
+                const prevVer = lastVersions.current[id] || 0;
+                const fresh = await fetchBoardItem(id, certType);
+                if (!fresh || fresh.version <= prevVer) return;
+                lastVersions.current[id] = fresh.version;
+                setBoard(prev => replaceAcrossColumns(prev, fresh));
+                setItems(prev => prev.map(i => (i.id === id && i.type === certType) ? fresh : i));
+            },
+            'cert:done': async ({ id, type }) => {
+                if (!id || !type || pendingIds.current.has(id)) return;
+                const certType = type.endsWith('_cert') ? type : `${type}_cert`;
+                const fresh = await fetchBoardItem(id, certType);
+                if (!fresh) return;
+                const prevVer = lastVersions.current[id] || 0;
+                if (fresh.version <= prevVer) return;
+                lastVersions.current[id] = fresh.version;
+                setBoard(prev => replaceAcrossColumns(prev, fresh));
+                setItems(prev => prev.map(i => (i.id === id && i.type === certType) ? fresh : i));
+            },
+        },
+        [fetchBoardItem]
     );
 
     // ── BATCH MOVE ────────────────────────────────────────────────────────
@@ -139,7 +277,7 @@ const WorkflowBoard = () => {
 
                 if (card.type === 'gold' || card.type === 'silver') {
                     const totalWtLoss = cardItems.reduce((acc, it) => acc + (
-                        Number(it.gross_weight || it.sample_weight || 0) - (Number(it.test_weight || it.sample_weight || 0) + Number(it.net_weight || 0))
+                        Number(it.gross_weight || 0) - (Number(it.test_weight || 0) + Number(it.net_weight || 0))
                     ), 0);
                     await api.post(`/${card.type}-tests/${card.id}/finalize`, {
                         items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned, item_number: i.item_number || i.item_no })),
@@ -148,12 +286,7 @@ const WorkflowBoard = () => {
                         cert: { gst: false }
                     });
                 } else {
-                    await api.post(resultsEndpoint, {
-                        items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned })),
-                        mode_of_payment: card.mode_of_payment,
-                        total: Number(card.total || 0)
-                    });
-                    await api.patch(statusEndpoint, { status: 'DONE' });
+                    await api.post('/workflow/finalize', { testId: card.id, type: card.type });
                 }
                 count++;
             } catch (err) {
@@ -237,6 +370,9 @@ const WorkflowBoard = () => {
             return;
         }
 
+        const itemId = draggedItem.id;
+        const itemType = draggedItem.type;
+        pendingIds.current.add(itemId);
         const previousBoard = board;
         try {
             const actionSeq = ++actionSequenceRef.current;
@@ -282,7 +418,7 @@ const WorkflowBoard = () => {
                     const detailRes = await api.get(endpoint);
                     const cardItems = detailRes.data?.data?.items || [];
                     const totalWtLoss = cardItems.reduce((acc, it) => acc + (
-                        Number(it.gross_weight || it.sample_weight || 0) - (Number(it.test_weight || it.sample_weight || 0) + Number(it.net_weight || 0))
+                        Number(it.gross_weight || 0) - (Number(it.test_weight || 0) + Number(it.net_weight || 0))
                     ), 0);
                     await api.post(`/${draggedItem.type}-tests/${draggedItem.id}/finalize`, {
                         items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned, item_number: i.item_number || i.item_no })),
@@ -303,13 +439,20 @@ const WorkflowBoard = () => {
                 addToast('Moved to Completed ✓', 'success');
             }
             if (actionSeq === actionSequenceRef.current) {
-                await fetchData();
+                // Targeted single-item fetch to confirm server state after move
+                const fresh = await fetchBoardItem(itemId, itemType);
+                if (fresh && actionSeq === actionSequenceRef.current) {
+                    setBoard(prev => replaceAcrossColumns(prev, fresh));
+                    setItems(prev => prev.map(i => (i.id === fresh.id && i.type === fresh.type) ? fresh : i));
+                    lastVersions.current[itemId] = fresh.version;
+                }
             }
         } catch (err) {
             applyBoardState(previousBoard);
             addToast(err.response?.data?.error || 'Move failed', 'error');
         } finally {
             setDraggedItem(null);
+            setTimeout(() => pendingIds.current.delete(itemId), 500);
         }
     };
 
@@ -359,18 +502,6 @@ const WorkflowBoard = () => {
         });
     };
 
-    // ── WEIGHT LOSS DETECTION ─────────────────────────────────────────────
-    const hasWeightLoss = (item) => {
-        const gross = Number(item.gross_weight || item.total_weight || 0);
-        const net = Number(item.net_weight || item.returned_weight || 0);
-        return gross > 0 && net > 0 && gross > net + 0.001;
-    };
-
-    const weightLossAmount = (item) => {
-        const gross = Number(item.gross_weight || item.total_weight || 0);
-        const net = Number(item.net_weight || item.returned_weight || 0);
-        return (gross - net).toFixed(3);
-    };
 
     // ── CONTEXT MENU ──────────────────────────────────────────────────────
     const handleContextMenu = (e, item) => {
@@ -382,9 +513,15 @@ const WorkflowBoard = () => {
         setContextMenu({ visible: false, x: 0, y: 0, item: null });
     };
 
-    const handleReceipt = () => {
+    const handleReceipt = async () => {
         if (contextMenu.item) {
-            navigate(`/print/${contextMenu.item.type}-test/${contextMenu.item.id}`);
+            const { type, id } = contextMenu.item;
+            const printType = `${type}-test`;
+            try {
+                await triggerPrint(printType, id, { layout: 'receipt' });
+            } catch (err) {
+                addToast('Failed to generate receipt. Please try again.', 'error');
+            }
         }
         handleCloseContextMenu();
     };
@@ -639,7 +776,6 @@ const WorkflowBoard = () => {
                                 {colItems.map(item => {
                                     const isReady = item.status === 'IN_PROGRESS' && Number(item.total || 0) > 0 && !!item.mode_of_payment;
                                     const shortId = item.auto_number?.split('-')[1] || item.auto_number;
-                                    const showWtLoss = item.status === 'DONE' && hasWeightLoss(item);
                                     const isDragging = draggedItem?.id === item.id && draggedItem?.type === item.type;
                                     return (
                                         <div
@@ -677,19 +813,6 @@ const WorkflowBoard = () => {
                                             <div className="card-meta">
                                                 <FaClock className="me-1" /> {formatDate(item.createdon)}
                                             </div>
-                                            {/* Weight Loss Alert Badge */}
-                                            {showWtLoss && (
-                                                <div style={{
-                                                    display: 'flex', alignItems: 'center', gap: '5px',
-                                                    background: '#fef3c7', border: '1px solid #f59e0b',
-                                                    borderRadius: '6px', padding: '3px 8px',
-                                                    fontSize: '11px', fontWeight: 700, color: '#92400e',
-                                                    margin: '4px 0'
-                                                }}>
-                                                    <FaExclamationTriangle style={{ color: '#f59e0b' }} />
-                                                    Weight Loss: {weightLossAmount(item)}g
-                                                </div>
-                                            )}
                                             {isReady && <div className="ready-indicator"><FaCheck /></div>}
                                             <div className="card-footer">
                                                 <span className="type-tag">{item.type.replace('_cert', '')}</span>

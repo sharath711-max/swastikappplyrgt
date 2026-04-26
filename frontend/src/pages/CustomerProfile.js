@@ -5,6 +5,7 @@ import { FaPhone, FaArrowLeft, FaEdit, FaCheckCircle, FaTimesCircle, FaPlus } fr
 import api from '../services/api';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
+import { usePrint } from '../contexts/PrintContext';
 import NewCreditHistoryModal from '../components/NewCreditHistoryModal';
 import NewWeightLossHistoryModal from '../components/NewWeightLossHistoryModal';
 
@@ -81,6 +82,7 @@ const CustomerProfile = () => {
     const { openModal } = useModal();
     const { id } = useParams();
     const navigate = useNavigate();
+    const { triggerPrint } = usePrint();
 
     const [activeTab, setActiveTab] = useState('details');
     const [customer, setCustomer] = useState(null);
@@ -318,7 +320,13 @@ const CustomerProfile = () => {
                                                         { header: 'Record No', field: 'auto_number' },
                                                         { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
                                                         { header: 'Total', render: r => formatCurrency(r.total) },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => navigate(`/print/certificate/${r.id}`)}>View</Button> }
+                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={async () => {
+                                                            try {
+                                                                await triggerPrint('gold-certificate', r.id);
+                                                            } catch (err) {
+                                                                addToast('Print failed. Please try again.', 'error');
+                                                            }
+                                                        }}>View</Button> }
                                                     ]}
                                                 />
                                             </Accordion.Body>
@@ -332,7 +340,13 @@ const CustomerProfile = () => {
                                                     columns={[
                                                         { header: 'Record No', field: 'auto_number' },
                                                         { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => navigate(`/print/certificate/${r.id}`)}>View</Button> }
+                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={async () => {
+                                                            try {
+                                                                await triggerPrint('silver-certificate', r.id);
+                                                            } catch (err) {
+                                                                addToast('Print failed. Please try again.', 'error');
+                                                            }
+                                                        }}>View</Button> }
                                                     ]}
                                                 />
                                             </Accordion.Body>
@@ -376,7 +390,13 @@ const CustomerProfile = () => {
                                                     columns={[
                                                         { header: 'Record No', field: 'auto_number' },
                                                         { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => navigate(`/print/certificate/${r.id}`)}>View</Button> }
+                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={async () => {
+                                                            try {
+                                                                await triggerPrint('photo-certificate', r.id);
+                                                            } catch (err) {
+                                                                addToast('Print failed. Please try again.', 'error');
+                                                            }
+                                                        }}>View</Button> }
                                                     ]}
                                                 />
                                             </Accordion.Body>

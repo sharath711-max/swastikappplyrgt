@@ -15,6 +15,7 @@ const { db, genId, now, transaction, readCachedResult } = require('../../db/db')
 const { getRequestId } = require('../../utils/audit');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit      = require('./auditLogger');
+const systemMode = require('../../config/systemMode');
 const { writeAuditLog } = require('../auditLogService');
 const socket     = require('../../socket');
 const { assertTransitionAllowed } = require('../workflowStateMachine');
@@ -92,6 +93,8 @@ function _assertFoundAndMutable(type, id) {
     return row;
 }
 
+const MAX_ITEMS_PER_TEST = 20;
+
 function _validateCreateTest(type, data) {
     _cfg(type);   // validates type
 
@@ -107,17 +110,72 @@ function _validateCreateTest(type, data) {
     if (!Array.isArray(items) || items.length === 0) {
         throw new BusinessError('items array is required and cannot be empty', ERR.ITEMS_EMPTY, 422);
     }
+    if (items.length > MAX_ITEMS_PER_TEST) {
+        throw new BusinessError(
+            `A single test cannot have more than ${MAX_ITEMS_PER_TEST} items (received ${items.length}).`,
+            ERR.VALIDATION, 422
+        );
+    }
+
+    // Per-item weight validation — catches bad data before the transaction opens
+    for (let i = 0; i < items.length; i++) {
+        const raw   = items[i];
+        const label = `Item ${i + 1}`;
+        const gross = parseFloat(raw.gross_weight ?? raw.total_weight ?? raw.weight ?? 0);
+        const test  = parseFloat(raw.test_weight  ?? raw.sample_weight ?? 0);
+        const itemType = (raw.item_type || raw.item_name || raw.name || '').trim();
+
+        if (!itemType) {
+            throw new BusinessError(`${label}: item type is required`, ERR.MISSING_FIELD, 422);
+        }
+        if (!gross || gross <= 0) {
+            throw new BusinessError(`${label}: gross_weight must be > 0`, ERR.VALIDATION, 422);
+        }
+        if (test < 0) {
+            throw new BusinessError(`${label}: test_weight cannot be negative`, ERR.VALIDATION, 422);
+        }
+        if (test > gross) {
+            throw new BusinessError(
+                `${label}: test_weight (${test}g) cannot exceed gross_weight (${gross}g)`,
+                ERR.VALIDATION, 422
+            );
+        }
+    }
 }
 
 function _validateSaveResults(type, id, data) {
     _assertFoundAndMutable(type, id);
     for (const item of (data.items ?? [])) {
+        const label = `Item ${item.id ?? '?'}`;
+
         if (item.purity !== undefined) {
             const p = parseFloat(item.purity);
             if (isNaN(p) || p < 0 || p > 100) {
                 throw new BusinessError(
-                    `Invalid purity for item ${item.id ?? '?'}: ${item.purity}`,
+                    `${label}: purity ${item.purity} is invalid (must be 0–100)`,
                     ERR.INVALID_PURITY, 422
+                );
+            }
+        }
+
+        // Validate weight relationship only when both values are explicitly in the payload.
+        // Partial updates (test_weight only, no gross_weight) are allowed — the DB holds gross.
+        if (item.test_weight !== undefined && item.gross_weight !== undefined) {
+            const gw = parseFloat(item.gross_weight);
+            const tw = parseFloat(item.test_weight);
+            if (tw > gw) {
+                throw new BusinessError(
+                    `${label}: test_weight (${tw}g) cannot exceed gross_weight (${gw}g)`,
+                    ERR.VALIDATION, 422
+                );
+            }
+        }
+        if (item.net_weight !== undefined) {
+            const nw = parseFloat(item.net_weight);
+            if (nw < 0) {
+                throw new BusinessError(
+                    `${label}: net_weight cannot be negative (got ${nw}g)`,
+                    ERR.VALIDATION, 422
                 );
             }
         }
@@ -133,6 +191,87 @@ function _validateCompleteTest(type, id, data) {
             ERR.MISSING_PAYMENT, 422
         );
     }
+}
+
+// ─── Purity pre-flight (runs BEFORE transaction) ─────────────────────────────
+
+/**
+ * Validates purity for every non-returned item. Runs BEFORE the transaction
+ * (UX gate), but the same check runs again INSIDE the transaction (correctness
+ * gate) to close the TOCTOU window.
+ *
+ * Rules enforced:
+ *   • If any items are submitted, ALL items must be present (full-payload rule).
+ *   • Every non-returned item must have purity in [0.01, 100].
+ *
+ * STRICT mode: throws on any violation.
+ * PARITY mode: logs PARITY_BYPASS and continues (Python allowed purity=0).
+ *
+ * @param {string} type          - 'gold' | 'silver'
+ * @param {string} testId
+ * @param {Array}  submittedItems - items from the request body
+ * @param {{ trx?: object }}  opts - optional: pass { trx } inside a transaction
+ */
+function _validatePurityBeforeFinalize(type, testId, submittedItems = [], { trx } = {}) {
+    const c = _cfg(type);
+    const dbItems = (trx ?? db).prepare(
+        `SELECT id, item_number, purity, returned FROM ${c.itemTable}
+         WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
+    ).all(testId);
+
+    // ── Full-payload enforcement ──────────────────────────────────────────────
+    // If the caller sends any item overrides, they must account for every item —
+    // no silent stale-purity retention for omitted rows.
+    if (submittedItems.length > 0 && submittedItems.length !== dbItems.length) {
+        throw new BusinessError(
+            `Incomplete purity payload: expected ${dbItems.length} items, received ${submittedItems.length}. Submit all items.`,
+            ERR.VALIDATION, 422
+        );
+    }
+
+    // Build an index of submitted purity overrides keyed by item id
+    const submittedIndex = Object.fromEntries(submittedItems.map(i => [i.id, i]));
+
+    const badItems = [];
+
+    for (const dbItem of dbItems) {
+        const submitted = submittedIndex[dbItem.id];
+        const purity  = submitted?.purity !== undefined
+            ? parseFloat(submitted.purity)
+            : parseFloat(dbItem.purity ?? 0);
+        const returned = submitted?.returned !== undefined
+            ? Boolean(submitted.returned)
+            : Boolean(dbItem.returned);
+
+        // Purity range: must be in [0.01, 100] for non-returned items
+        if (!returned && (isNaN(purity) || purity < 0.01 || purity > 100)) {
+            badItems.push({ item_number: dbItem.item_number || dbItem.id, purity, returned });
+        }
+    }
+
+    if (badItems.length === 0) return;
+
+    const itemLabels = badItems.map(i => i.item_number);
+
+    audit.info('testService._validatePurityBeforeFinalize', {
+        event      : 'PURITY_VALIDATION_BLOCKED',
+        type,
+        testId,
+        items      : badItems,      // includes item_number + purity value for debuggability
+        mode       : systemMode.SYSTEM_MODE,
+        requestId  : getRequestId() || null,
+    });
+
+    if (systemMode.isStrict()) {
+        throw new BusinessError(
+            `Purity is required before finalize (must be 0.01–100). Items: ${itemLabels.join(', ')}`,
+            ERR.INVALID_PURITY,
+            422
+        );
+    }
+
+    // PARITY mode — Python allowed purity=0; log bypass and continue
+    systemMode.parityLog('PURITY_REQUIRED_BEFORE_FINALIZE', { type, testId, items: itemLabels });
 }
 
 // ─── Item normaliser ──────────────────────────────────────────────────────────
@@ -367,7 +506,7 @@ function saveTestDraft(type, id, data) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('testService.saveTestDraft', { id, type });
         return result;
     } catch (err) {
@@ -384,6 +523,7 @@ function finalizeTest(type, id, data) {
     if (!data.mode_of_payment) {
         throw new BusinessError('mode_of_payment is required', ERR.MISSING_PAYMENT, 422);
     }
+    _validatePurityBeforeFinalize(type, id, data.items ?? []);
     audit.validate('testService.finalizeTest', { type, id });
 
     const { items = [], mode_of_payment, weight_loss = 0 } = data;
@@ -416,7 +556,7 @@ function finalizeTest(type, id, data) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('testService.finalizeTest', { id, type });
         audit.statusChange('testService.finalizeTest', id, 'IN_PROGRESS', 'DONE');
         return result;
@@ -455,6 +595,9 @@ function completeTest(type, testId, data) {
 
     audit.validate('testService.completeTest', { type, testId, customer_id: testRow.customer_id });
 
+    // ── GATE 3: Purity pre-flight (before transaction, no partial-write risk) ──
+    _validatePurityBeforeFinalize(type, testId, data.items ?? []);
+
     const {
         items          = [],
         mode_of_payment,
@@ -488,6 +631,10 @@ function completeTest(type, testId, data) {
         const ts              = now();
         const { customer_id } = testRow;
 
+        // TOCTOU re-check: re-validate purity on fresh DB data BEFORE any writes.
+        // The pre-transaction call was for UX; this call is for correctness.
+        _validatePurityBeforeFinalize(type, testId, items, { trx: db });
+
         // Step 1: Finalize items
         _finalizeItemsWork(type, testId, items, ts);
 
@@ -504,11 +651,24 @@ function completeTest(type, testId, data) {
             if (item.gross_weight <= 0) {
                 throw new BusinessError(`Item ${item.item_number} has an invalid gross weight.`, ERR.VALIDATION, 422);
             }
-            if (item.purity < 0 || item.purity > 100) {
-                throw new BusinessError(`Item ${item.item_number} has purity out of bounds (0-100).`, ERR.VALIDATION, 422);
+            if (item.purity > 100) {
+                throw new BusinessError(`Item ${item.item_number} has purity out of bounds (must be 0.01–100).`, ERR.INVALID_PURITY, 422);
             }
-            if (item.purity === 0 && !item.returned) {
-                throw new BusinessError(`Item ${item.item_number} must have a valid purity entered, or be marked as returned.`, ERR.VALIDATION, 422);
+            if (!item.returned && (item.purity == null || parseFloat(item.purity) < 0.01)) {
+                throw new BusinessError(`Item ${item.item_number} must have purity ≥ 0.01 before finalize, or be marked as returned.`, ERR.INVALID_PURITY, 422);
+            }
+            // Weight relationship — re-check on the written values (TOCTOU guard)
+            if (item.test_weight > item.gross_weight) {
+                throw new BusinessError(
+                    `Item ${item.item_number}: test_weight (${item.test_weight}g) exceeds gross_weight (${item.gross_weight}g).`,
+                    ERR.VALIDATION, 422
+                );
+            }
+            if (item.net_weight != null && item.net_weight < 0) {
+                throw new BusinessError(
+                    `Item ${item.item_number}: net_weight is negative (${item.net_weight}g).`,
+                    ERR.VALIDATION, 422
+                );
             }
         }
 
@@ -647,7 +807,7 @@ function completeTest(type, testId, data) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('testService.completeTest', {
             testId,
             type,

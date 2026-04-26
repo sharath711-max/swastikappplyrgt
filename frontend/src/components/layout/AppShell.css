@@ -61,6 +61,12 @@
     filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.4));
 }
 
+.logo-img {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+}
+
 .brand-name {
     font-size: 18px;
     font-weight: 800;

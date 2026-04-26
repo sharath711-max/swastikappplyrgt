@@ -11,20 +11,21 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import ModalManager from './components/core/ModalManager';
 import AppShell from './components/layout/AppShell';
 
+import { PrintProvider } from './contexts/PrintContext';
+import PrintPortal from './components/print/PrintPortal';
 import Dashboard from './pages/Dashboard';
 import Verify from './pages/public/Verify';
 import Customers from './pages/Customers';
 import CustomerProfile from './pages/CustomerProfile';
-import CertificatePage from './pages/CertificatePage';
 import WorkflowBoard from './pages/WorkflowBoard';
 import ListViewsPage from './pages/ListViewsPage';
 import PrintView from './pages/PrintView';
-import TestPage from './pages/TestPage';
 import WeightLoss from './pages/WeightLoss';
 import CashInHand from './pages/CashInHand';
 import UserManagement from './pages/UserManagement';
 import RecordPage from './pages/RecordPage';
 import BillsReportPage from './pages/BillsReportPage';
+import ModuleBillsPage from './pages/ModuleBillsPage';
 import ItemMasterPage from './pages/ItemMasterPage';
 
 import './index.css';
@@ -35,6 +36,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <PrintProvider>
         <ModalProvider>
           <ToastContainer />
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -59,40 +61,21 @@ export default function App() {
                 </ProtectedRoute>
               } />
 
-              <Route path="/gold-certificates" element={
-                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
-                  <AppShell><CertificatePage type="gold" /></AppShell>
-                </ProtectedRoute>
-              } />
-              <Route path="/silver-certificates" element={
-                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
-                  <AppShell><CertificatePage type="silver" /></AppShell>
-                </ProtectedRoute>
-              } />
-              <Route path="/photo-certificates" element={
-                <ProtectedRoute roles={['admin', 'manager', 'front_desk', 'user']}>
-                  <AppShell><CertificatePage type="photo" /></AppShell>
-                </ProtectedRoute>
-              } />
-
-              <Route path="/gold-test" element={
-                <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
-                  <AppShell>
-                    <TestPage title="Gold Tests" endpoint="gold-tests" print="gold-certificate" modalType="gold" />
-                  </AppShell>
-                </ProtectedRoute>
-              } />
-              <Route path="/silver-test" element={
-                <ProtectedRoute roles={['admin', 'manager', 'technician', 'front_desk', 'user']}>
-                  <AppShell>
-                    <TestPage title="Silver Tests" endpoint="silver-tests" print="silver-certificate" modalType="silver" />
-                  </AppShell>
-                </ProtectedRoute>
-              } />
+              {/* Legacy routes — redirect to unified Workflow Board with correct tab */}
+              <Route path="/gold-test" element={<Navigate to="/workflow?tab=gold" replace />} />
+              <Route path="/silver-test" element={<Navigate to="/workflow?tab=silver" replace />} />
+              <Route path="/gold-certificates" element={<Navigate to="/workflow?tab=gold_cert" replace />} />
+              <Route path="/silver-certificates" element={<Navigate to="/workflow?tab=silver_cert" replace />} />
+              <Route path="/photo-certificates" element={<Navigate to="/workflow?tab=photo_cert" replace />} />
 
               <Route path="/bills" element={
                 <ProtectedRoute roles={['admin', 'manager', 'front_desk']}>
                   <AppShell><BillsReportPage /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/module-bills" element={
+                <ProtectedRoute roles={['admin', 'manager', 'front_desk']}>
+                  <AppShell><ModuleBillsPage /></AppShell>
                 </ProtectedRoute>
               } />
               <Route path="/items" element={
@@ -139,8 +122,10 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             <ModalManager />
+            <PrintPortal />
           </Router>
         </ModalProvider>
+        </PrintProvider>
       </ToastProvider>
     </AuthProvider>
   );

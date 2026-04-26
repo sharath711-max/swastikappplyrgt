@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useCustomerSearch } from '../hooks/useCustomerSearch';
 import { Modal, Button, Form, Row, Col, InputGroup, ListGroup, Badge } from 'react-bootstrap';
 import { FaPlus, FaTrash, FaSearch } from 'react-icons/fa';
 import api from '../services/api';
@@ -34,14 +35,18 @@ const deriveWeights = (draft) => {
     return { gross, sample, net };
 };
 
+const emptyNewCustomer = { name: '', phone: '', balance: '', notes: '' };
+
 const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
     const { addToast } = useToast();
     const { openModal } = useModal();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [customers, setCustomers] = useState([]);
-    const [filteredCustomers, setFilteredCustomers] = useState([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [searchTerm,       setSearchTerm]       = useState('');
+    const [showSuggestions,  setShowSuggestions]  = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+    const { filteredCustomers, reload: reloadCustomers } = useCustomerSearch({
+        show, searchTerm, addToast, limit: 5,
+    });
     const dropdownRef = useRef(null);
     const submitReqIdRef = useRef(null);
 
@@ -50,24 +55,16 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
 
+    // Inline new-customer form
+    const [showNewCust, setShowNewCust] = useState(false);
+    const [newCustData, setNewCustData] = useState(emptyNewCustomer);
+    const [savingCust,  setSavingCust]  = useState(false);
+
     const currentDate = new Date().toLocaleDateString('en-US');
 
-    const fetchCustomers = useCallback(async () => {
-        try {
-            const res = await api.get('/customers');
-            const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
-            setCustomers(data);
-        } catch (_error) {
-            addToast('Unable to load customers', 'error');
-        }
-    }, [addToast]);
-
     useEffect(() => {
-        if (show) {
-            fetchCustomers();
-            resetForm();
-        }
-    }, [show, fetchCustomers]);
+        if (show) resetForm();
+    }, [show]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -78,18 +75,6 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    useEffect(() => {
-        if (!searchTerm.trim()) {
-            setFilteredCustomers([]);
-            return;
-        }
-        const term = searchTerm.toLowerCase();
-        const matches = customers
-            .filter((c) => (c.name && c.name.toLowerCase().includes(term)) || (c.phone && c.phone.includes(term)))
-            .slice(0, 5);
-        setFilteredCustomers(matches);
-    }, [searchTerm, customers]);
 
     const resetForm = () => {
         setSearchTerm('');
@@ -111,10 +96,27 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
         setShowSuggestions(false);
     };
 
-    const handleCustomerCreated = async (newCustomer) => {
-        await fetchCustomers();
-        if (newCustomer) {
-            handleCustomerSelect(newCustomer);
+    const saveNewCustomer = async (e) => {
+        e.preventDefault();
+        if (!newCustData.name.trim()) { addToast('Name is required', 'error'); return; }
+        setSavingCust(true);
+        try {
+            const res = await api.post('/customers', {
+                name   : newCustData.name.trim(),
+                phone  : newCustData.phone.trim() || undefined,
+                balance: parseFloat(newCustData.balance) || 0,
+                notes  : newCustData.notes.trim() || undefined,
+            });
+            const created = res.data?.data ?? res.data;
+            addToast('Customer created', 'success');
+            setShowNewCust(false);
+            setNewCustData(emptyNewCustomer);
+            await reloadCustomers();
+            if (created) handleCustomerSelect(created);
+        } catch (err) {
+            addToast(err?.response?.data?.error || err.message, 'error');
+        } finally {
+            setSavingCust(false);
         }
     };
 
@@ -124,7 +126,14 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
 
 
 
+    const MAX_ITEMS = 20;
+
     const addSampleToList = () => {
+        if (sampleItems.length >= MAX_ITEMS) {
+            addToast(`A test cannot have more than ${MAX_ITEMS} items`, 'error');
+            return;
+        }
+
         const item = sampleDraft.item.trim();
         const { gross, sample, net } = deriveWeights(sampleDraft);
 
@@ -275,18 +284,56 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
                                     </ListGroup.Item>
                                 ))
                             ) : (
-                                <ListGroup.Item className="text-center text-muted">
-                                    No customers found.{' '}
-                                    <Button
-                                        variant="link"
-                                        size="sm"
-                                        onClick={() => openModal('customer', { reload: handleCustomerCreated })}
-                                    >
-                                        Create New?
-                                    </Button>
+                                <ListGroup.Item className="py-2">
+                                    <div className="text-center text-muted small mb-1">No customers found.</div>
+                                    {!showNewCust && (
+                                        <div className="text-center">
+                                            <Button variant="link" size="sm" className="p-0"
+                                                onClick={() => { setShowNewCust(true); setShowSuggestions(false); }}>
+                                                + Add new customer?
+                                            </Button>
+                                        </div>
+                                    )}
                                 </ListGroup.Item>
                             )}
                         </ListGroup>
+                    )}
+
+                    {/* Inline new-customer form */}
+                    {showNewCust && (
+                        <div className="p-2 mt-2 rounded" style={{ background: '#f0fdf4', border: '1px solid #198754' }}>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <small className="fw-bold text-success">New Customer</small>
+                                <Button variant="link" size="sm" className="p-0 text-muted"
+                                    onClick={() => { setShowNewCust(false); setNewCustData(emptyNewCustomer); }}>
+                                    Cancel
+                                </Button>
+                            </div>
+                            <Form onSubmit={saveNewCustomer}>
+                                <Row className="g-2">
+                                    <Col xs={12} sm={6}>
+                                        <Form.Control size="sm" placeholder="Name *" required
+                                            value={newCustData.name}
+                                            onChange={e => setNewCustData(p => ({ ...p, name: e.target.value }))} />
+                                    </Col>
+                                    <Col xs={12} sm={6}>
+                                        <Form.Control size="sm" placeholder="Phone"
+                                            value={newCustData.phone}
+                                            onChange={e => setNewCustData(p => ({ ...p, phone: e.target.value }))} />
+                                    </Col>
+                                    <Col xs={6}>
+                                        <Form.Control size="sm" type="number" placeholder="Initial Balance (₹)" min="0"
+                                            value={newCustData.balance}
+                                            onChange={e => setNewCustData(p => ({ ...p, balance: e.target.value }))} />
+                                    </Col>
+                                    <Col xs={6}>
+                                        <Button size="sm" type="submit" variant="success" className="w-100" disabled={savingCust}>
+                                            {savingCust ? 'Saving…' : 'Create & Select'}
+                                        </Button>
+                                    </Col>
+                                </Row>
+                            </Form>
+                        </div>
                     )}
                 </Form.Group>
 

@@ -10,6 +10,7 @@ const { generateCertificateHTML } = require('../utils/certificateTemplate');
 const { authMiddleware }     = require('../middleware/authMiddleware');
 const { immutabilityGuard }  = require('../middleware/immutabilityGuard');
 const workflowService        = require('../services/workflowService');
+const { _store }             = require('../utils/audit');
 
 // Dynamic immutability guard keyed on cert ID prefix
 const dynamicCertGuard = (req, res, next) => {
@@ -120,35 +121,46 @@ router.post('/', async (req, res) => {
 
 // POST /api/certificates/with-photo
 router.post('/with-photo', upload.single('photo'), async (req, res) => {
-    try {
-        let data = req.body;
-        if (req.body.data) {
-            data = typeof req.body.data === 'string' ? JSON.parse(req.body.data) : req.body.data;
-        }
+    const ctx = {
+        requestId: req.requestId,
+        userId: req.user?.id,
+        username: req.user?.username,
+        method: req.method,
+        url: req.originalUrl || req.url,
+        startMs: Date.now()
+    };
 
-        if (req.file) {
-            const photoPath = req.file.path.replace(/\\/g, '/').split('backend/')[1] || req.file.path.replace(/\\/g, '/');
-            if (data.items && data.items.length > 0) {
-                data.items[0].media_path = photoPath;
-                data.items[0].media = photoPath;
+    _store.run(ctx, async () => {
+        try {
+            let data = req.body;
+            if (req.body.data) {
+                data = typeof req.body.data === 'string' ? JSON.parse(req.body.data) : req.body.data;
             }
+
+            if (req.file) {
+                const photoPath = req.file.path.replace(/\\/g, '/').split('backend/')[1] || req.file.path.replace(/\\/g, '/');
+                if (data.items && data.items.length > 0) {
+                    data.items[0].media_path = photoPath;
+                    data.items[0].media = photoPath;
+                }
+            }
+
+            let type = data.type || req.query.type || 'gold';
+            if (data.certificate_type) type = data.certificate_type.toLowerCase();
+
+            let certificate;
+            if (type === 'photo') {
+                const { customer_id, items, mode_of_payment, total, gst, gst_bill_number, total_tax, status } = data;
+                certificate = await photoCertSvc.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
+            } else {
+                certificate = certServiceV2.createCertificate(type, data);
+            }
+
+            return res.status(201).json(certificate);
+        } catch (error) {
+            handleError(res, error);
         }
-
-        let type = data.type || req.query.type || 'gold';
-        if (data.certificate_type) type = data.certificate_type.toLowerCase();
-
-        let certificate;
-        if (type === 'photo') {
-            const { customer_id, items, mode_of_payment, total, gst, gst_bill_number, total_tax, status } = data;
-            certificate = await photoCertSvc.create(customer_id, items, { mode_of_payment, total, gst, gst_bill_number, total_tax }, status);
-        } else {
-            certificate = certServiceV2.createCertificate(type, data);
-        }
-
-        return res.status(201).json(certificate);
-    } catch (error) {
-        handleError(res, error);
-    }
+    });
 });
 
 // GET /api/certificates/:no/print
@@ -187,34 +199,46 @@ router.get('/:no/print', async (req, res) => {
 });
 
 // POST /api/certificates/:id/results
+// Can handle both JSON and multipart (optional photo)
 router.post('/:id/results', upload.single('photo'), async (req, res) => {
-    try {
-        const id = req.params.id;
-        let data = req.body;
-        if (req.body.data) data = JSON.parse(req.body.data);
+    const ctx = {
+        requestId: req.requestId,
+        userId: req.user?.id,
+        username: req.user?.username,
+        method: req.method,
+        url: req.originalUrl || req.url,
+        startMs: Date.now()
+    };
 
-        if (req.file) {
-            const photoPath = req.file.path.replace(/\\/g, '/').split('backend/')[1] || req.file.path.replace(/\\/g, '/');
-            if (data.photo_item_id && data.items) {
-                const item = data.items.find(i => i.id === data.photo_item_id);
-                if (item) item.media = photoPath;
-            } else if (data.items && data.items.length > 0) {
-                data.items[0].media = photoPath;
+    _store.run(ctx, async () => {
+        try {
+            const id = req.params.id;
+            let data = req.body;
+            if (req.body.data) data = JSON.parse(req.body.data);
+
+            if (req.file) {
+                const photoPath = req.file.path.replace(/\\/g, '/').split('backend/')[1] || req.file.path.replace(/\\/g, '/');
+                if (data.photo_item_id && data.items) {
+                    const item = data.items.find(i => i.id === data.photo_item_id);
+                    if (item) item.media = photoPath;
+                } else if (data.items && data.items.length > 0) {
+                    data.items[0].media = photoPath;
+                }
             }
+
+            const type = data.type || inferType(id);
+
+            if (type === 'photo') {
+                await photoCertSvc.saveResults(id, data);
+            } else {
+                await certServiceV2.saveResults(type, id, data);
+            }
+
+            return res.json({ success: true });
+        } catch (error) {
+            handleError(res, error);
         }
-
-        const type = data.type || inferType(id);
-
-        if (type === 'photo') {
-            await photoCertSvc.saveResults(id, data);
-        } else {
-            await certServiceV2.saveResults(type, id, data);
-        }
-
-        return res.json({ success: true });
-    } catch (error) {
-        handleError(res, error);
-    }
+    });
 });
 
 // PATCH /api/certificates/:id/status

@@ -1,117 +1,119 @@
 import React from 'react';
 import './CertificatePrint.css';
 
-// Utility for converting purity percentages to "Words POINT Words"
 const numToWords = (num) => {
-    const a = ['', 'ONE ', 'TWO ', 'THREE ', 'FOUR ', 'FIVE ', 'SIX ', 'SEVEN ', 'EIGHT ', 'NINE ', 'TEN ', 'ELEVEN ', 'TWELVE ', 'THIRTEEN ', 'FOURTEEN ', 'FIFTEEN ', 'SIXTEEN ', 'SEVENTEEN ', 'EIGHTEEN ', 'NINETEEN '];
-    const b = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
-
+    const a = ['','ONE ','TWO ','THREE ','FOUR ','FIVE ','SIX ','SEVEN ','EIGHT ','NINE ','TEN ',
+               'ELEVEN ','TWELVE ','THIRTEEN ','FOURTEEN ','FIFTEEN ','SIXTEEN ','SEVENTEEN ','EIGHTEEN ','NINETEEN '];
+    const b = ['','','TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
     if ((num = num.toString()).length > 9) return 'overflow';
     const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-    if (!n) return;
+    if (!n) return 'ZERO';
     let str = '';
-    str += (n[1] !== '00') ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'CRORE ' : '';
-    str += (n[2] !== '00') ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'LAKH ' : '';
-    str += (n[3] !== '00') ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'THOUSAND ' : '';
-    str += (n[4] !== '0') ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'HUNDRED ' : '';
-    str += (n[5] !== '00') ? ((str !== '') ? 'AND ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+    str += n[1] !== '00' ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'CRORE ' : '';
+    str += n[2] !== '00' ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'LAKH ' : '';
+    str += n[3] !== '00' ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'THOUSAND ' : '';
+    str += n[4] !== '0'  ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'HUNDRED ' : '';
+    str += n[5] !== '00' ? ((str !== '') ? 'AND ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
     return str.trim() || 'ZERO';
 };
 
 const getPurityWords = (purity) => {
-    if (typeof purity !== 'number') return 'ZERO POINT ZERO';
-    const numStr = purity.toFixed(2);
-    const [intPart, decPart] = numStr.split('.');
+    const s = (Number(purity) || 0).toFixed(2);
+    const [i, d] = s.split('.');
+    return `${numToWords(parseInt(i, 10))} POINT ${numToWords(parseInt(d, 10))}`;
+};
 
-    const intWords = numToWords(parseInt(intPart, 10));
-    const decWords = numToWords(parseInt(decPart, 10));
-
-    return `${intWords} POINT ${decWords}`;
+const toCarat = (purity) => {
+    const kt = ((Number(purity) || 0) / 100 * 24).toFixed(2);
+    return `${kt} KT`;
 };
 
 /**
- * High-fidelity print template mimicking the old SSR Python template.
- * Uses a "Document-in-CSS" approach for pristine A4 exports.
+ * Gold test certificate and gold certificate print template.
+ * Layout and dimensions mirror the Python Jinja2 templates exactly:
+ *   gold_test  → gold_test/certificate.css  (10cm × 10.5in form overlay)
+ *   certificate → gold_certificate/certificate.css (16cm × 11cm form overlay)
  */
 const GoldCertificateTemplate = ({ test, item, recordType = 'gold' }) => {
-    // Graceful fallback for missing data
     if (!test || !item) return null;
 
-    const isGold = recordType === 'gold';
-    const headerTitle = isGold ? 'SWASTIK LAB' : 'SWASTIK TESTING CENTER';
-
-    // Generates a verifiable QR code tying back to this certificate item
-    const verifyUrl = `${window.location.origin}/verify/${item.id}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(verifyUrl)}`;
+    const isTest = recordType === 'gold' || recordType === 'gold-test';
+    const purity   = Number(item.purity) || 0;
+    const grossWt  = (Number(item.gross_weight)  || 0).toFixed(3);
+    const testWt   = (Number(item.test_weight)   || 0).toFixed(3);
+    const customer = (item.name || test.customer_name || '').toUpperCase();
+    const itemName = (item.item_type || item.item || '').toUpperCase();
+    const date     = new Date(test.created_at || test.createdon || Date.now())
+                        .toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    const refNo    = isTest
+        ? (test.bill_number || item.item_number || '-')
+        : (item.certificate_number || item.item_number || test.bill_number || '-');
 
     return (
-        <div className="certificate-container" id="certificate-print-document">
-            {/* Background Watermark */}
-            <div className="watermark">SWASTIK</div>
-
-            {/* Header: Lab Name + NNN Ticket Number / Date */}
-            <div className="cert-header">
-                <h2>{headerTitle}</h2>
-                <div className="cert-meta">
-                    <span className="cert-number">
-                        <strong>No:</strong> {test.bill_number}/{item.item_no || item.item_number || '001'}
-                    </span>
-                    <span className="cert-date">
-                        <strong>Date:</strong> {new Date(test.created_at || test.createdon).toLocaleDateString('en-GB')}
-                    </span>
-                </div>
-            </div>
-
-            {/* Customer Details */}
-            <div className="cert-customer">
-                <p>
-                    <strong>Customer:</strong> {item.name || test.customer_name || (test.customer && test.customer.name) || '-'}
-                </p>
-            </div>
-
-            {/* Table Details */}
-            <table className="cert-table">
+        <div className={isTest ? 'gt-cert-container' : 'gc-cert-container'}>
+            <table className="cert-slip-table">
                 <tbody>
+                    {/* Row 1: reference number + date */}
                     <tr>
-                        <td style={{ width: '50%' }}>
-                            <strong>Item:</strong> {item.item_type || item.item || '-'}
-                        </td>
-                        <td style={{ width: '50%', textAlign: 'right' }}>
-                            <strong>Gross Wt:</strong> {(Number(item.gross_weight) || 0).toFixed(3)}g
+                        <td><span className="cert-h5 cert-ml">{refNo}</span></td>
+                        <td className="cert-right"><span className="cert-h5">{date}</span></td>
+                    </tr>
+
+                    {/* Row 2: customer name */}
+                    <tr>
+                        <td colSpan={2}>
+                            <span className="cert-h5 cert-ml">{customer}</span>
                         </td>
                     </tr>
+
+                    {/* Row 3: weight — test cert shows gross/test, cert shows gross + carats */}
+                    {isTest ? (
+                        <tr>
+                            <td colSpan={2}>
+                                <span className="cert-h5 cert-ml">
+                                    {grossWt}gm{Number(item.test_weight) > 0 ? `/ ${testWt}gm` : ''}
+                                </span>
+                            </td>
+                        </tr>
+                    ) : (
+                        <tr>
+                            <td><span className="cert-h5 cert-ml">{grossWt} gm</span></td>
+                            <td className="cert-right"><span className="cert-h5">{toCarat(purity)}</span></td>
+                        </tr>
+                    )}
+
+                    {/* Row 4: item name */}
                     <tr>
-                        <td style={{ width: '50%' }}>
-                            <strong>Sample Wt:</strong> {(Number(item.test_weight) || 0).toFixed(3)}g
-                        </td>
-                        <td style={{ width: '50%', textAlign: 'right' }}>
-                            <strong>Net Wt:</strong> {(Number(item.net_weight) || 0).toFixed(3)}g
+                        <td colSpan={2}>
+                            <span className="cert-h5 cert-ml">{itemName}</span>
                         </td>
                     </tr>
+
+                    {/* Row 5: purity — large display */}
+                    <tr>
+                        <td colSpan={2}>
+                            {purity > 0
+                                ? <span className="cert-purity">{purity.toFixed(2)}%</span>
+                                : <span className="cert-purity cert-no-gold">NO GOLD</span>
+                            }
+                        </td>
+                    </tr>
+
+                    {/* Row 6 (cert only): purity number + words */}
+                    {!isTest && (
+                        <tr>
+                            <td colSpan={2} style={{ paddingTop: 0 }}>
+                                <span className="cert-h5" style={{ marginLeft: '1.6cm' }}>
+                                    {purity.toFixed(2)}
+                                </span>
+                                <span className="cert-h5 cert-purity-words">
+                                    &nbsp;&nbsp;{getPurityWords(purity)}
+                                </span>
+                            </td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
-
-            {/* Prominent Purity Value Section */}
-            {test.status !== 'TODO' && (
-                <div className="cert-purity-section">
-                    <div className="purity-value-box">
-                        <span className="purity-number">{(Number(item.purity) || 0).toFixed(2)}%</span>
-                    </div>
-                    <div className="purity-words">
-                        {getPurityWords(Number(item.purity) || 0)}
-                    </div>
-                </div>
-            )}
-
-            {/* Footer containing Security QR & Signature */}
-            <div className="cert-footer">
-                <div className="cert-qr">
-                    <img src={qrUrl} alt="Verify QR" />
-                </div>
-                <div className="cert-signature">
-                    Authorized Signatory
-                </div>
-            </div>
         </div>
     );
 };

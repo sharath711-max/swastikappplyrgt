@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Table, Form, Alert, Badge, Row, Col, Spinner } from 'react-bootstrap';
-import { FaCamera, FaCopy, FaPrint, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCamera, FaCopy, FaPrint, FaFileAlt, FaExclamationTriangle } from 'react-icons/fa';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import PriceCalculationTable from './core/PriceCalculationTable';
 import api from '../services/api';
+import { buildPrintUrl } from '../utils/print';
+import { usePrint } from '../contexts/PrintContext';
 
 const CURRENT_SYSTEM = 'LAB';
 
 const getWeights = (item) => {
-    const gross = Number(item.gross_weight || item.sample_weight || 0);
-    const test = Number(item.test_weight || item.sample_weight || 0);
-    const net = Number(item.net_weight || (gross - test));
-    const loss = Number((gross - (test + net)).toFixed(3));
+    const gross = Number(item.gross_weight || 0);
+    const test  = Number(item.test_weight  || 0);
+    const net   = Number(item.net_weight   || (gross - test));
+    const loss  = Number((gross - (test + net)).toFixed(3));
     return { gross, test, net, loss };
 };
 
@@ -30,9 +32,10 @@ const escapeHtml = (value) => String(value ?? '')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
+const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = false }) => {
     const { addToast } = useToast();
     const { openModal } = useModal();
+    const { triggerPrint } = usePrint();
     const [items, setItems] = useState([]);
     const [modeOfPayment, setModeOfPayment] = useState('Cash');
     const [amount, setAmount] = useState('');
@@ -90,33 +93,52 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
         setPhotos((prev) => ({ ...prev, [itemId]: file }));
     };
 
+    // Small tolerance to absorb Decimal → float rounding when comparing weights
+    const WT_TOLERANCE = 0.005;
+
     const validate = () => {
-        for (const item of items) {
-            const purity = parseFloat(item.purity);
-            if (isNaN(purity) || purity <= 0 || purity > 100) {
-                return `Invalid purity for item ${item.item_number || item.item_no || '-'}. Must be > 0 and <= 100.`;
+        for (let idx = 0; idx < items.length; idx++) {
+            const item = items[idx];
+            const lbl  = item.item_number || item.item_no || `#${idx + 1}`;
+            const w    = getWeights(item);
+
+            // ── Weight checks (fundamental data integrity — run first) ──────
+            if (w.gross <= 0) {
+                return `Item ${lbl}: Gross weight must be greater than 0.`;
+            }
+            if (w.test > w.gross + WT_TOLERANCE) {
+                return `Item ${lbl}: Test weight (${w.test}g) cannot exceed gross weight (${w.gross}g).`;
+            }
+            if (w.net < -WT_TOLERANCE) {
+                return `Item ${lbl}: Net weight is negative (${w.net.toFixed(3)}g) — returned weight exceeds Gross − Test.`;
+            }
+            if (w.loss < -WT_TOLERANCE) {
+                return `Item ${lbl}: Overweight — Test + Returned exceeds intake by ${Math.abs(w.loss).toFixed(3)}g.`;
             }
 
+            // ── Purity (skip for returned items) ────────────────────────────
+            if (!item.returned) {
+                const purity = parseFloat(item.purity);
+                if (isNaN(purity) || purity <= 0 || purity > 100) {
+                    return `Item ${lbl}: Purity must be between 0.01 and 100 (got "${item.purity || 'empty'}").`;
+                }
+            }
+
+            // ── Photo cert: photo required ───────────────────────────────────
             if (isPhotoCert) {
-                const hasNewPhoto = !!photos[item.id];
+                const hasNewPhoto      = !!photos[item.id];
                 const hasExistingPhoto = !!item.media;
                 if (!hasNewPhoto && !hasExistingPhoto) {
-                    return `Photo is required for item ${item.item_number || item.item_no || '-'}.`;
+                    return `Item ${lbl}: A photo is required before submission.`;
                 }
             }
         }
 
-        for (const item of items) {
-            const w = getWeights(item);
-            if (w.loss < 0) {
-                return `Negative Loss / Overweight error on item ${item.item_number || '-'}. Returned + Test cannot exceed Intake.`;
-            }
-        }
-
+        // ── Payment-stage fields ─────────────────────────────────────────────
         if (!isTodoStage) {
             const parsedAmount = parseFloat(amount);
             if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
-                return 'Invalid amount. Must be >= 0.';
+                return 'Amount must be ≥ 0.';
             }
             if (!modeOfPayment) {
                 return 'Mode of payment is required.';
@@ -129,6 +151,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
     const getDraftEndpoint = () => {
         if (isGoldTest) return `/gold-tests/${test.id}/save-draft`;
         if (isSilverTest) return `/silver-tests/${test.id}/save-draft`;
+        if (isCertificate) return `/certificates/${test.id}/results`;
         return null;
     };
 
@@ -152,21 +175,36 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
         setLoading(true);
         setError('');
         try {
-            await api.put(draftEndpoint, {
-                mode_of_payment: modeOfPayment,
-                items: items.map(i => ({
-                    id: i.id,
-                    purity: Number(i.purity) || 0,
-                    returned: !!i.returned,
-                    test_weight: i.test_weight !== undefined ? Number(i.test_weight) : undefined,
-                    net_weight: i.net_weight !== undefined ? Number(i.net_weight) : undefined,
-                    // Operator override: send null to reset to auto-rule
-                    certificate_required: i.certificate_required,
-                }))
-            });
-            addToast('Draft saved — order is now PENDING', 'info');
-            if (onSuccess) onSuccess();
+            if (isCertificate) {
+                // Certificates: draft saved via POST /certificates/:id/results
+                // Status is NOT changed — stays TODO until "Submit to Tested" is clicked
+                await api.post(draftEndpoint, {
+                    items: items.map(i => ({
+                        id: i.id,
+                        purity: Number(i.purity) || 0,
+                        returned: !!i.returned,
+                        item_number: i.item_number || i.item_no,
+                    }))
+                });
+            } else {
+                // Tests: draft saved via PUT /:type-tests/:id/save-draft
+                await api.put(draftEndpoint, {
+                    mode_of_payment: modeOfPayment,
+                    items: items.map(i => ({
+                        id: i.id,
+                        purity: Number(i.purity) || 0,
+                        returned: !!i.returned,
+                        test_weight: i.test_weight !== undefined ? Number(i.test_weight) : undefined,
+                        net_weight: i.net_weight !== undefined ? Number(i.net_weight) : undefined,
+                        // Operator override: send null to reset to auto-rule
+                        certificate_required: i.certificate_required,
+                    }))
+                });
+            }
+            addToast('Draft saved', 'info');
+            // Do NOT call onSuccess — status must remain unchanged
         } catch (err) {
+            if (err.response?.status === 409) { onConflict?.(err); return; }
             setError(err.response?.data?.error || err.message || 'Failed to save draft');
         } finally {
             setLoading(false);
@@ -236,6 +274,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
 
             return true;
         } catch (err) {
+            if (err.response?.status === 409) { onConflict?.(err); return false; }
             setError(err.response?.data?.error || err.message || 'Failed to save results');
             return false;
         } finally {
@@ -259,18 +298,40 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                 const testTypeStr = test.type === 'silver' ? 'silver' : 'gold';
 
                 await api.post(`/${testTypeStr}-tests/${test.id}/finalize`, {
-                    items: items.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned, item_number: i.item_number || i.item_no })),
+                    items: items.map(i => ({
+                        id                  : i.id,
+                        purity              : Number(i.purity),
+                        returned            : !!i.returned,
+                        item_number         : i.item_number || i.item_no,
+                        certificate_required: i.certificate_required ?? null,
+                    })),
                     mode_of_payment: modeOfPayment,
-                    weight_loss: totalWtLoss,
-                    cert: { gst: includeGst }
+                    weight_loss: Math.max(0, totalWtLoss),
+                    cert: { gst: includeGst },
                 });
-                
+
                 addToast('Moved to Completed ✓', 'success');
-                
                 if (onSuccess) onSuccess();
                 onHide();
             } catch (err) {
+                if (err.response?.status === 409) { onConflict?.(err); return; }
                 setError(err.response?.data?.error || err.message || 'Failed to complete test');
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
+        if (nextStatus === 'DONE' && isCertificate) {
+            setLoading(true);
+            try {
+                await api.post('/workflow/finalize', { testId: test.id, type: test.type });
+                addToast('Moved to Completed ✓', 'success');
+                if (onSuccess) onSuccess();
+                onHide();
+            } catch (err) {
+                if (err.response?.status === 409) { onConflict?.(err); return; }
+                setError(err.response?.data?.error || err.message || 'Failed to complete certificate');
             } finally {
                 setLoading(false);
             }
@@ -289,6 +350,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
             onSuccess?.();
             onHide();
         } catch (err) {
+            if (err.response?.status === 409) { onConflict?.(err); return; }
             addToast(err.response?.data?.error || 'Failed to update workflow status', 'error');
         } finally {
             setLoading(false);
@@ -332,34 +394,47 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
         }
     };
 
-    const printSingle = (item) => {
-        if (!test || !item) return;
-        const win = window.open('', '_blank', 'width=420,height=600');
-        if (!win) return;
-        const w = getWeights(item);
-        const sampleStr = w.test > 0 ? `${w.test}g` : '—';
-        const netStr = w.net > 0 ? `${w.net}g` : '—';
-        const weightStr = item.returned ? `${netStr} / ${sampleStr}` : sampleStr;
-        const purityVal = Number(item.purity || 0);
-        const dateStr = test.created_at
-            ? new Date(test.created_at).toLocaleDateString('en-IN')
-            : new Date().toLocaleDateString('en-IN');
-        const tokenNo = item.item_no || item.item_number || test.auto_number || '—';
-        const itemType = item.item_type || item.item_name || '—';
-        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Gold Test Report</title>
-        <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#fff;padding:0}.slip{position:relative;width:80mm;height:120mm;margin:0 auto;background:transparent;color:#111827}.slip-header,.slip-body,.row,.purity-block,.slip-footer{display:none!important}.value{position:absolute;font-size:4.8mm;font-weight:700;line-height:1;white-space:nowrap}.value-date{top:31mm;right:8mm;text-align:right}.value-no{top:31mm;left:24mm;text-align:left}.value-name{top:46mm;right:8mm;text-align:right}.value-weight{top:67mm;right:8mm;text-align:right}.value-item{top:85mm;right:8mm;text-align:right}.purity-box{position:absolute;right:11mm;top:103mm;min-width:24mm;text-align:center;font-size:7.2mm;font-weight:800;line-height:1}@media print{@page{margin:0;size:80mm 120mm}body{margin:0}.slip{margin:0}}</style>
-        </head><body><div class="slip">
-        <div class="value value-date">${dateStr}</div>
-        <div class="value value-no">${escapeHtml(tokenNo)}</div>
-        <div class="value value-name">${escapeHtml(test.customer_name || 'â€”')}</div>
-        <div class="value value-weight">${weightStr}</div>
-        <div class="value value-item">${escapeHtml(itemType)}</div>
-        </div>
-        <div class="purity-box">${purityVal}%</div></div>
-        <script>window.onload=function(){setTimeout(function(){window.print();window.onafterprint=function(){window.close()};},150)};</script></body></html>`;
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
+    // Derive the frontend print-route type from test.type / test.id prefix.
+    // Returns the segment used in /print/:type/:id — or null if unknown.
+    const resolvePrintRoute = () => {
+        const t = test?.type;
+        if (t === 'gold')       return 'gold-test';
+        if (t === 'silver')     return 'silver-test';
+        if (t === 'gold_cert')  return 'gold-certificate';
+        if (t === 'silver_cert') return 'silver-certificate';
+        if (t === 'photo_cert') return 'photo-certificate';
+        // Fallback: infer from ID prefix written by the sequence generator
+        const id = test?.id || '';
+        if (id.startsWith('GCR')) return 'gold-certificate';
+        if (id.startsWith('SCR')) return 'silver-certificate';
+        if (id.startsWith('PCR')) return 'photo-certificate';
+        if (id.startsWith('GTS')) return 'gold-test';
+        if (id.startsWith('STS')) return 'silver-test';
+        return null;
+    };
+
+    // Open snapshot-based per-item certificate print (small cert equivalent).
+    // Uses the PrintView route which fetches HMAC-verified immutable snapshot from backend.
+    const openItemPrint = async (idx) => {
+        const route = resolvePrintRoute();
+        if (!route || !test?.id) return;
+        const itemId = items[idx]?.id;
+        try {
+            await triggerPrint(route, test.id, itemId ? { itemId } : { itemIndex: idx });
+        } catch (err) {
+            addToast('Print failed. Please try again.', 'error');
+        }
+    };
+
+    // Open snapshot-based full certificate print (all items, paginated).
+    const openFullPrint = async () => {
+        const route = resolvePrintRoute();
+        if (!route || !test?.id) return;
+        try {
+            await triggerPrint(route, test.id);
+        } catch (err) {
+            addToast('Print failed. Please try again.', 'error');
+        }
     };
 
     const modalTitle = isTodoStage ? 'Add Test Results' : isDoneStage ? 'Completed Details' : 'Payment Details';
@@ -375,9 +450,16 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                         {isPhotoCert && <Badge bg="info">Photo Cert</Badge>}
                     </Modal.Title>
                     {isDoneStage && (
-                        <Button variant="outline-primary" size="sm" onClick={handleCopy}>
-                            <FaCopy className="me-1" /> Copy
-                        </Button>
+                        <div className="d-flex gap-2">
+                            <Button variant="outline-primary" size="sm" onClick={handleCopy}>
+                                <FaCopy className="me-1" /> Copy
+                            </Button>
+                            {isCertificate && resolvePrintRoute() && (
+                                <Button variant="outline-success" size="sm" onClick={openFullPrint}>
+                                    <FaFileAlt className="me-1" /> Print All
+                                </Button>
+                            )}
+                        </div>
                     )}
                 </Modal.Header>
 
@@ -410,7 +492,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                                 {isPhotoCert && <th>Photo</th>}
                                 {isPhotoCert && <th>KT</th>}
                                 <th>Returned</th>
-                                {isDoneStage && <th>Print</th>}
+                                <th>Print</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -526,19 +608,47 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                                                 )}
                                             </td>
                                         )}
-                                        {isDoneStage && (
-                                            <td>
-                                                <Button variant="outline-secondary" size="sm" onClick={() => printSingle(item)}>
-                                                    <FaPrint />
-                                                </Button>
-                                            </td>
-                                        )}
+                                        <td>
+                                            {(() => {
+                                                const printRoute = resolvePrintRoute();
+                                                const canPrint  = (isDoneStage || currentStatus === 'IN_PROGRESS') && !!printRoute;
+                                                const tip       = canPrint ? undefined : 'Submit to Tested to enable printing';
+                                                return (
+                                                    <div className="d-flex gap-1 flex-nowrap">
+                                                        {/* Per-item certificate (small cert equivalent) */}
+                                                        <Button
+                                                            variant="outline-primary"
+                                                            size="sm"
+                                                            disabled={!canPrint}
+                                                            title={tip ?? 'Print certificate for this item'}
+                                                            onClick={() => openItemPrint(idx)}
+                                                        >
+                                                            <FaPrint />
+                                                            <span className="ms-1 d-none d-md-inline">Cert</span>
+                                                        </Button>
+                                                        {/* Full certificate (all items) — only meaningful for cert records */}
+                                                        {isCertificate && (
+                                                            <Button
+                                                                variant="outline-secondary"
+                                                                size="sm"
+                                                                disabled={!canPrint}
+                                                                title={tip ?? 'Print full certificate (all items)'}
+                                                                onClick={openFullPrint}
+                                                            >
+                                                                <FaFileAlt />
+                                                                <span className="ms-1 d-none d-md-inline">All</span>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
                                     </tr>
                                 );
                             })}
                             {items.length === 0 && (
                                 <tr>
-                                    <td colSpan={isPhotoCert ? (isDoneStage ? 10 : 9) : (isDoneStage ? 8 : 7)} className="text-center text-muted py-4">
+                                    <td colSpan={isPhotoCert ? 10 : 8} className="text-center text-muted py-4">
                                         No sample items found for this card.
                                     </td>
                                 </tr>
@@ -635,12 +745,12 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, readOnly = false }) => {
                     <Button variant="secondary" onClick={onHide}>Close</Button>
                     {!isDoneStage && !isModalReadOnly && (
                         <>
-                            {(isGoldTest || isSilverTest) && (
+                            {(isGoldTest || isSilverTest || isTodoStage) && (
                                 <Button
                                     variant="outline-primary"
                                     onClick={handleSaveDraft}
                                     disabled={loading}
-                                    title="Save purity/weights as draft (no financial impact)"
+                                    title="Save purity/weights as draft (no status change)"
                                 >
                                     {loading ? <Spinner animation="border" size="sm" /> : '💾 Save Draft'}
                                 </Button>

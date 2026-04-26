@@ -1,6 +1,7 @@
 'use strict';
 
 const { BusinessError, ERR } = require('./v2/errors');
+const { isStrict, parityLog } = require('../config/systemMode');
 
 // ─── Entity → table mapping ───────────────────────────────────────────────────
 
@@ -100,11 +101,15 @@ function assertTransitionAllowed(type, fromStatus, toStatus) {
 
     const allowed = ALLOWED_TRANSITIONS[type]?.[fromStatus] ?? [];
     if (!allowed.includes(toStatus)) {
-        throw new BusinessError(
-            `Transition ${fromStatus} → ${toStatus} is not allowed for ${type}. ` +
-            `Allowed: [${allowed.join(', ') || 'none'}]`,
-            ERR.STATUS_INVALID, 409,
-        );
+        if (isStrict()) {
+            throw new BusinessError(
+                `Transition ${fromStatus} → ${toStatus} is not allowed for ${type}. ` +
+                `Allowed: [${allowed.join(', ') || 'none'}]`,
+                ERR.STATUS_INVALID, 409,
+            );
+        } else {
+            parityLog('workflow.state_machine.transition', { type, fromStatus, toStatus });
+        }
     }
 }
 

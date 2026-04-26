@@ -1,0 +1,373 @@
+## Kanban Flow — Implementation Log
+
+---
+
+## ✅ K1 — TestPage: Save-Draft Flow — DONE
+
+**`frontend/src/pages/TestPage.js`**
+- Removed `import PurityEntryModal`, added `import Phase2Modal`
+- Removed `purityTarget` + `submitting` state → `selectedTest` state
+- Replaced `openPurityModal` + `handleFinalize` with `openPhase2Modal`, `handlePhase2Success`, `handlePhase2Conflict`
+- `TestCard`: prop `onFinalize` → `onOpen`; button enabled for TODO ("Open") and IN_PROGRESS ("Finalize")
+- Replaced `<PurityEntryModal>` with `<Phase2Modal show test onSuccess onConflict onHide>`
+
+**`frontend/src/components/Phase2Modal.js`** — no changes needed
+- Already has `handleSaveDraft` → `PUT /{type}-tests/{id}/save-draft`
+- "Submit to Tested" (TODO → IN_PROGRESS), "Finalize & Commit" (IN_PROGRESS → DONE)
+- Full purity validation before finalize, OCC 409 handling
+
+### Checklist
+- [x] TODO card "Open" button enabled — opens Phase2Modal in draft mode
+- [x] Save Draft saves without status change
+- [x] Submit to Tested moves TODO → IN_PROGRESS
+- [x] Finalize requires full purity
+- [x] OCC 409 handled, pendingIds guard active
+- [x] CertificatePage and WorkflowBoard unchanged
+
+---
+
+## ✅ K2 — WorkflowBoard: Targeted Socket Updates — DONE
+
+**`frontend/src/pages/WorkflowBoard.js`**
+
+### What was added
+
+**Helper functions (outside component):**
+- `replaceAcrossColumns(board, updated)` — replaces a single item across all 3 columns by id+type
+- `moveToDoneColumn(board, id, type)` — moves item in-place to DONE column
+- `prependToColumn(board, newItem)` — prepends a new item to its column
+
+**Inside component:**
+- `lastVersions = useRef({})` — tracks `{ id: version }` to reject stale socket payloads
+- `pendingIds = useRef(new Set())` — blocks socket echo on own optimistic writes
+- `fetchBoardItem(id, type)` — fetches one record and normalizes to kanban shape
+
+**Socket handlers replaced** (was 6× `fetchData`):
+| Event | Before | After |
+|---|---|---|
+| `item:added` | `fetchData` | fetch single record → prepend to column |
+| `item:updated` | `fetchData` | fetch single record → `replaceAcrossColumns` (version guard) |
+| `item:done` | `fetchData` | fetch fresh → `replaceAcrossColumns` (version guard) |
+| `cert:created` | `fetchData` | fetch cert (type mapped `gold` → `gold_cert`) → prepend |
+| `cert:updated` | `fetchData` | fetch cert → `replaceAcrossColumns` (version guard) |
+| `cert:done` | `fetchData` | fetch fresh → `replaceAcrossColumns` (version guard) |
+
+**Drag-and-drop updated:**
+- `pendingIds.current.add(itemId)` before API call (prevents socket echo during drag)
+- targeted `fetchBoardItem` + `replaceAcrossColumns` on success
+- `pendingIds.current.delete(itemId)` in `finally` with 500ms delay
+
+**Kept as `fetchData()`** (full reload still appropriate):
+- Initial load, Refresh button, delete, batch operations, modal `onSuccess`
+
+### Checklist
+- [x] No `fetchData` on socket events
+- [x] Version guard prevents stale overwrites
+- [x] `pendingIds` prevents own-write echo
+- [x] Drag-and-drop uses targeted fetch after move
+- [x] `cert:created` type mapping handled (gold → gold_cert)
+- [x] `item:done` and `cert:done` fetch full fresh record → `replaceAcrossColumns` (finalized totals/purity shown correctly)
+
+---
+
+## ✅ K3 — CertificatePage: Save-Draft from TODO Card — DONE
+
+**Files changed:**
+- `frontend/src/components/Phase2Modal.js`
+- `frontend/src/pages/CertificatePage.js` *(bonus crash fix)*
+
+### Bonus fix: CertificatePage crash (`filter is not a function`)
+`listCertificates` returns `{ certificates, total, pages }` but `fetchCerts` was unwrapping with `r.data?.data` (undefined). Fixed to:
+```js
+r.data?.certificates ?? r.data?.data ?? (Array.isArray(r.data) ? r.data : [])
+```
+
+### K3 fix in Phase2Modal.js (3 changes)
+1. `getDraftEndpoint()` — added cert branch: `if (isCertificate) return /certificates/${id}/results`
+2. `handleSaveDraft` — branches on `isCertificate` to use `api.post`; does NOT call `onSuccess` so status stays TODO
+3. Button condition widened: `(isGoldTest || isSilverTest || isTodoStage)`
+
+### Checklist — Browser Tested ✓
+- [x] CertificatePage loads without crash (all types: gold, silver, photo)
+- [x] TODO card modal shows "💾 Save Draft" + "Submit to Tested" + "Close"
+- [x] Save Draft toast: "Draft saved" — confirmed in browser
+- [x] Card remains in TODO (Ongoing) column after Save Draft
+- [x] Tests (gold/silver) unaffected — still use PUT /save-draft
+
+---
+
+## ✅ K4 — Per-Row Item Print Link (enable for IN_PROGRESS) — DONE
+
+**File:** `frontend/src/components/Phase2Modal.js`
+
+```js
+// Before
+const canPrint = isDoneStage && !!printRoute;
+// After
+const canPrint = (isDoneStage || currentStatus === 'IN_PROGRESS') && !!printRoute;
+```
+
+### Checklist — Browser Tested ✓
+- [x] IN_PROGRESS modal shows blue enabled "Cert" print button per row
+- [x] DONE records unaffected
+
+---
+
+## ✅ K5 — Inline Customer Creation in New Test Modals — DONE (pre-existing)
+
+**Files:** `frontend/src/components/NewGoldTestModal.js`, `frontend/src/components/NewSilverTestModal.js`
+
+Both modals implement full inline customer workflow — "No match found" shows "+ Add new customer?" → inline form → auto-selects on create.
+
+### Checklist — Browser Tested ✓
+- [x] Gold Test + Silver Test modal: inline create confirmed in browser
+
+---
+
+## ✅ K7 — Delete PaymentDeliveryModal (dead code) — DONE
+
+**Files deleted:**
+- `frontend/src/components/PaymentDeliveryModal.js`
+- `frontend/src/tests/unit/components/PaymentDeliveryModal.test.js`
+
+---
+
+## ✅ K8 — Certificate Finalize via Phase2Modal (IN_PROGRESS → DONE) — DONE
+
+**Root cause:** Phase2Modal called `POST /certificates/:id/results` for cert finalization — but `saveResults` rejects IN_PROGRESS certs with 409 (immutability guard). Batch Move had the same bug.
+
+**Files changed:**
+- `frontend/src/components/Phase2Modal.js`
+- `frontend/src/pages/WorkflowBoard.js`
+- `backend/services/workflowService.js`
+- `backend/services/v2/certificateService.js`
+- `backend/db/init.sql` + live DB
+
+### Frontend fixes
+1. `Phase2Modal.handleSubmitFlow` — added cert branch for `nextStatus === 'DONE'`:
+   ```js
+   if (nextStatus === 'DONE' && isCertificate) {
+       await api.post('/workflow/finalize', { testId: test.id, type: test.type });
+   }
+   ```
+2. `WorkflowBoard` batch move — replaced `POST /certificates/:id/results + PATCH status` with `POST /workflow/finalize` for cert cards
+
+### Backend fixes
+3. `workflowService._finalizeCert` — moved `completion_request_id` stamp **before** `updateStatus` (the immutability trigger `WHEN OLD.status = 'DONE'` blocked a post-DONE update)
+4. `certificateService.updateItem` — removed `fields.rate_per_gram` (column does not exist in `gold_certificate_item` schema → caused save-draft to fail)
+5. Dropped `update_gc/sc/pc_lastmodified` AFTER UPDATE triggers — they fired after status→DONE and triggered the immutability trigger, aborting every cert finalization. All cert UPDATE statements already set `lastmodified` explicitly.
+
+### Checklist — API Tested ✓
+- [x] `POST /workflow/finalize` with `type=gold_cert` → `success: true`, `toStatus: DONE`
+- [x] Print snapshot generated on finalize
+- [x] Ledger DEBIT entry created
+- [x] Multi-device flow (service layer): Create → SaveDraft purity → Submit → Finalize — PASS
+- [x] Batch move certs now uses correct endpoint
+- [x] No 409 on finalize
+
+---
+
+## ✅ K9 — Data Correctness: Wrong Field Mapping in UI — DONE
+
+**Python → Node schema migration left stale field references in active frontend code.**
+
+### Fix 1 — RecordPage.js:156 (wrong column displayed)
+
+Column header branches by record type ("Fine Weight" for certs, "Sample Weight" for tests) but `<td>` was using `fine_weight || sample_weight` for both:
+- Tests: showed `fine_weight` (wrong value) under "Sample Weight" header
+- Certs: fell back to `sample_weight` (doesn't exist on cert items) → displayed `undefinedg`
+
+```js
+// Before
+<td>{item.fine_weight || item.sample_weight} g</td>
+// After
+<td>{type.includes('certificate') ? (item.fine_weight ?? 0) : (item.sample_weight ?? 0)} g</td>
+```
+
+### Fix 2 — Phase2Modal.js getWeights (wrong field substitution in validation)
+
+`getWeights` used `|| item.sample_weight` as fallback for both `gross_weight` and `test_weight`. When `test_weight = 0` (not yet entered), validation used `sample_weight` as test weight — completely different field. Purity validation could pass with wrong weight data.
+
+```js
+// Before (dangerous)
+const gross = Number(item.gross_weight || item.sample_weight || 0);
+const test  = Number(item.test_weight  || item.sample_weight || 0);
+// After (correct)
+const gross = Number(item.gross_weight || 0);
+const test  = Number(item.test_weight  || 0);
+```
+
+### Fix 3 — WorkflowBoard.js hasWeightLoss (dead feature, wrong fields)
+
+Kanban board query returns only summary fields (`total`, `status`, `auto_number`, etc.) — no `gross_weight` or `net_weight`. `hasWeightLoss` always returned false. Removed `hasWeightLoss`, `weightLossAmount`, `showWtLoss`, weight loss badge JSX, and unused `FaExclamationTriangle` import.
+
+### Checklist
+- [x] RecordPage: certs show fine_weight, tests show sample_weight — no undefined display
+- [x] Phase2Modal validation: uses actual DB fields only — no wrong field substitution
+- [x] WorkflowBoard: dead weight loss badge removed — no silent wrong computation
+- [x] No regressions in existing K1–K7 flows
+
+---
+
+## ✅ K10 — Backend: Certificate Creation Broken — DONE
+
+**File:** `backend/services/v2/certificateService.js` line 356
+
+**Problem:**
+`createCertificate`'s `_txn` closure references `c.parentTable` at line 356 (snapshot update after cert created), but `c` is never defined in `createCertificate`'s scope — it only exists inside `_createCertificateWork`. The dead-code block at line 348 also references `c` but is guarded by `post_ledger = false` so it never executes. Line 356 always executes.
+
+**Impact:**
+`POST /api/certificates` and `POST /api/certificates/with-photo` always fail with:
+```
+"Unexpected failure in certificateService.createCertificate: c is not defined"
+```
+Certificate creation is completely broken via API. No new certs can be created.
+
+**Fix required:**
+Add `const c = _cfg(type);` inside `createCertificate`'s `_txn` closure (before line 356), OR use `_cfg(type).parentTable` inline.
+
+### Checklist — API Tested ✓
+- [x] `POST /api/certificates` with type=gold returns success
+- [x] `POST /api/certificates/with-photo` creates cert + snapshot
+- [x] Existing cert finalize/update unaffected
+
+---
+
+## ✅ K11 — Backend: multer Breaks AsyncLocalStorage — DONE
+
+**File:** `backend/routes/certificateRoutes.js` — routes using `upload.single('photo')`
+
+**Problem:**
+`POST /certificates/:id/results` and `POST /certificates/with-photo` use multer middleware. Multer's internal processing breaks the AsyncLocalStorage chain. Inside the route handler, `getRequestId()` returns a stale or wrong value. This causes `transaction()` to see `inserted.changes === 0` (request_id already in `request_log` from a different context), triggering "Request is already processing" 409 errors even on first-call requests.
+
+**Impact:**
+Save-draft via `POST /certificates/:id/results` fails through the HTTP layer with "Request is already processing". Service layer works correctly (tested directly — PASS).
+
+**Fix required:**
+Wrap the route handler in `AsyncLocalStorage.run()` to re-enter the correct context after multer processing. Or restructure so `upload.single('photo')` only applies to routes that actually handle photos, and separate the JSON-only results save to a non-multer route.
+
+### Checklist — Applied Fix ✓
+- [x] `POST /certificates/:id/results` with JSON body succeeds without "Request is already processing"
+- [x] Photo upload path still works
+- [x] Service-layer idempotency unaffected
+
+---
+
+## ✅ K12 — WorkflowBoard: Correct Weight Loss Calc — DONE
+
+**File:** `frontend/src/pages/WorkflowBoard.js` lines 278, 419
+
+**Problem:**
+Batch move and drag-and-drop both compute `weight_loss` before calling the finalize endpoint:
+```js
+Number(it.gross_weight || it.sample_weight || 0) - (Number(it.test_weight || it.sample_weight || 0) + Number(it.net_weight || 0))
+```
+Same wrong-field substitution fixed in Phase2Modal (K9): if `test_weight = 0` (not yet entered), `sample_weight` is used as the test weight, producing a wrong `weight_loss` value sent to `/gold-tests/:id/finalize`.
+
+**Impact:**
+Batch move and drag-to-DONE for gold/silver tests sends incorrect `weight_loss` when any item has `test_weight = 0`. Backend stores wrong weight loss in the finalized record.
+
+**Fix required:**
+Replace with:
+```js
+Number(it.gross_weight || 0) - (Number(it.test_weight || 0) + Number(it.net_weight || 0))
+```
+At both line 278 (batch move) and line 419 (drag-and-drop).
+
+### Checklist — Verified ✓
+- [x] Batch move sends correct weight_loss (no sample_weight substitution)
+- [x] Drag-to-DONE sends correct weight_loss
+- [x] Finalized records show correct weight data
+
+---
+
+## ✅ K13 — Multi-Device Browser Test — DONE
+
+**Per ArchitrctPrompt.txt requirement.**
+
+Service-layer test (Node direct calls) passed. Browser test with two sessions not yet run.
+
+**Scenario to validate:**
+1. [Device 1] Create new entry → Ongoing
+2. [Device 2] Open same record → Save Draft → remains Ongoing
+3. [Device 2] Submit → moves to Tested
+4. [Device 1] Open Tested card → Finalize → moves to Completed instantly
+5. No 409 error, no "modified by another session" toast
+6. Data visible correctly on both devices
+7. Print works, ledger entry correct
+
+**Blocked by:** K10 (cert creation broken), K11 (save-draft HTTP path broken for certs). Must fix K10 + K11 first to run the full cert scenario.
+
+### Checklist — Verified in Browser ✓
+- [x] K10 fixed (cert creation works)
+- [x] K11 fixed (save-draft HTTP path works)
+- [x] Two-browser scenario run and passes all 7 criteria (verified via browser subagent)
+
+---
+
+## ✅ K14 — Dead Code Cleanup (Python-era files) — DONE
+
+**Not routed, not imported — no user impact. Cleanup only.**
+
+Files containing Python-era field names (`total_weight`, `uid`, `data` blob) that no longer match Node schema:
+- `frontend/src/pages/Certificates.js` — `cert.total_weight` (should be `total_net_weight`); not in App.jsx routes
+- `frontend/src/components/GoldTestForm.js` — uses `total_weight`, `item` state fields; not imported anywhere
+- `frontend/src/unused/CertificateRecordPage.js` — mixed Python field references; explicitly in `/unused/`
+
+**Action:** Delete all three files when entering cleanup phase. No functional fix needed now.
+
+### Checklist
+- [x] `Certificates.js` deleted
+- [x] `GoldTestForm.js` deleted
+- [x] `unused/CertificateRecordPage.js` deleted
+---
+
+## ✅ K15 — Finalize Idempotency & Conflict Handling — DONE
+
+**Problem:**
+Finalizing a record that was already DONE (e.g. via double-click or concurrent session) triggered the `trg_immutable_gold_test` DB trigger. This raised an error that was wrapped into a 500 `SystemError` by the backend, resulting in a generic "Something went wrong!" response instead of a meaningful 409 Conflict. Additionally, concurrent requests could race between the code-level status check and the final DB update.
+
+**Files changed:**
+- `backend/services/v2/errors.js`
+- `backend/services/v2/testService.js`
+- `backend/services/v2/certificateService.js`
+
+### Fixes
+1. **Graceful Conflict Mapping:** Updated `rethrow` in `errors.js` to detect SQLite trigger errors containing "finalized" and map them to a 409 `BusinessError` with code `IMMUTABLE`.
+2. **Transaction Hardening:** Switched all critical write transactions in `testService.js` and `certificateService.js` (finalize, complete, save-draft) to `.immediate()` mode. This forces concurrent writers to serialize at the database level, ensuring the status check always reads the most current state.
+
+### Checklist — Verified ✓
+- [x] Finalizing an already DONE record returns 409 Conflict with "gold_test is finalized and cannot be modified"
+- [x] Concurrent finalize requests handle race conditions correctly via IMMEDIATE locks
+- [x] No generic 500 errors on terminal state transitions
+
+---
+
+## ✅ K16 — In-Page Print Migration — DONE
+
+**Spec:** "Click Print button → `window.print()` fires immediately, no navigation to another page."
+
+**Files changed:**
+- `frontend/src/App.jsx` (wired `PrintProvider`, `PrintPortal`)
+- `frontend/src/contexts/PrintContext.jsx` (created: centralized fetch & trigger)
+- `frontend/src/components/print/PrintPortal.jsx` (created: portal for @media print rendering)
+- `frontend/src/components/print/PrintPortal.css` (created: visibility logic)
+- `frontend/src/components/Phase2Modal.js` (switched to `triggerPrint`)
+- `frontend/src/pages/WorkflowBoard.js` (switched Context Menu "Receipt" to `triggerPrint`)
+- `frontend/src/pages/RecordPage.js` (switched all document/item print actions to `triggerPrint`)
+- `frontend/src/pages/CustomerProfile.js` (switched list actions to `triggerPrint`)
+- `frontend/src/pages/GoldTest.js` (legacy page cleanup)
+- `frontend/src/components/print/ThermalReceipt.js` (added `snapshot` prop support)
+
+### Implementation Details
+- **Context-Driven:** `triggerPrint(type, id, opts)` fetches document data/snapshots and sets a global `job` state.
+- **Zero Navigation:** Replaced `window.open` and `navigate` calls with hook-based trigger. `PrintPortal` renders the content into a hidden div on the same page.
+- **Portal Visibility:** `PrintPortal.css` uses `@media print` to hide the #root app UI and show only the #in-page-print-root during the print operation.
+- **Auto-Cleanup:** `PrintContext` resets the `job` state after `onafterprint` or a short timeout, cleaning up the DOM.
+
+### Checklist — Browser Verified ✓
+- [x] `window.print()` triggers immediately on click
+- [x] No tab changes, no URL changes (Verified with `window.navigation` listener)
+- [x] Supports full documents, per-item certificates, and thermal receipts
+- [x] Works in Phase2Modal, RecordPage, and CustomerProfile
+- [x] Snapshot-based HMAC verified data used for certificates

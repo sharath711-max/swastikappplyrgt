@@ -2,81 +2,62 @@ import React from 'react';
 import './PhotoCertificatePrint.css';
 
 /**
- * High-fidelity print template for Photo Certificates.
- * Replaces the digital layout with a physical stationery overlay (ghost print).
+ * Photo certificate print template.
+ * Mirrors Python photo_certificate/certificate.css exactly:
+ *   - html transform=scale(0.7), width=16.26cm, height=10.9cm
+ *   - Two-column layout: left=data table (8.13cm), right=photo (8.13cm)
+ *   - h5 font-size=2rem, font-weight=800, text-transform=uppercase, margin-left=2cm
+ *   - img height=14cm, width=12cm, margin-left=3.5cm
+ *   - Row order: date | customer | cert_number | item | gross weight | purity KT | purity % | signatory
  */
 const PhotoCertificateTemplate = ({ test, item, photos = [] }) => {
     if (!test || !item) return null;
 
-    // Use full base URL for images. Handle local caching if needed.
     const getMediaUrl = (path) => {
         if (!path) return '';
-        // If it's a blob/object URL already, just return it
         if (path.startsWith('blob:') || path.startsWith('data:')) return path;
-
-        // Otherwise prefix with backend domain if it is relative
-        const urlObj = new URL(window.location.href);
-        const baseUrl = `${urlObj.protocol}//${urlObj.hostname}:5000`;
-        return path.startsWith('http') ? path : `${baseUrl}/${path}`;
+        const base = `${window.location.protocol}//${window.location.hostname}:6000`;
+        return path.startsWith('http') ? path : `${base}/${path}`;
     };
 
-    // Use the first capture for the primary photo overlay
     const primaryPhoto = photos[0] || item.media_path || item.media;
-
-    // Purity Calculation Logic (KT)
-    const purityVal = Number(item.purity) || 0;
-    const ktVal = ((purityVal / 100) * 24).toFixed(2);
+    const purity  = Number(item.purity) || 0;
+    const grossWt = (Number(item.gross_weight) || 0).toFixed(3);
+    const ktVal   = ((purity / 100) * 24).toFixed(2);
+    const date    = new Date(item.created_at || test.createdon || Date.now())
+                        .toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    const certNo  = `${test.auto_number || test.bill_number || ''}-${item.item_no || item.item_number || 'A01'}`;
 
     return (
-        <div className="pc-certificate-container" id="certificate-print-document">
-            {/* 1. Date */}
-            <div className="print-field pos-date">
-                {new Date(item.created_at || test.createdon || Date.now()).toLocaleDateString('en-IN')}
-            </div>
+        <div className="pc-cert-container">
+            <div className="pc-row">
+                {/* Left column — data table, mirrors Python's 8.13cm left div */}
+                <div className="pc-col-data">
+                    <table className="pc-table">
+                        <tbody>
+                            <tr><td><span className="pc-h5">{date}</span></td></tr>
+                            <tr><td><span className="pc-h5">{(test.customer_name || '').toUpperCase()}</span></td></tr>
+                            <tr><td><span className="pc-h5">{certNo}</span></td></tr>
+                            <tr><td><span className="pc-h5 pc-mb-extra">{(item.item_type || '').toUpperCase()}</span></td></tr>
+                            <tr><td><span className="pc-h5 pc-weight">{grossWt}<span className="pc-gm"> GM</span></span></td></tr>
+                            <tr><td><span className="pc-h5">{item.show_kt ? `${ktVal} KT` : ''}</span></td></tr>
+                            <tr><td><span className="pc-h5 pc-weight">{purity.toFixed(2)}</span></td></tr>
+                            <tr><td><span className="pc-h5">Bhimram</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            {/* 2. Customer Name */}
-            <div className="print-field pos-name">
-                {(test.customer_name || 'ANONYMOUS').toUpperCase()}
+                {/* Right column — photo, mirrors Python's 8.13cm right div */}
+                <div className="pc-col-photo">
+                    {primaryPhoto && (
+                        <img
+                            src={getMediaUrl(primaryPhoto)}
+                            alt="Jewel"
+                            className="pc-jewel-img"
+                        />
+                    )}
+                </div>
             </div>
-
-            {/* 3. Case Ref / Ref Code */}
-            <div className="print-field pos-refcode">
-                {test.auto_number || test.bill_number}-{item.item_no || item.item_number || 'A01'}
-            </div>
-
-            {/* 4. Article / Item Description */}
-            <div className="print-field pos-article">
-                {(item.item_type || 'GOLD SAMPLE').toUpperCase()}
-            </div>
-
-            {/* 5. Gross Weight */}
-            <div className="print-field pos-weight">
-                {(Number(item.gross_weight) || 0).toFixed(3)}g
-            </div>
-
-            {/* 6. Purity KT */}
-            <div className="print-field pos-result-kt">
-                {ktVal} KT
-            </div>
-
-            {/* 7. Purity % */}
-            <div className="print-field pos-result-pct">
-                {purityVal.toFixed(2)}%
-            </div>
-
-            {/* 8. Authorized / Verified By */}
-            <div className="print-field pos-verified">
-                {(test.technician_name || 'AUTHORIZED SIGNATORY').toUpperCase()}
-            </div>
-
-            {/* 9. Jewel Photo (Absolute positioning overlay) */}
-            {primaryPhoto && (
-                <img
-                    src={getMediaUrl(primaryPhoto)}
-                    alt="Jewel Sample"
-                    className="pos-jewel-photo"
-                />
-            )}
         </div>
     );
 };

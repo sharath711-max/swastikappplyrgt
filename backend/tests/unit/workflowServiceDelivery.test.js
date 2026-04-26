@@ -29,12 +29,15 @@ describe('workflowService completion delivery', () => {
         jest.clearAllMocks();
     });
 
-    it('returns delivery metadata when a record reaches DONE', async () => {
-        const result = await workflowService.updateStatus('gold', 'GTS-100', 'DONE');
+    it('rejects DONE status — finalization requires the explicit finalizeItem flow', async () => {
+        await expect(workflowService.updateStatus('gold', 'GTS-100', 'DONE'))
+            .rejects.toMatchObject({
+                message: 'Finalization requires explicit completion logic',
+                statusCode: 403,
+            });
 
-        expect(testServiceV2.updateStatus).toHaveBeenCalledWith('gold', 'GTS-100', 'DONE');
-        expect(documentDeliveryService.deliverCompletedRecord).toHaveBeenCalledWith('gold', 'GTS-100');
-        expect(result.delivery).toEqual(expect.objectContaining({ ok: true }));
+        expect(testServiceV2.updateStatus).not.toHaveBeenCalled();
+        expect(documentDeliveryService.deliverCompletedRecord).not.toHaveBeenCalled();
     });
 
     it('does not trigger customer delivery for non-DONE status changes', async () => {
@@ -45,16 +48,11 @@ describe('workflowService completion delivery', () => {
         expect(result.delivery).toBeUndefined();
     });
 
-    it('keeps the status update successful when secure delivery fails', async () => {
-        documentDeliveryService.deliverCompletedRecord.mockRejectedValueOnce(new Error('provider offline'));
+    it('returns { updated: true } without triggering delivery for any non-DONE status', async () => {
+        const result = await workflowService.updateStatus('gold', 'GTS-300', 'IN_PROGRESS');
 
-        const result = await workflowService.updateStatus('gold', 'GTS-300', 'DONE');
-
-        expect(testServiceV2.updateStatus).toHaveBeenCalledWith('gold', 'GTS-300', 'DONE');
+        expect(testServiceV2.updateStatus).toHaveBeenCalledWith('gold', 'GTS-300', 'IN_PROGRESS');
         expect(result.updated).toBe(true);
-        expect(result.delivery).toEqual(expect.objectContaining({
-            ok: false,
-            error: 'provider offline'
-        }));
+        expect(documentDeliveryService.deliverCompletedRecord).not.toHaveBeenCalled();
     });
 });

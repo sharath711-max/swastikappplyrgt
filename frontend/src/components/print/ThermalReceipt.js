@@ -5,7 +5,10 @@ import './CertificatePrint.css';
  * 80mm Thermal Receipt Template for Technician/Quick Results.
  * Strictly adheres to Pillar 4 requirements (80mm width, purity-box).
  */
-const ThermalReceipt = ({ test, items, type = 'RESULT' }) => {
+const ThermalReceipt = ({ test: propTest, items: propItems, type = 'RESULT', snapshot }) => {
+    const test = snapshot ? { id: snapshot.receipt?.number, ...snapshot.receipt } : propTest;
+    const items = snapshot ? snapshot.items : propItems;
+    
     if (!test || !items) return null;
 
     return (
@@ -18,9 +21,9 @@ const ThermalReceipt = ({ test, items, type = 'RESULT' }) => {
             <div className="thermal-items">
                 {items.map((it, idx) => (
                     <div key={idx} style={{ borderBottom: '1px dashed #000', padding: '5px 0' }}>
-                        <div style={{ fontWeight: 'bold' }}>{it.item_type}</div>
+                        <div style={{ fontWeight: 'bold' }}>{it.item_type || it.name}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Gross: {Number(it.gross_weight).toFixed(3)}g</span>
+                            <span>Gross: {Number(it.gross_weight || it.weight || 0).toFixed(3)}g</span>
                             {type === 'RESULT' && (
                                 <span className="purity-box" data-testid="purity-box">
                                     {Number(it.purity).toFixed(2)}%

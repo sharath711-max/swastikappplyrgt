@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
 let openModalCount = 0;
 
@@ -11,7 +11,10 @@ const sizeClasses = {
 
 const Modal = ({ isOpen, show, onClose, onHide, title, children, size = 'medium', dark = false }) => {
     const isModalOpen = typeof isOpen === 'boolean' ? isOpen : !!show;
-    const handleClose = onClose || onHide || (() => { });
+    const handleClose = useCallback(() => {
+        if (onClose) onClose();
+        else if (onHide) onHide();
+    }, [onClose, onHide]);
 
     useEffect(() => {
         if (!isModalOpen) {

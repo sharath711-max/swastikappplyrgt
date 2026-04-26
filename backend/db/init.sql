@@ -256,10 +256,14 @@ CREATE TABLE IF NOT EXISTS credit_history (
   amount REAL DEFAULT 0,
   type TEXT CHECK (type IN ('CREDIT','DEBIT')) NOT NULL,
   mode_of_payment TEXT,
-  description TEXT NOT NULL,
+  description TEXT,
+  previous_balance REAL,
+  request_id TEXT,
   created DATETIME NOT NULL,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_history_request_id ON credit_history(request_id) WHERE request_id IS NOT NULL;
 
 -- ⚖️ WEIGHT LOSS HISTORY (APPEND ONLY)
 CREATE TABLE IF NOT EXISTS weight_loss_history (
@@ -268,6 +272,16 @@ CREATE TABLE IF NOT EXISTS weight_loss_history (
   amount REAL NOT NULL,
   reason TEXT,
   created DATETIME NOT NULL,
+  FOREIGN KEY (customer_id) REFERENCES customer(id)
+);
+
+-- 🧾 RECEIPTS (IMMUTABLE SNAPSHOTS)
+CREATE TABLE IF NOT EXISTS receipts (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL,
+  snapshot TEXT NOT NULL,        -- JSON
+  snapshot_hash TEXT NOT NULL,   -- HMAC
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
@@ -300,9 +314,6 @@ CREATE TRIGGER IF NOT EXISTS update_users_lastmodified AFTER UPDATE ON users BEG
 
 CREATE TRIGGER IF NOT EXISTS update_gt_lastmodified AFTER UPDATE ON gold_test BEGIN UPDATE gold_test SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 CREATE TRIGGER IF NOT EXISTS update_st_lastmodified AFTER UPDATE ON silver_test BEGIN UPDATE silver_test SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
-CREATE TRIGGER IF NOT EXISTS update_gc_lastmodified AFTER UPDATE ON gold_certificate BEGIN UPDATE gold_certificate SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
-CREATE TRIGGER IF NOT EXISTS update_sc_lastmodified AFTER UPDATE ON silver_certificate BEGIN UPDATE silver_certificate SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
-CREATE TRIGGER IF NOT EXISTS update_pc_lastmodified AFTER UPDATE ON photo_certificate BEGIN UPDATE photo_certificate SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 
 CREATE TRIGGER IF NOT EXISTS update_gti_lastmodified AFTER UPDATE ON gold_test_item BEGIN UPDATE gold_test_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 CREATE TRIGGER IF NOT EXISTS update_sti_lastmodified AFTER UPDATE ON silver_test_item BEGIN UPDATE silver_test_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;

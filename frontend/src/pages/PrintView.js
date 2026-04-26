@@ -2,29 +2,37 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import PrintManager from '../components/print/PrintManager';
+import ThermalReceipt from '../components/print/ThermalReceipt';
 import './PrintView.css';
 
-const resolveSnapshotRequest = (type, id, itemIndex) => {
+const resolveSnapshotRequest = (type, id, itemIndex, itemId) => {
+    const itemQuery = itemId ? `?itemId=${encodeURIComponent(itemId)}` : '';
+
     switch (type) {
         case 'gold-test':
             return {
-                endpoint: itemIndex !== null ? `/print/test/gold/${id}/item/${itemIndex}` : `/print/test/gold/${id}`,
+                endpoint: itemId ? `/print/test/gold/${id}/item${itemQuery}` : itemIndex !== null ? `/print/test/gold/${id}/item/${itemIndex}` : `/print/test/gold/${id}`,
                 printType: 'gold-test'
             };
         case 'silver-test':
             return {
-                endpoint: itemIndex !== null ? `/print/test/silver/${id}/item/${itemIndex}` : `/print/test/silver/${id}`,
+                endpoint: itemId ? `/print/test/silver/${id}/item${itemQuery}` : itemIndex !== null ? `/print/test/silver/${id}/item/${itemIndex}` : `/print/test/silver/${id}`,
                 printType: 'silver-test'
             };
         case 'gold-certificate':
             return {
-                endpoint: itemIndex !== null ? `/print/certificate/gold/${id}/item/${itemIndex}` : `/print/certificate/gold/${id}`,
+                endpoint: itemId ? `/print/certificate/gold/${id}/item${itemQuery}` : itemIndex !== null ? `/print/certificate/gold/${id}/item/${itemIndex}` : `/print/certificate/gold/${id}`,
                 printType: 'certificate'
             };
         case 'silver-certificate':
             return {
-                endpoint: itemIndex !== null ? `/print/certificate/silver/${id}/item/${itemIndex}` : `/print/certificate/silver/${id}`,
+                endpoint: itemId ? `/print/certificate/silver/${id}/item${itemQuery}` : itemIndex !== null ? `/print/certificate/silver/${id}/item/${itemIndex}` : `/print/certificate/silver/${id}`,
                 printType: 'silver'
+            };
+        case 'photo-certificate':
+            return {
+                endpoint: itemId ? `/print/certificate/photo/${id}/item${itemQuery}` : itemIndex !== null ? `/print/certificate/photo/${id}/item/${itemIndex}` : `/print/certificate/photo/${id}`,
+                printType: 'photo'
             };
         case 'certificate':
         case 'small-certificate':
@@ -47,11 +55,49 @@ const resolveLegacyRequest = (type, id) => {
     return `/list/${type}/${id}`;
 };
 
+const buildReceiptSnapshot = (payload) => ({
+    lab: {
+        name: 'SWASTIK GOLD LAB',
+        tagline: 'Testing & Certification',
+        address: payload?.customer?.address || '',
+    },
+    receipt: {
+        number: payload?.header?.auto_number || payload?.bill_number || '-',
+        createdAt: payload?.header?.created_at || payload?.created_at || payload?.createdon,
+        type: payload?.header?.entity_type || 'document',
+        status: payload?.status || payload?.header?.status || 'DONE',
+    },
+    customer: {
+        name: payload?.customer?.name || payload?.customer_name || '-',
+        phone: payload?.customer?.phone || payload?.customer_phone || '',
+    },
+    items: (payload?.items || []).map((item) => ({
+        id: item.id || item.item_number,
+        name: item.item_type || item.item_name || item.name || 'Item',
+        label: item.item_number || item.certificate_number || '',
+        weight: item.net_weight || item.gross_weight || 0,
+        amount: Number(item.item_total || item.total || 0),
+        purity: item.purity,
+    })),
+    totals: {
+        subtotal: Number(payload?.totals?.base || payload?.base || 0),
+        tax: Number(payload?.totals?.tax || payload?.tax || 0),
+        total: Number(payload?.totals?.total || payload?.total || payload?.grand_total || 0),
+        paid: Number(payload?.totals?.total || payload?.total || payload?.grand_total || 0),
+        balance: 0,
+    },
+    footer: {
+        message: 'Snapshot receipt copy',
+    },
+});
+
 const PrintView = () => {
     const { type, id } = useParams();
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
     const itemIndex = queryParams.get('itemIndex'); // Support printing specific items from a set
+    const itemId = queryParams.get('itemId'); // Preferred stable item selector
+    const layout = queryParams.get('layout');
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -67,7 +113,7 @@ const PrintView = () => {
             setResolvedType(type);
 
             try {
-                const snapshotRequest = resolveSnapshotRequest(type, id, itemIndex);
+                const snapshotRequest = resolveSnapshotRequest(type, id, itemIndex, itemId);
                 const response = snapshotRequest
                     ? await api.get(snapshotRequest.endpoint)
                     : await api.get(resolveLegacyRequest(type, id));
@@ -79,7 +125,7 @@ const PrintView = () => {
                 setData(result);
 
                 // Handle item-level precision for batch records
-                if (itemIndex !== null && result && result.data?.items) {
+                if ((itemIndex !== null || itemId) && result && result.data?.items) {
                     setSelectedItem(result.data.items[0] || null);
                 } else if (itemIndex !== null && result && result.items) {
                     setSelectedItem(result.items[parseInt(itemIndex, 10)]);
@@ -94,29 +140,28 @@ const PrintView = () => {
         };
 
         fetchData();
-    }, [type, id, itemIndex]);
+    }, [type, id, itemIndex, itemId]);
 
     useEffect(() => {
         if (!loading && data) {
-            let frameOne = null;
-            let frameTwo = null;
+            // Match Python: auto-print then close the tab when print dialog finishes
+            const afterPrint = () => window.close();
+            window.onafterprint = afterPrint;
+            if (window.matchMedia) {
+                const mql = window.matchMedia('print');
+                const listener = (e) => { if (!e.matches) afterPrint(); };
+                mql.addEventListener('change', listener);
+            }
 
-            frameOne = window.requestAnimationFrame(() => {
-                frameTwo = window.requestAnimationFrame(() => {
-                    window.print();
-                });
+            let f1 = window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => window.print());
             });
 
             return () => {
-                if (frameOne) {
-                    window.cancelAnimationFrame(frameOne);
-                }
-                if (frameTwo) {
-                    window.cancelAnimationFrame(frameTwo);
-                }
+                window.cancelAnimationFrame(f1);
+                window.onafterprint = null;
             };
         }
-
         return undefined;
     }, [loading, data]);
 
@@ -149,7 +194,9 @@ const PrintView = () => {
             </div>
 
             <div className="print-content">
-                {selectedItem ? (
+                {layout === 'receipt' ? (
+                    <ThermalReceipt snapshot={buildReceiptSnapshot(printPayload)} />
+                ) : selectedItem ? (
                     <PrintManager
                         type={resolvedType}
                         data={printPayload}
@@ -157,7 +204,7 @@ const PrintView = () => {
                         photos={printPayload?.photos || []}
                     />
                 ) : (
-                    (queryParams.get('itemLevel') === 'true' || resolvedType.includes('certificate') || resolvedType.includes('cert') || resolvedType === 'gold' || resolvedType === 'silver' || resolvedType === 'photo') && printPayload?.items && printPayload.items.length > 0 ? (
+                    queryParams.get('itemLevel') === 'true' && printPayload?.items && printPayload.items.length > 0 ? (
                         printPayload.items.map((it, idx) => (
                             <div key={it.id || it.item_no || it.item_number || idx} style={{ pageBreakAfter: idx < printPayload.items.length - 1 ? 'always' : 'auto' }}>
                                 <PrintManager

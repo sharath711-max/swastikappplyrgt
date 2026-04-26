@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fa';
 import { useToast } from '../contexts/ToastContext';
 import api from '../services/api';
+import { usePrint } from '../contexts/PrintContext';
 
 import RecordPageHeader from '../components/layout/RecordPageHeader';
 import SwastikTabs from '../components/core/SwastikTabs';
@@ -18,6 +19,7 @@ const RecordPage = () => {
     const { addToast } = useToast();
     const { type, id } = useParams();
     const navigate = useNavigate();
+    const { triggerPrint } = usePrint();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -65,14 +67,24 @@ const RecordPage = () => {
     const isItem = type.includes('item');
     const isFinalized = data?.status === 'DONE';
 
-    const handlePrint = () => {
-        let printType = type;
-        if (type === 'gold-tests') printType = 'gold-test';
-        if (type === 'silver-tests') printType = 'silver-test';
-        if (type.includes('certificate')) printType = 'certificate';
+    const resolvePrintType = (t) => {
+        if (t === 'gold-tests') return 'gold-test';
+        if (t === 'silver-tests') return 'silver-test';
+        if (t === 'gold-certificates') return 'gold-certificate';
+        if (t === 'silver-certificates') return 'silver-certificate';
+        if (t === 'photo-certificates') return 'photo-certificate';
+        return null;
+    };
 
-        // Assuming printing functionality remains the same
-        navigate(`/print/${printType}/${data.auto_number || id}`);
+    const handlePrint = async () => {
+        const printType = resolvePrintType(type);
+        if (printType) {
+            try {
+                await triggerPrint(printType, id);
+            } catch (err) {
+                addToast('Print failed. Please try again.', 'error');
+            }
+        }
     };
 
     const handleStatusChange = async (newStatus) => {
@@ -153,7 +165,7 @@ const RecordPage = () => {
                         {type.includes('certificate') && <td><Badge bg="light" text="dark">{item.certificate_number || '-'}</Badge></td>}
                         <td>{item.item_type || item.item_name}</td>
                         <td>{item.gross_weight || item.total_weight} g</td>
-                        <td>{item.fine_weight || item.sample_weight} g</td>
+                        <td>{type.includes('certificate') ? (item.fine_weight ?? 0) : (item.sample_weight ?? 0)} g</td>
                         <td><span className="fw-600 text-primary">{item.purity}%</span></td>
                         <td className="text-end pe-4 fw-bold">
                             ₹{item.item_total || item.amount || 0}
@@ -163,13 +175,16 @@ const RecordPage = () => {
                                     size="sm"
                                     className="ms-3 p-0 text-secondary"
                                     title="Print Item only"
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                         e.stopPropagation();
-                                        let printType = type;
-                                        if (type === 'gold-tests') printType = 'gold-test';
-                                        if (type === 'silver-tests') printType = 'silver-test';
-                                        if (type.includes('certificate')) printType = 'certificate';
-                                        navigate(`/print/${printType}/${data.auto_number || id}?itemIndex=${data.items.indexOf(item)}`);
+                                        const printType = resolvePrintType(type);
+                                        if (printType) {
+                                            try {
+                                                await triggerPrint(printType, id, { itemIndex: data.items.indexOf(item) });
+                                            } catch (err) {
+                                                addToast('Print failed. Please try again.', 'error');
+                                            }
+                                        }
                                     }}
                                 >
                                     <FaPrint />
@@ -276,12 +291,15 @@ const RecordPage = () => {
                                 <FaCheckCircle className="me-2" /> Finalize Record
                             </Button>
                         )}
-                        <Button variant="outline-primary" className="me-3 fw-bold bg-white" onClick={() => {
-                            let printType = type;
-                            if (type === 'gold-tests') printType = 'gold-test';
-                            if (type === 'silver-tests') printType = 'silver-test';
-                            if (type.includes('certificate')) printType = 'certificate';
-                            navigate(`/print/${printType}/${data.auto_number || id}?itemLevel=true`);
+                        <Button variant="outline-primary" className="me-3 fw-bold bg-white" onClick={async () => {
+                            const printType = resolvePrintType(type);
+                            if (printType) {
+                                try {
+                                    await triggerPrint(printType, id, { itemLevel: true });
+                                } catch (err) {
+                                    addToast('Print failed. Please try again.', 'error');
+                                }
+                            }
                         }}>
                             <FaPrint className="me-2" /> Print Everything Item Level
                         </Button>

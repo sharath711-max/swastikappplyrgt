@@ -67,6 +67,7 @@ function applyPostInitMigrations() {
     ensureColumn('silver_certificate_item', 'item_total',  'REAL DEFAULT 0');
     ensureColumn('photo_certificate_item',  'fine_weight', 'REAL DEFAULT 0');
     ensureColumn('photo_certificate_item',  'item_total',  'REAL DEFAULT 0');
+    ensureColumn('photo_certificate_item',  'show_kt',     'INTEGER DEFAULT 0');
 
     ensureColumn('audit_logs', 'request_id',    'TEXT');
     ensureColumn('audit_logs', 'event',         'TEXT');
@@ -223,47 +224,54 @@ function withTransaction(fn, opts = {}) {
  * ─────────────────────────────────────────────
  * Service-layer idempotency guard on top of better-sqlite3 transactions.
  *
- * Before executing fn:
- *   1. INSERT OR IGNORE a placeholder into request_log.
- *   2. If changes === 0 → duplicate request → return cached response.
- *   3. Execute fn.
- *   4. UPDATE request_log with the response JSON.
+ * Idempotency check runs ONLY at the outermost call level. Nested calls
+ * (SAVEPOINTs) skip the check so they don't false-positive on the same
+ * request_id already inserted by the outer transaction.
  *
- * Nested calls (inside an outer transaction) use SAVEPOINT automatically.
+ * Since better-sqlite3 transactions are synchronous (no async interleaving),
+ * _txnDepth correctly tracks nesting within a single call stack.
  */
+let _txnDepth = 0;
+
 const transaction = (fn) => {
     return db.transaction((...args) => {
-        const { getRequestId } = require('../utils/audit');
-        const requestId = getRequestId();
+        const isNested = _txnDepth > 0;
+        _txnDepth++;
+        try {
+            const { getRequestId } = require('../utils/audit');
+            const requestId = getRequestId();
 
-        if (requestId) {
-            const inserted = db.prepare(
-                'INSERT OR IGNORE INTO request_log (request_id) VALUES (?)'
-            ).run(requestId);
+            if (requestId && !isNested) {
+                const inserted = db.prepare(
+                    'INSERT OR IGNORE INTO request_log (request_id) VALUES (?)'
+                ).run(requestId);
 
-            if (inserted.changes === 0) {
-                const row = db.prepare(
-                    'SELECT response_json FROM request_log WHERE request_id = ?'
-                ).get(requestId);
-                if (row?.response_json) {
-                    try { return JSON.parse(row.response_json); } catch (_) { /* fall through */ }
-                } else {
-                    const { BusinessError } = require('../services/v2/errors');
-                    throw new BusinessError('Request is already processing', 'CONFLICT', 409);
+                if (inserted.changes === 0) {
+                    const row = db.prepare(
+                        'SELECT response_json FROM request_log WHERE request_id = ?'
+                    ).get(requestId);
+                    if (row?.response_json) {
+                        try { return JSON.parse(row.response_json); } catch (_) { /* fall through */ }
+                    } else {
+                        const { BusinessError } = require('../services/v2/errors');
+                        throw new BusinessError('Request is already processing', 'CONFLICT', 409);
+                    }
                 }
             }
+
+            const res = fn(...args);
+
+            if (requestId && !isNested && res !== undefined) {
+                try {
+                    db.prepare('UPDATE request_log SET response_json = ? WHERE request_id = ?')
+                      .run(JSON.stringify(res), requestId);
+                } catch (_) { /* non-fatal */ }
+            }
+
+            return res;
+        } finally {
+            _txnDepth--;
         }
-
-        const res = fn(...args);
-
-        if (requestId && res !== undefined) {
-            try {
-                db.prepare('UPDATE request_log SET response_json = ? WHERE request_id = ?')
-                  .run(JSON.stringify(res), requestId);
-            } catch (_) { /* non-fatal: idempotency cache write failure */ }
-        }
-
-        return res;
     });
 };
 

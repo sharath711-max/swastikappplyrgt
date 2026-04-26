@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
     FaTachometerAlt, FaUsers, FaCheckDouble, FaBars, FaChevronDown,
-    FaUserShield
+    FaUserShield, FaFileInvoiceDollar
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
 import { APP_CONFIG } from '../../utils/Constants';
@@ -36,6 +36,12 @@ const Sidebar = ({ sidebarCollapsed }) => {
             roles: ['admin', 'manager', 'technician', 'front_desk'],
         },
         { type: 'section', label: 'TOOLS' },
+        {
+            name: 'Bills',
+            path: '/module-bills',
+            icon: <FaFileInvoiceDollar />,
+            roles: ['admin', 'manager', 'front_desk'],
+        },
         {
             name: 'Reports',
             path: '/list-views',

@@ -12,7 +12,9 @@ const documentDeliveryService   = require('./documentDeliveryService');
 const { writeAuditLog }         = require('./auditLogService');
 const logger                    = require('../utils/logger');
 const { BusinessError, ERR }    = require('./v2/errors');
+const { assertTransitionAllowed } = require('./workflowStateMachine');
 const socket                    = require('../socket');
+const { isStrict, parityLog }   = require('../config/systemMode');
 
 // ─── Table map (used throughout) ─────────────────────────────────────────────
 
@@ -46,7 +48,8 @@ class WorkflowService {
                 'gold' AS type, gt.id, gt.customer_id, gt.auto_number, gt.status,
                 'Gold Test' AS description,
                 gt.total AS total, gt.mode_of_payment, gt.created AS createdon,
-                c.name AS customer_name
+                c.name AS customer_name,
+                CASE WHEN gt.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
             FROM gold_test gt
             JOIN customer c ON gt.customer_id = c.id
             WHERE gt.deletedon IS NULL
@@ -57,7 +60,8 @@ class WorkflowService {
                 'silver' AS type, st.id, st.customer_id, st.auto_number, st.status,
                 'Silver Test' AS description,
                 st.total AS total, st.mode_of_payment, st.created AS createdon,
-                c.name AS customer_name
+                c.name AS customer_name,
+                CASE WHEN st.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
             FROM silver_test st
             JOIN customer c ON st.customer_id = c.id
             WHERE st.deletedon IS NULL
@@ -68,7 +72,8 @@ class WorkflowService {
                 'gold_cert' AS type, gc.id, gc.customer_id, gc.auto_number, gc.status,
                 'Gold Certificate' AS description,
                 gc.total AS total, gc.mode_of_payment, gc.created AS createdon,
-                c.name AS customer_name
+                c.name AS customer_name,
+                CASE WHEN gc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
             FROM gold_certificate gc
             JOIN customer c ON gc.customer_id = c.id
             WHERE gc.deletedon IS NULL
@@ -79,7 +84,8 @@ class WorkflowService {
                 'silver_cert' AS type, sc.id, sc.customer_id, sc.auto_number, sc.status,
                 'Silver Certificate' AS description,
                 sc.total AS total, sc.mode_of_payment, sc.created AS createdon,
-                c.name AS customer_name
+                c.name AS customer_name,
+                CASE WHEN sc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
             FROM silver_certificate sc
             JOIN customer c ON sc.customer_id = c.id
             WHERE sc.deletedon IS NULL
@@ -90,7 +96,8 @@ class WorkflowService {
                 'photo_cert' AS type, pc.id, pc.customer_id, pc.auto_number, pc.status,
                 'Photo Certificate' AS description,
                 pc.total AS total, pc.mode_of_payment, pc.created AS createdon,
-                c.name AS customer_name
+                c.name AS customer_name,
+                CASE WHEN pc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
             FROM photo_certificate pc
             JOIN customer c ON pc.customer_id = c.id
             WHERE pc.deletedon IS NULL
@@ -138,9 +145,11 @@ class WorkflowService {
 
         // ── 1. Idempotency: return cached result for duplicate requests ────────
         const requestId = getRequestId() || null;
-        if (requestId) {
+        if (isStrict() && requestId) {
             const cached = getIdempotencyKey(_moveIdemKey(type, id, toStatus, requestId));
             if (cached?.response) return { ...cached.response, _idempotent: true };
+        } else if (requestId) {
+            parityLog('workflow.move.idempotency', { type, id, toStatus });
         }
 
         // ── 2. Pre-flight read (fast-fail before acquiring write lock) ─────────
@@ -148,18 +157,7 @@ class WorkflowService {
         if (!preflight) {
             throw new BusinessError(`Workflow item not found: ${id}`, ERR.NOT_FOUND, 404);
         }
-        if (preflight.status !== 'TODO') {
-            throw new BusinessError(
-                `Only TODO items can be moved to IN_PROGRESS (current: ${preflight.status})`,
-                ERR.STATUS_INVALID, 409
-            );
-        }
-        if (toStatus !== 'IN_PROGRESS') {
-            throw new BusinessError(
-                'Only TODO → IN_PROGRESS is allowed via workflow move',
-                ERR.STATUS_INVALID, 409
-            );
-        }
+        assertTransitionAllowed(type, preflight.status, toStatus);
 
         // ── 3. BEGIN IMMEDIATE: OCC check + status UPDATE + audit (atomic) ───────
         const moved = withTransaction(() => {
@@ -174,21 +172,20 @@ class WorkflowService {
             if (!row) {
                 throw new BusinessError(`Workflow item not found: ${id}`, ERR.NOT_FOUND, 404);
             }
-            if (row.status !== 'TODO') {
-                throw new BusinessError(
-                    `Status conflict: expected TODO, got ${row.status}`,
-                    ERR.STATUS_INVALID, 409
-                );
-            }
+            // Re-validate inside the transaction to catch race conditions
+            assertTransitionAllowed(type, row.status, toStatus);
 
             // OCC: reject if row was modified between client read and now
-            if (expectedVersion !== null &&
+            if (isStrict() && expectedVersion !== null &&
                 Number(row.version) !== Number(expectedVersion)) {
                 throw new BusinessError(
                     `Version conflict on move: expected v${expectedVersion}, got v${row.version}. Reload and retry.`,
                     'OPTIMISTIC_LOCK_CONFLICT', 409,
                     { expectedVersion: Number(expectedVersion), actualVersion: Number(row.version) }
                 );
+            } else if (!isStrict() && expectedVersion !== null &&
+                Number(row.version) !== Number(expectedVersion)) {
+                parityLog('workflow.move.occ', { type, id, expectedVersion, actualVersion: Number(row.version) });
             }
 
             // Status update (DB trigger increments version automatically)
@@ -277,9 +274,11 @@ class WorkflowService {
 
         // ── 1. Idempotency gate ───────────────────────────────────────────────
         const requestId = getRequestId() || null;
-        if (requestId) {
+        if (isStrict() && requestId) {
             const cached = getIdempotencyKey(_finalizeIdemKey(type, id, requestId));
             if (cached?.response) return { ...cached.response, _idempotent: true };
+        } else if (requestId) {
+            parityLog('workflow.finalize.idempotency', { type, id });
         }
 
         // ── 2. Pre-flight status + completion_request_id check ────────────────
@@ -522,15 +521,9 @@ class WorkflowService {
                 );
             }
 
-            // updateStatus becomes a SAVEPOINT inside our BEGIN IMMEDIATE.
-            // Snapshot is computed inside updateStatus after the fee write, so it
-            // captures the canonical fee total, not the pre-finalization item sum.
-            const result = certType === 'photo'
-                ? photoCertRepo.updateStatus(id, 'DONE', actor, {})
-                : certServiceV2.updateStatus(certType, id, 'DONE', {});
-
-            // Stamp completion_request_id in the same commit as the status change.
-            // If the SAVEPOINT above is rolled back this UPDATE also rolls back.
+            // Stamp completion_request_id BEFORE status → DONE.
+            // The immutability trigger (WHEN OLD.status = 'DONE') blocks all updates
+            // on a DONE record, so this must run while the cert is still IN_PROGRESS.
             if (requestId) {
                 db.prepare(
                     `UPDATE ${certTable}
@@ -538,6 +531,13 @@ class WorkflowService {
                      WHERE id = ? AND deletedon IS NULL`
                 ).run(requestId, id);
             }
+
+            // updateStatus becomes a SAVEPOINT inside our BEGIN IMMEDIATE.
+            // Snapshot is computed inside updateStatus after the fee write, so it
+            // captures the canonical fee total, not the pre-finalization item sum.
+            const result = certType === 'photo'
+                ? photoCertRepo.updateStatus(id, 'DONE', actor, {})
+                : certServiceV2.updateStatus(certType, id, 'DONE', {});
 
             // Audit written in the same commit — never orphaned.
             // requestId passed explicitly so the column is populated even when

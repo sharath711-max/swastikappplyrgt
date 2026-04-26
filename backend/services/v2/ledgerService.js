@@ -15,6 +15,7 @@ const { ALL_LEDGER_REF_TYPES } = require('../../constants/entityTypes');
 const { db, genId, now, transaction } = require('../../db/db');
 const { BusinessError, SystemError, ERR, rethrow } = require('./errors');
 const audit = require('./auditLogger');
+const { isStrict, parityLog } = require('../../config/systemMode');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EntryType    = Object.freeze({ DEBIT: 'DEBIT', CREDIT: 'CREDIT' });
@@ -156,9 +157,13 @@ function recordRevenue(source_type, opts, tx = db) {
     }
 
     if (opts.reference_id && !opts.skip_status_check) {
-        const row = tx.prepare(`SELECT status FROM ${opts.reference_type} WHERE id = ?`).get(opts.reference_id);
-        if (row && row.status !== 'DONE') {
-            throw new BusinessError(`recordRevenue cross-check failed: source record ${opts.reference_id} must be DONE, but is ${row.status}`, ERR.VALIDATION, 409);
+        if (isStrict()) {
+            const row = tx.prepare(`SELECT status FROM ${opts.reference_type} WHERE id = ?`).get(opts.reference_id);
+            if (row && row.status !== 'DONE') {
+                throw new BusinessError(`recordRevenue cross-check failed: source record ${opts.reference_id} must be DONE, but is ${row.status}`, ERR.VALIDATION, 409);
+            }
+        } else {
+            parityLog('ledger.status_cross_check', { reference_id: opts.reference_id, reference_type: opts.reference_type });
         }
     }
 

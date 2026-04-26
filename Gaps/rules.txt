@@ -1,0 +1,262 @@
+filepath: Gaps/rules.txt
+## PROJECT RULES — KANBAN WORKFLOW (FINAL)
+
+---
+
+## 1. GENERAL SYSTEM RULES
+
+1. System runs on multiple devices connected via local network (same IP).
+2. Only ONE admin user account exists.
+3. Admin can login from multiple devices simultaneously.
+4. All actions must reflect in real-time across devices.
+5. Workflow must be consistent across devices (no divergence).
+
+---
+
+## 2. WORKFLOW STATES
+
+All modules (GT / ST / SC / GC / PC) follow:
+
+Ongoing → Tested → Completed
+
+Mapping:
+- Ongoing = TODO
+- Tested = IN_PROGRESS
+- Completed = DONE
+
+---
+
+## 3. PHASE TRANSITION RULE
+
+Each phase MUST enforce required fields before moving forward:
+
+- Cannot move to Tested without purity data
+- Cannot move to Completed without payment details
+- No skipping phases
+- No direct TODO → DONE
+
+---
+
+## 4. DEVICE ROLE ACTIONS
+
+---
+
+### DEVICE USER 1 — ENTRY CREATION
+
+Location: Workflow Page → New Entry Modal
+
+Allowed Actions:
+- Save
+- Cancel
+
+Flow:
+1. Click "New"
+2. Enter sample details (GT/ST/SC/GC/PC)
+3. Save
+
+Result:
+- Record created in **Ongoing** state
+- Appears in Kanban board
+
+---
+
+### DEVICE USER 2 — TESTING PHASE
+
+Location: Ongoing Card → Test Results Modal
+
+Allowed Actions:
+- Save Draft
+- Submit
+- Cancel
+
+Flow:
+1. Click Ongoing card
+2. Enter purity values
+
+Actions:
+
+SAVE DRAFT:
+- Saves entered purity
+- Status remains **Ongoing**
+
+SUBMIT:
+- Validates purity fields
+- Moves record to **Tested**
+
+---
+
+### DEVICE USER 1 — PAYMENT & FINALIZATION
+
+Location: Tested Card → Payment & Status Modal
+
+Allowed Actions:
+- Save Draft
+- Finalise
+- Cancel
+
+Editable:
+- Amount
+- Mode of payment
+
+Read-only:
+- All test data
+
+Actions:
+
+SAVE DRAFT:
+- Saves payment details
+- Status remains **Tested**
+
+FINALISE:
+- Validates required fields
+- Calls: POST /api/workflow/finalize
+- Moves record to **Completed**
+
+---
+
+## 5. COMPLETED STATE RULE
+
+For ALL devices:
+
+Location: Completed Card → Modal
+
+Rules:
+- All fields are READ-ONLY
+- No edits allowed
+
+Allowed Actions:
+- Copy
+- Print
+- Close
+
+---
+
+## 6. PRINT RULE
+
+- Print is allowed ONLY after Completed (DONE)
+- Print must use snapshot (no live calculation)
+- Item-level print allowed after DONE
+
+---
+
+## 7. REAL-TIME RULE
+
+- All changes must sync across devices immediately
+- No stale UI allowed
+- Socket updates must use latest backend data
+- No full board reload on each event
+
+---
+
+## 8. CONCURRENCY RULE
+
+- System must handle multiple devices safely
+- No overwrite of newer data
+- OCC (version) must prevent stale updates
+- Pending actions must not conflict with socket updates
+
+---
+
+## 9. FINALIZATION RULE (CRITICAL)
+
+ALL finalization paths MUST use:
+
+POST /api/workflow/finalize
+
+❌ NOT ALLOWED:
+- PATCH status → DONE directly
+- POST /certificates/:id/results for finalize
+
+---
+
+## 10. VALIDATION CHECKLIST (MANDATORY BEFORE MARKING DONE)
+
+Test on 2 devices:
+
+1. Device 1 → Create entry → appears in Ongoing
+2. Device 2 → Save Draft → remains Ongoing
+3. Device 2 → Submit → moves to Tested
+4. Device 1 → Save Draft payment → remains Tested
+5. Device 1 → Finalise → moves to Completed
+
+Expected:
+- No errors
+- No wrong toast
+- No stuck state
+- Print works
+- Data consistent on both devices
+
+---
+
+## 11. COMPLETION CONDITION
+
+Mark "DONE" in Gaps/Todo.txt ONLY IF:
+
+✔ All steps in validation checklist pass  
+✔ Finalize works (Tested → Completed)  
+✔ No 409 or incorrect error messages  
+✔ Multi-device flow is consistent  
+
+---
+
+## FINAL NOTE
+In TODO.txt file 
+If any step fails:
+
+→ DO NOT mark DONE  
+→ Fix issue first  
+
+System correctness > UI completion
+
+You're absolutely right to demand multi‑device validation. Fixing the API endpoint does **not** prove the UI stays consistent, toasts are correct, or the ledger updates under real concurrency.
+
+I have not run the two‑device scenario yet. I will now.
+
+---
+
+## ✅ What I will validate (exactly as you specified)
+
+**Device 1 (Admin)**
+1. Create new entry → `Ongoing`
+
+**Device 2**
+2. Open same record
+3. Save Draft → remains `Ongoing`
+4. Submit → moves to `Tested`
+
+**Device 1**
+5. Open `Tested` card
+6. Save Draft payment → remains `Tested`
+7. Finalise → must move to `Completed`
+
+**Pass criteria**
+- Moves to `Completed` instantly
+- No 409 error
+- No “modified by another session” toast
+- Data visible correctly on both devices
+- Print works
+- Ledger entry correct
+
+---
+
+## 🔍 Additional check – `lastmodified` after trigger removal
+
+You noted: we dropped `update_gc/sc/pc_lastmodified` triggers.
+
+**Current state:**  
+The service layer **explicitly sets** `lastmodified = NOW()` on every update (verified in `updateItem`, `finalizeItem`, `saveDraft`).  
+So audit timestamps are still correct – the trigger was redundant. No silent break.
+
+---
+
+## 🚀 Next step after I run the test
+
+I will execute the scenario (using two browser profiles or two devices) and report back **only**:
+
+> **Multi-device flow PASS**  
+> or  
+> **Multi-device flow FAIL – [specific failure]**
+
+No other claims until then.
+
+Expect my result within 1 hour.

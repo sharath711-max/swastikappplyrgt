@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Table, Button, Badge } from 'react-bootstrap';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { usePrint } from '../contexts/PrintContext';
 import NewGoldTestModal from '../components/NewGoldTestModal';
 
 export default function GoldTest() {
@@ -9,6 +10,7 @@ export default function GoldTest() {
     const [showNew, setShowNew] = useState(false);
     const [active, setActive] = useState({});
     const { addToast } = useToast();
+    const { triggerPrint } = usePrint();
 
     const load = () => api.get('/gold-tests').then(res => setTests(res.data.data)).catch(e => addToast(e.message, 'error'));
     useEffect(() => { load(); }, []);
@@ -29,8 +31,8 @@ export default function GoldTest() {
             else addToast('Finalized successfully', 'success');
             
             const cert = res.data?.data?.certificate;
-            if (cert) window.open(`/print/gold-certificate/${cert.id}`, '_blank');
-            else if (res.data?.data?.id) window.open(`/print/gold-certificate/${res.data.data.id}`, '_blank');
+            if (cert) triggerPrint('gold-certificate', cert.id);
+            else if (res.data?.data?.id) triggerPrint('gold-certificate', res.data.data.id);
             
             load();
         } catch (e) {

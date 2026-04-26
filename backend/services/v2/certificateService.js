@@ -328,6 +328,7 @@ function createCertificate(type, data) {
     audit.start('certificateService.createCertificate', { type, customer_id: data.customer_id });
 
     const _txn = transaction(() => {
+        const c  = _cfg(type);
         const tx = db;
         const ts   = now();
         const cert = _createCertificateWork(type, data, ts, tx);
@@ -360,7 +361,7 @@ function createCertificate(type, data) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('certificateService.createCertificate', {
             id         : result.id,
             auto_number: result.auto_number,
@@ -557,7 +558,7 @@ function updateStatus(type, id, newStatus, opts = {}) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('certificateService.updateStatus', {
             id, type, from: current.status, to: newStatus,
             ledger_id: result.ledger?.id,
@@ -615,7 +616,7 @@ function addItems(type, certId, newItems) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('certificateService.addItems', { certId, type, added: result.added.length, total: result.totals.grand_total });
         return result;
     } catch (err) {
@@ -658,7 +659,6 @@ function updateItem(type, certId, itemId, updates) {
             returned          : calc.is_returned ? 1 : 0,
             certificate_number: merged.certificate_number || current.certificate_number,
         };
-        if (type === 'gold') fields.rate_per_gram = normInput.rate_per_gram;
 
         const setClause = Object.keys(fields).map(k => `${k} = ?`).join(', ');
         db.prepare(`
@@ -679,7 +679,7 @@ function updateItem(type, certId, itemId, updates) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('certificateService.updateItem', { certId, itemId, type, total: result.totals.grand_total });
         return result;
     } catch (err) {
@@ -715,7 +715,7 @@ function removeItem(type, certId, itemId) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('certificateService.removeItem', { certId, itemId, type });
         return result;
     } catch (err) {
@@ -792,7 +792,7 @@ function saveResults(type, certId, data) {
     });
 
     try {
-        const result = _txn();
+        const result = _txn.immediate();
         audit.commit('certificateService.saveResults', { certId, type, total: result.total });
         return result;
     } catch (err) {

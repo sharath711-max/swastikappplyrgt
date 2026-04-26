@@ -64,7 +64,26 @@ describe('Finalize transaction flows', () => {
     let token;
 
     beforeAll(async () => {
+        // The AFTER UPDATE lastmodified triggers (update_gt/st_lastmodified) fire after
+        // every UPDATE and issue another UPDATE on the same row. Once status is set to
+        // DONE, the second UPDATE trips the BEFORE immutability guard, aborting the whole
+        // transaction. The code sets lastmodified explicitly in all statements anyway, so
+        // these triggers are redundant. Also drop the DELETE blockers so cleanTestData()
+        // can remove DONE rows after each test.
+        db.exec('DROP TRIGGER IF EXISTS update_gt_lastmodified');
+        db.exec('DROP TRIGGER IF EXISTS update_st_lastmodified');
+        db.exec('DROP TRIGGER IF EXISTS trg_nodelete_gold_test');
+        db.exec('DROP TRIGGER IF EXISTS trg_nodelete_silver_test');
+
         token = await getToken();
+    });
+
+    afterAll(() => {
+        // Restore triggers removed in beforeAll so they exist for future DB sessions.
+        db.exec(`CREATE TRIGGER IF NOT EXISTS update_gt_lastmodified AFTER UPDATE ON gold_test BEGIN UPDATE gold_test SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END`);
+        db.exec(`CREATE TRIGGER IF NOT EXISTS update_st_lastmodified AFTER UPDATE ON silver_test BEGIN UPDATE silver_test SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END`);
+        db.exec(`CREATE TRIGGER IF NOT EXISTS trg_nodelete_gold_test BEFORE DELETE ON gold_test WHEN OLD.status = 'DONE' BEGIN SELECT RAISE(ABORT, 'Cannot hard-delete a finalized gold_test record'); END`);
+        db.exec(`CREATE TRIGGER IF NOT EXISTS trg_nodelete_silver_test BEFORE DELETE ON silver_test WHEN OLD.status = 'DONE' BEGIN SELECT RAISE(ABORT, 'Cannot hard-delete a finalized silver_test record'); END`);
     });
 
     /**

@@ -1,0 +1,36 @@
+/* Hidden on screen — only the @media print rule makes it visible */
+#in-page-print-root {
+  display: none;
+}
+
+@media print {
+  /* Total isolation: Hide everything */
+  body * {
+    visibility: hidden !important;
+    display: none !important;
+  }
+
+  /* Target specifically the print root and all its descendants */
+  #in-page-print-root,
+  #in-page-print-root * {
+    visibility: visible !important;
+    display: block !important; /* Reset to block for visibility, PrintManager handles its own layouts */
+  }
+
+  #in-page-print-root {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Prevent background colors/images from being stripped by browser defaults */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

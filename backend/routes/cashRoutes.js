@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { db, now } = require('../db/db');
+const { db } = require('../db/db');
+const cashRegisterService = require('../services/cashRegisterService');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
@@ -122,30 +123,10 @@ router.get('/', (req, res) => {
  */
 router.post('/transaction', (req, res) => {
     try {
-        const { type, amount, description, date } = req.body;
-        const normalizedType = String(type || '').trim().toUpperCase();
-        const parsedAmount = parseFloat(amount);
-
-        if (!['IN', 'OUT'].includes(normalizedType)) {
-            return res.status(400).json({ success: false, error: 'Type must be IN or OUT' });
-        }
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
-            return res.status(400).json({ success: false, error: 'Amount must be a positive number' });
-        }
-
-        const entryDate = date || new Date().toISOString().split('T')[0];
-        const timestamp = now();
-        const stmt = db.prepare(`
-            INSERT INTO cash_register (date, type, amount, description, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        `);
-
-        const info = stmt.run(entryDate, normalizedType, parsedAmount, description || '', timestamp);
-        const newEntry = db.prepare('SELECT * FROM cash_register WHERE id = ?').get(info.lastInsertRowid);
-        res.status(201).json({ success: true, data: newEntry });
+        const entry = cashRegisterService.createEntry(req.body);
+        res.status(201).json({ success: true, data: entry });
     } catch (error) {
-        console.error('Error creating cash register transaction:', error);
-        res.status(500).json({ success: false, error: 'Failed to create cash register transaction' });
+        res.status(error.statusCode || 500).json({ success: false, error: error.message });
     }
 });
 
@@ -155,45 +136,13 @@ router.post('/transaction', (req, res) => {
  */
 router.post('/', (req, res) => {
     try {
-        const { date, type, amount, description } = req.body;
-        const normalizedType = String(type || '').trim().toUpperCase();
-        const parsedAmount = parseFloat(amount);
-
-        // Validate required fields
-        if (!date || !type || !amount) {
+        if (!req.body.date || !req.body.type || !req.body.amount) {
             return res.status(400).json({ success: false, error: 'date, type and amount are required' });
         }
-
-        if (!['IN', 'OUT'].includes(normalizedType)) {
-            return res.status(400).json({ success: false, error: 'Type must be IN or OUT' });
-        }
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
-            return res.status(400).json({ success: false, error: 'Amount must be a positive number' });
-        }
-
-        const timestamp = now();
-
-        // Insert cash register entry
-        const stmt = db.prepare(`
-      INSERT INTO cash_register (date, type, amount, description, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-        const info = stmt.run(
-            date,
-            normalizedType,
-            parsedAmount,
-            description || '',
-            timestamp
-        );
-
-        // Get the created entry
-        const newEntry = db.prepare('SELECT * FROM cash_register WHERE id = ?').get(info.lastInsertRowid);
-
-        res.status(201).json({ success: true, data: newEntry });
+        const entry = cashRegisterService.createEntry(req.body);
+        res.status(201).json({ success: true, data: entry });
     } catch (error) {
-        console.error('Error creating cash register entry:', error);
-        res.status(500).json({ success: false, error: 'Failed to create cash register entry' });
+        res.status(error.statusCode || 500).json({ success: false, error: error.message });
     }
 });
 
@@ -203,19 +152,10 @@ router.post('/', (req, res) => {
  */
 router.delete('/:id', (req, res) => {
     try {
-        const { id } = req.params;
-
-        const stmt = db.prepare('DELETE FROM cash_register WHERE id = ?');
-        const result = stmt.run(id);
-
-        if (result.changes === 0) {
-            return res.status(404).json({ success: false, error: 'Entry not found' });
-        }
-
+        cashRegisterService.deleteEntry(req.params.id);
         res.json({ success: true, message: 'Cash register entry deleted successfully' });
     } catch (error) {
-        console.error('Error deleting cash register entry:', error);
-        res.status(500).json({ success: false, error: 'Failed to delete cash register entry' });
+        res.status(error.statusCode || 500).json({ success: false, error: error.message });
     }
 });
 

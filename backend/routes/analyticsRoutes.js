@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const { db } = require('../db/db');
+const configService = require('../services/configService');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 const HEARTBEAT_FILE = path.join(__dirname, '../db/xrf_heartbeat.json');
@@ -173,6 +174,61 @@ router.get('/summary', (req, res) => {
     }
 });
 
+// ── GET /api/analytics/revenue-breakdown ─────────────────────────────────────
+// Returns today's revenue and all-time revenue split by cash / upi / balance,
+// plus today's expense and total P&L. Used by Dashboard breakdown modal.
+router.get('/revenue-breakdown', (req, res) => {
+    try {
+        const modeBreakdown = (scope) => {
+            const filter = scope === 'today' ? `AND date(created) = date('now','localtime')` : '';
+            return db.prepare(`
+                SELECT
+                    COALESCE(SUM(CASE WHEN LOWER(mode_of_payment) = 'cash'    THEN amount ELSE 0 END), 0) AS cash,
+                    COALESCE(SUM(CASE WHEN LOWER(mode_of_payment) = 'upi'     THEN amount ELSE 0 END), 0) AS upi,
+                    COALESCE(SUM(CASE WHEN LOWER(mode_of_payment) = 'balance' THEN amount ELSE 0 END), 0) AS balance,
+                    COALESCE(SUM(amount), 0) AS total
+                FROM credit_history WHERE type = 'DEBIT' ${filter}
+            `).get();
+        };
+        const expenseBreakdown = (scope) => {
+            const filter = scope === 'today' ? `AND date(date) = date('now','localtime')` : '';
+            return db.prepare(`
+                SELECT
+                    COALESCE(SUM(CASE WHEN LOWER(description) LIKE '%weight%loss%' THEN amount ELSE 0 END), 0) AS weight_loss,
+                    COALESCE(SUM(amount), 0) AS total
+                FROM cash_register WHERE type = 'OUT' ${filter}
+            `).get();
+        };
+
+        const todayRev  = modeBreakdown('today');
+        const totalRev  = modeBreakdown('all');
+        const todayExp  = expenseBreakdown('today');
+        const totalExp  = expenseBreakdown('all');
+
+        const cashInHandRow = db.prepare(`SELECT value FROM globals WHERE key = 'cash_in_hand'`).get();
+        const cashInHand    = cashInHandRow ? parseFloat(cashInHandRow.value) || 0 : 0;
+
+        res.json({
+            success: true,
+            data: {
+                today: {
+                    revenue : { cash: todayRev.cash, upi: todayRev.upi, balance: todayRev.balance, total: todayRev.total },
+                    expense : { weight_loss: todayExp.weight_loss, total: todayExp.total },
+                    pnl     : todayRev.total - todayExp.total,
+                },
+                allTime: {
+                    revenue : { cash: totalRev.cash, upi: totalRev.upi, balance: totalRev.balance, total: totalRev.total },
+                    expense : { weight_loss: totalExp.weight_loss, total: totalExp.total },
+                    pnl     : totalRev.total - totalExp.total,
+                    cashInHand,
+                },
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // ── GET /api/analytics/xrf-status  (Gap 2 – Hardware Heartbeat) ──────────────
 router.get('/xrf-status', (req, res) => {
     try {
@@ -255,60 +311,65 @@ router.get('/search', (req, res) => {
 });
 
 // ── GET /api/analytics/rates ─────────────────────────────────────────────────
-// Returns current gold and silver rate-per-gram from globals table.
 router.get('/rates', (req, res) => {
     try {
-        const gold   = db.prepare(`SELECT value FROM globals WHERE key = 'gold_rate_per_gram'`).get();
-        const silver = db.prepare(`SELECT value FROM globals WHERE key = 'silver_rate_per_gram'`).get();
-        res.json({
-            success: true,
-            data: {
-                gold_rate_per_gram  : gold   ? parseFloat(gold.value)   : 0,
-                silver_rate_per_gram: silver ? parseFloat(silver.value) : 0,
-                updated_at          : new Date().toISOString(),
-            }
-        });
+        const rates = configService.getRates();
+        res.json({ success: true, data: { ...rates, updated_at: new Date().toISOString() } });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
 });
 
 // ── PUT /api/analytics/rates ──────────────────────────────────────────────────
-// Admin sets gold and/or silver rate-per-gram. Stored in globals table.
 // Body: { gold_rate_per_gram?: number, silver_rate_per_gram?: number }
 router.put('/rates', (req, res) => {
-    const { gold_rate_per_gram, silver_rate_per_gram } = req.body;
-    if (gold_rate_per_gram === undefined && silver_rate_per_gram === undefined) {
-        return res.status(400).json({ success: false, error: 'At least one rate is required' });
-    }
-
-    const upsert = db.prepare(`
-        INSERT INTO globals (key, value, created, lastmodified)
-        VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value, lastmodified = CURRENT_TIMESTAMP
-    `);
-
     try {
-        const update = db.transaction(() => {
-            const updated = {};
-            if (gold_rate_per_gram !== undefined) {
-                if (typeof gold_rate_per_gram !== 'number' || gold_rate_per_gram < 0)
-                    throw new Error('gold_rate_per_gram must be a non-negative number');
-                upsert.run('gold_rate_per_gram', String(gold_rate_per_gram));
-                updated.gold_rate_per_gram = gold_rate_per_gram;
-            }
-            if (silver_rate_per_gram !== undefined) {
-                if (typeof silver_rate_per_gram !== 'number' || silver_rate_per_gram < 0)
-                    throw new Error('silver_rate_per_gram must be a non-negative number');
-                upsert.run('silver_rate_per_gram', String(silver_rate_per_gram));
-                updated.silver_rate_per_gram = silver_rate_per_gram;
-            }
-            return updated;
-        });
-        res.json({ success: true, data: update() });
+        const updated = configService.updateRates(req.body);
+        res.json({ success: true, data: updated });
     } catch (e) {
-        res.status(400).json({ success: false, error: e.message });
+        res.status(e.statusCode || 400).json({ success: false, error: e.message });
     }
+});
+
+// ── GET /api/analytics/cash-in-hand ──────────────────────────────────────────
+router.get('/cash-in-hand', (req, res) => {
+    try {
+        const row = db.prepare(`SELECT value FROM globals WHERE key = 'cash_in_hand'`).get();
+        res.json({ success: true, data: { cash_in_hand: row ? parseFloat(row.value) || 0 : 0 } });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// ── PUT /api/analytics/cash-in-hand ──────────────────────────────────────────
+// Body: { amount: number }
+router.put('/cash-in-hand', (req, res) => {
+    try {
+        const amount = parseFloat(req.body.amount);
+        if (isNaN(amount) || amount < 0) {
+            return res.status(400).json({ success: false, error: 'amount must be a non-negative number' });
+        }
+        db.prepare(
+            `INSERT INTO globals (key, value, created, lastmodified)
+             VALUES ('cash_in_hand', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value, lastmodified = CURRENT_TIMESTAMP`
+        ).run(String(amount));
+        res.json({ success: true, data: { cash_in_hand: amount } });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// ── GET /api/analytics/parity-bypasses ────────────────────────────────────────
+// Returns live bypass counts. Zero cost — reads in-memory counters only.
+router.get('/parity-bypasses', (req, res) => {
+    const { getBypassSummary, SYSTEM_MODE } = require('../config/systemMode');
+    const summary = getBypassSummary();
+    res.json({
+        SYSTEM_MODE,
+        total: Object.values(summary).reduce((s, n) => s + n, 0),
+        rules: summary,
+    });
 });
 
 module.exports = router;

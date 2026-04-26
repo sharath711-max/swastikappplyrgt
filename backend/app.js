@@ -19,7 +19,7 @@ const { correlationMiddleware, getRequestId } = require('./utils/audit');
 const { globalErrorHandler }  = require('./middleware/errorHandler');
 
 const app  = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 6000;
 
 const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
 const isAllowedCorsOrigin = (origin) => !origin || allowedCorsOrigins.has(origin);
@@ -76,6 +76,7 @@ app.use('/api/credit-history',   require('./routes/creditHistoryRoutes'));
 app.use('/api/list',             require('./routes/listRoutes'));
 app.use('/api/records',          require('./routes/recordRoutes'));
 app.use('/api/analytics',        require('./routes/analyticsRoutes'));
+app.use('/api/bills',            require('./routes/billsRoutes'));
 app.use('/api/audit',            require('./routes/auditRoutes'));
 
 app.get('/health', (_req, res) => {

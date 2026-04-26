@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBars, FaGem, FaSearch, FaUser, FaChevronDown, FaUserCog, FaSignOutAlt, FaUsers } from 'react-icons/fa';
+import { FaBars, FaSearch, FaUser, FaChevronDown, FaUserCog, FaSignOutAlt, FaUsers } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ChangePasswordModal from './ChangePasswordModal';
@@ -38,8 +38,12 @@ const Header = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                     <FaBars />
                 </button>
                 <div className="logo cursor-pointer" onClick={() => navigate('/')}>
-                    <FaGem className="logo-icon" />
-                    {!sidebarCollapsed && <span className="brand-name gradient-text">{APP_CONFIG.brandName}</span>}
+                    <img
+                        src={sidebarCollapsed ? '/logo-sm.png' : '/logo.png'}
+                        alt={APP_CONFIG.brandName}
+                        className="logo-img"
+                        onError={e => { e.target.style.display='none'; }}
+                    />
                 </div>
             </div>
 

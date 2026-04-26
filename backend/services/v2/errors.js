@@ -120,6 +120,13 @@ function rethrow(err, operation, context = {}) {
         err.operation = err.operation || operation;
         throw err;
     }
+
+    // Map SQLite trigger failures (integrity guard) to a 409 Conflict
+    // instead of letting them bubble as a 500 SystemError.
+    if (err.code === 'SQLITE_CONSTRAINT_TRIGGER' && err.message.includes('finalized')) {
+        throw new BusinessError(err.message, ERR.IMMUTABLE, 409);
+    }
+
     throw new SystemError(
         `Unexpected failure in ${operation}: ${err.message}`,
         err,

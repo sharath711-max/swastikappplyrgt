@@ -44,9 +44,9 @@ class PhotoCertificateRepository {
                 this.db.prepare(`
                     INSERT INTO photo_certificate_item (
                         id, item_number, photo_certificate_id, certificate_number,
-                        name, item_type, gross_weight, test_weight, net_weight, 
-                        purity, fine_weight, item_total, returned, media_path, created
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        name, item_type, gross_weight, test_weight, net_weight,
+                        purity, fine_weight, item_total, returned, show_kt, media_path, created
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
                     itemId,
                     itemNumber,
@@ -61,6 +61,7 @@ class PhotoCertificateRepository {
                     item.fine_weight || 0,
                     item.item_total || 0,
                     item.returned ? 1 : 0,
+                    item.show_kt ? 1 : 0,
                     item.media_path || null,
                     timestamp
                 );

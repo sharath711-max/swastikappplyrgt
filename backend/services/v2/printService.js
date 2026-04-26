@@ -283,42 +283,84 @@ function getPrintLayout(resourceType, metalType, id, forceRegenerate = false) {
          base = total / 1.18;
     }
 
+    const fmtBase  = _formatAmount(base);
+    const fmtTax   = _formatAmount(total_tax || (total - base));
+    const fmtTotal = _formatAmount(total);
+
+    // Canonical timestamp — tests store `created`, certs may store `created_at`
+    const recordDate = data.created || data.created_at || data.createdon || null;
+
     return {
-        base: _formatAmount(base),
-        tax: _formatAmount(total_tax || (total - base)),
-        total: _formatAmount(total),
-        mode_of_payment: data.mode_of_payment,
-        gst_bill_no: data.gst_bill_number || null,
+        // ── Normalized envelope fields (schema-versioned) ─────────────────
+        base            : fmtBase,
+        tax             : fmtTax,
+        total           : fmtTotal,
+        mode_of_payment : data.mode_of_payment,
+        gst_bill_no     : data.gst_bill_number || null,
+
         header: {
-            entity_type: resourceType,
-            metal_type: resolvedMetalType,
-            auto_number: data.auto_number,
-            status: data.status,
-            created_at: data.created_at,
+            entity_type : resourceType,
+            metal_type  : resolvedMetalType,
+            auto_number : data.auto_number,
+            status      : data.status,
+            created_at  : recordDate,
         },
+
         customer: {
-            name: customer.name,
-            phone: customer.phone,
+            name   : customer.name,
+            phone  : customer.phone  || null,
             address: customer.address || '',
         },
-        items: data.items.map(item => ({
-            item_number: item.item_number,
-            certificate_number: item.certificate_number || null,
-            name: item.name || item.item_type || '',
-            gross_weight: _formatAmount(item.gross_weight),
-            test_weight: _formatAmount(item.test_weight),
-            net_weight: _formatAmount(item.net_weight),
-            purity: _formatAmount(item.purity),
-            fine_weight: _formatAmount(item.fine_weight),
-            item_total: _formatAmount(item.item_total),
-            returned: item.returned == 1 || item.returned === true,
-            ...(resolvedMetalType === 'photo' ? { media_path: item.media_path || null } : {}),
-        })),
+
+        items: data.items.map(item => {
+            const itemTotal = _formatAmount(item.item_total);
+            // item.name = per-item person name (can be null/empty)
+            // item.item_type = the metal item description (Ring, Necklace…)
+            const personName = item.name  || '';
+            const itemType   = item.item_type || item.item_name || item.name || '';
+
+            return {
+                // ── Canonical fields ──────────────────────────────────────
+                id                 : item.id          || item.item_number || null,
+                item_number        : item.item_number || null,
+                certificate_number : item.certificate_number || null,
+                name               : personName,      // person/customer name for this item
+                item_type          : itemType,         // metal item description
+                gross_weight       : _formatAmount(item.gross_weight),
+                test_weight        : _formatAmount(item.test_weight),
+                net_weight         : _formatAmount(item.net_weight),
+                purity             : _formatAmount(item.purity),
+                fine_weight        : _formatAmount(item.fine_weight),
+                item_total         : itemTotal,
+                returned           : item.returned == 1 || item.returned === true,
+
+                // ── Aliases — expected by print components ────────────────
+                item_name          : itemType,         // MemoCert: item.item_name
+                item_no            : item.item_number || null, // SilverCert: item.item_no
+                total              : itemTotal,        // MemoCert: item.total
+
+                ...(resolvedMetalType === 'photo'
+                    ? { media_path: item.media_path || null }
+                    : {}
+                ),
+            };
+        }),
+
         totals: {
-            base: _formatAmount(base),
-            tax: _formatAmount(total_tax || (total - base)),
-            total: _formatAmount(total)
-        }
+            base : fmtBase,
+            tax  : fmtTax,
+            total: fmtTotal,
+        },
+
+        // ── Flat aliases — expected by print components ───────────────────
+        // These mirror the raw-API shape components were originally written against.
+        bill_number    : data.auto_number   || data.bill_number || null,
+        createdon      : recordDate,
+        created_at     : recordDate,
+        customer_name  : customer.name,
+        customer_phone : customer.phone || null,
+        grand_total    : fmtTotal,
+        status         : data.status,
     };
 }
 
@@ -355,7 +397,32 @@ function serializeSnapshot(resourceType, metalType, id, actorId = null) {
     };
 }
 
-function validateAndExtract(snapshotRow, itemIndex = null) {
+/**
+ * Maps snapshot header {entity_type, metal_type} to the frontend print-route segment.
+ * Used to validate that the URL route matches the actual record type.
+ */
+function mapTypeToRoute(entityType, metalType) {
+    if (entityType === 'test'        && metalType === 'gold')   return 'gold-test';
+    if (entityType === 'test'        && metalType === 'silver') return 'silver-test';
+    if (entityType === 'certificate' && metalType === 'gold')   return 'gold-certificate';
+    if (entityType === 'certificate' && metalType === 'silver') return 'silver-certificate';
+    if (entityType === 'certificate' && metalType === 'photo')  return 'photo-certificate';
+    throw new BusinessError(
+        `Cannot map type to route: ${entityType}/${metalType}`,
+        ERR.INVALID_TYPE, 400
+    );
+}
+
+/**
+ * Verify HMAC, parse envelope, optionally filter to a single item.
+ *
+ * @param {object} snapshotRow  DB row with print_snapshot, snapshot_hash, snapshot_key_version
+ * @param {string|null} itemIndex  0-based positional index (legacy; kept for backward compat)
+ * @param {string|null} itemId     Item ID string (preferred over itemIndex)
+ * @param {string|null} expectedRoute  e.g. 'gold-certificate' — when set, validated against snapshot header
+ * @returns {object}  Deep-cloned snapshot envelope (or partial envelope for single-item)
+ */
+function validateAndExtract(snapshotRow, itemIndex = null, itemId = null, expectedRoute = null) {
     const {
         print_snapshot: printSnapshot,
         snapshot_hash: snapshotHash,
@@ -366,19 +433,20 @@ function validateAndExtract(snapshotRow, itemIndex = null) {
         throw new BusinessError('SNAPSHOT_NOT_FOUND', ERR.NOT_FOUND, 404);
     }
 
+    // ── HMAC integrity check ──────────────────────────────────────────────────
     const keyVersion     = snapshotKeyVersion || CURRENT_SNAPSHOT_KEY_VERSION;
     const calculatedHash = hashSnapshot(printSnapshot, keyVersion);
     if (!snapshotHash) {
         throw new BusinessError('SNAPSHOT_INTEGRITY_FAILURE', ERR.DB_CORRUPTION, 500);
     }
     // timingSafeEqual prevents timing-oracle attacks on the MAC comparison.
-    // Both buffers must be the same length; length mismatch is also a failure.
     const aBuffer = Buffer.from(calculatedHash, 'hex');
     const bBuffer = Buffer.from(snapshotHash,   'hex');
     if (aBuffer.length !== bBuffer.length || !crypto.timingSafeEqual(aBuffer, bBuffer)) {
         throw new BusinessError('SNAPSHOT_INTEGRITY_FAILURE', ERR.DB_CORRUPTION, 500);
     }
 
+    // ── Parse ─────────────────────────────────────────────────────────────────
     let parsedSnapshot;
     try {
         parsedSnapshot = JSON.parse(printSnapshot);
@@ -397,24 +465,19 @@ function validateAndExtract(snapshotRow, itemIndex = null) {
         data                 : parsedSnapshot,
     };
 
-    // Envelope version: reject envelopes from a future server that we can't parse.
+    // ── Envelope version guards ───────────────────────────────────────────────
     if ((snapshot.version ?? 1) > SNAPSHOT_VERSION) {
         throw new BusinessError(
             `Unsupported snapshot envelope version: ${snapshot.version} (max ${SNAPSHOT_VERSION})`,
             ERR.DB_CORRUPTION, 500
         );
     }
-
-    // Schema version: reject data payloads whose field shape we don't understand.
     if ((snapshot.schema_version ?? 1) > SCHEMA_VERSION) {
         throw new BusinessError(
             `Unsupported snapshot schema version: ${snapshot.schema_version} (max ${SCHEMA_VERSION})`,
             ERR.DB_CORRUPTION, 500
         );
     }
-
-    // Serialization version: a different algorithm means the stored bytes can't
-    // be re-hashed with the current code — treat as integrity failure.
     if ((snapshot.serialization_version ?? 1) > SERIALIZATION_VERSION) {
         throw new BusinessError(
             `Unsupported snapshot serialization version: ${snapshot.serialization_version} (max ${SERIALIZATION_VERSION})`,
@@ -425,19 +488,49 @@ function validateAndExtract(snapshotRow, itemIndex = null) {
     const data = snapshot.data;
     validateSnapshotSchema(data);
 
-    if (itemIndex == null) {
+    // ── Route / type cross-validation ─────────────────────────────────────────
+    // Reject requests where the URL route doesn't match what's inside the snapshot.
+    // Prevents e.g. /print/gold-certificate/<silver-cert-id> from returning data.
+    if (expectedRoute && data.header?.entity_type && data.header?.metal_type) {
+        const actualRoute = mapTypeToRoute(data.header.entity_type, data.header.metal_type);
+        if (actualRoute !== expectedRoute) {
+            throw new BusinessError(
+                `Route/type mismatch: URL says "${expectedRoute}" but snapshot is "${actualRoute}"`,
+                ERR.INVALID_TYPE, 400
+            );
+        }
+    }
+
+    // ── Full snapshot (no item filter) ────────────────────────────────────────
+    if (itemIndex == null && itemId == null) {
         return JSON.parse(JSON.stringify(snapshot));
     }
 
-    const idx = parseInt(itemIndex, 10);
-    if (!Number.isInteger(idx) || idx < 0 || idx >= data.items.length) {
-        throw new BusinessError('INVALID_ITEM_INDEX', ERR.ITEM_NOT_FOUND, 404);
+    // ── Single-item filter ────────────────────────────────────────────────────
+    let targetItem;
+
+    if (itemId != null) {
+        // Preferred: look up by stable item ID
+        targetItem = data.items.find(i => String(i.id) === String(itemId));
+        if (!targetItem) {
+            throw new BusinessError(
+                `Item "${itemId}" not found in snapshot`,
+                ERR.ITEM_NOT_FOUND, 404
+            );
+        }
+    } else {
+        // Legacy: positional index (kept for backward compat with old URLs)
+        const idx = parseInt(itemIndex, 10);
+        if (!Number.isInteger(idx) || idx < 0 || idx >= data.items.length) {
+            throw new BusinessError('INVALID_ITEM_INDEX', ERR.ITEM_NOT_FOUND, 404);
+        }
+        targetItem = data.items[idx];
     }
 
     return JSON.parse(JSON.stringify({
         ...snapshot,
         is_partial: true,
-        data: { ...data, items: [data.items[idx]] },
+        data: { ...data, items: [targetItem] },
     }));
 }
 
@@ -451,6 +544,7 @@ module.exports = {
     validateAndExtract,
     validateSnapshotSchema,
     hashSnapshot,
+    mapTypeToRoute,
     CURRENT_SNAPSHOT_KEY_VERSION,
     SNAPSHOT_VERSION,
     SCHEMA_VERSION,

@@ -27,9 +27,9 @@
   }
 
   .receipt {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    min-width: 80mm !important;
+    width: 100mm !important;
+    max-width: 100mm !important;
+    min-width: 100mm !important;
     margin: 0 auto !important;
     padding: 0 !important;
     box-shadow: none !important;
@@ -89,12 +89,77 @@
   padding: 24px 12px 48px;
 }
 
-/* Base Certificate Style */
-.certificate-container,
-.silver-certificate-container,
-.pc-certificate-container,
+/* ── Gold/Silver Test Certificate (matches Python gold_test/certificate.css) ──
+   html { width: 10cm; height: 10.5in }
+   body { margin-left: 27vw; margin-top: 2cm }
+   table { width: 14.5cm; margin: 5.5cm 1cm 0 1cm }
+   tr { height: 2.35cm }                                                      */
+.gt-cert-container {
+  width: 10cm;
+  min-height: 10.5in;
+  background: white;
+  box-sizing: border-box;
+}
+.gt-cert-container .cert-slip-table {
+  width: 14.5cm;
+  margin: 5.5cm 1cm 0 1cm;
+  border-collapse: collapse;
+}
+.gt-cert-container .cert-slip-table tr {
+  height: 2.35cm;
+}
+.gt-cert-container .cert-ml  { margin-left: 5.6rem; }
+.gt-cert-container .cert-h5  { font-size: 1.8rem; font-weight: bold; display: inline-block; margin-bottom: 0; }
+.gt-cert-container .cert-purity { font-size: 40px; padding: 0 1cm; margin-left: 3.5cm; display: inline-block; margin-bottom: 0.5rem; }
+.gt-cert-container .cert-no-gold { font-size: 1.7rem; }
+.gt-cert-container .cert-right { text-align: right; }
+
+/* ── Gold/Silver Certificate (matches Python gold_certificate/certificate.css) ──
+   html { width: 16cm; height: 11cm }
+   body { margin-left: 7.5cm }
+   table { width: 20.5cm; margin: 0.8cm 1cm 0 -1cm }
+   tr { height: 1.6cm }
+   container gets padding-top: 4.4cm to align with physical form header        */
+.gc-cert-container {
+  width: 16cm;
+  min-height: 11cm;
+  background: white;
+  box-sizing: border-box;
+  padding-top: 4.4cm;
+  margin-left: 7.5cm;
+}
+.gc-cert-container .cert-slip-table {
+  width: 20.5cm;
+  margin: 0.8cm 1cm 0 -1cm;
+  border-collapse: collapse;
+}
+.gc-cert-container .cert-slip-table tr {
+  height: 1.6cm;
+}
+.gc-cert-container .cert-ml  { margin-left: 0; }
+.gc-cert-container .cert-h5  { font-size: 1.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 1.7rem; margin-top: 1.25rem; }
+.gc-cert-container .cert-purity { font-size: 40px; margin-left: 3.5cm; display: inline-block; }
+.gc-cert-container .cert-no-gold { font-size: 1.7rem; }
+.gc-cert-container .cert-right { text-align: right; }
+.gc-cert-container .cert-purity-words { font-weight: 800; font-style: italic; }
+
+/* ── Memo/Payment containers (keep A4) ── */
 .memo-container,
 .payment-container {
+  width: 210mm;
+  min-height: 297mm;
+  position: relative;
+  background-color: white;
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+  margin: 0 auto;
+  color: #1e293b;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.1);
+}
+
+/* legacy selectors kept for MemoCert / PaymentCert */
+.certificate-container,
+.silver-certificate-container {
   width: 210mm;
   min-height: 297mm;
   position: relative;
@@ -267,7 +332,7 @@
 
 /* Thermal Receipt styles (80mm) */
 .thermal-receipt {
-  width: 80mm;
+  width: 100mm;
   padding: 5mm;
   background: white;
   font-family: 'Courier New', Courier, monospace;
@@ -283,8 +348,8 @@
 }
 
 .receipt {
-  width: 80mm;
-  max-width: 80mm;
+  width: 100mm;
+  max-width: 100mm;
   min-height: auto;
   background: #ffffff;
   color: #000000;

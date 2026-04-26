@@ -27,6 +27,8 @@ import RecordPage from './pages/RecordPage';
 import BillsReportPage from './pages/BillsReportPage';
 import ModuleBillsPage from './pages/ModuleBillsPage';
 import ItemMasterPage from './pages/ItemMasterPage';
+import BackupPage from './pages/BackupPage';
+import RecycleBinPage from './pages/RecycleBinPage';
 
 import './index.css';
 import './styles/GlobalStyles.css';
@@ -107,6 +109,16 @@ export default function App() {
               <Route path="/admin/users" element={
                 <ProtectedRoute roles={['admin']}>
                   <AppShell><UserManagement /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/backup" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppShell><BackupPage /></AppShell>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/recycle-bin" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppShell><RecycleBinPage /></AppShell>
                 </ProtectedRoute>
               } />
 

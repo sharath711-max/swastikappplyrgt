@@ -101,8 +101,8 @@ const GoldCertificateTemplate = ({ test, item, recordType = 'gold' }) => {
 
                     {/* Row 6 (cert only): purity number + words */}
                     {!isTest && (
-                        <tr>
-                            <td colSpan={2} style={{ paddingTop: 0 }}>
+                        <tr className="purity-row">
+                            <td colSpan={2} className="purity-number" style={{ paddingTop: 0 }}>
                                 <span className="cert-h5" style={{ marginLeft: '1.6cm' }}>
                                     {purity.toFixed(2)}
                                 </span>

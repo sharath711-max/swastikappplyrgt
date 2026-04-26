@@ -42,7 +42,7 @@ const PhotoCertificateTemplate = ({ test, item, photos = [] }) => {
                             <tr><td><span className="pc-h5 pc-weight">{grossWt}<span className="pc-gm"> GM</span></span></td></tr>
                             <tr><td><span className="pc-h5">{item.show_kt ? `${ktVal} KT` : ''}</span></td></tr>
                             <tr><td><span className="pc-h5 pc-weight">{purity.toFixed(2)}</span></td></tr>
-                            <tr><td><span className="pc-h5">Bhimram</span></td></tr>
+                            <tr><td><span className="pc-h5 signatory">Bhimram</span></td></tr>
                         </tbody>
                     </table>
                 </div>

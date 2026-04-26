@@ -17,6 +17,9 @@ const logger                  = require('./utils/logger');
 const { getAllowedCorsOrigins, getJwtSecret } = require('./config/env');
 const { correlationMiddleware, getRequestId } = require('./utils/audit');
 const { globalErrorHandler }  = require('./middleware/errorHandler');
+const { maintenanceMiddleware } = require('./middleware/maintenanceMiddleware');
+const cron                    = require('node-cron');
+const { createBackup }        = require('./scripts/backup');
 
 const app  = express();
 const PORT = process.env.PORT || 6000;
@@ -58,6 +61,9 @@ try {
 } catch (error) {
     process.exit(1);
 }
+
+// ── 4.5 Maintenance Lock ──────────────────────────────────────────────────────
+app.use(maintenanceMiddleware);
 
 // ── 5. API routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth',             require('./routes/authRoutes'));
@@ -116,20 +122,56 @@ app.use(globalErrorHandler);
 {
     const { db: _maintDb, purgeExpiredIdempotencyKeys } = require('./db/db');
     const _cleanupSql = "DELETE FROM request_log WHERE created_at < datetime('now', '-30 days')";
+    const _recycleBinTables = [
+        'gold_test', 'silver_test', 
+        'gold_certificate', 'silver_certificate', 'photo_certificate',
+        'customer'
+    ];
 
     const _maintInterval = setInterval(() => {
         try {
+            // 1. Flush request logs
             _maintDb.prepare(_cleanupSql).run();
+            
+            // 2. Flush Idempotency keys
             const purged = purgeExpiredIdempotencyKeys();
-            console.log(`🧹 [MAINTENANCE] Cleaned up request_log (30d) and ${purged} expired idempotency keys`);
-        } catch (_) {}
+            
+            // 3. Flush Recycle Bin (30 days)
+            let totalFlushed = 0;
+            _recycleBinTables.forEach(table => {
+                const result = _maintDb.prepare(`DELETE FROM ${table} WHERE deletedon < datetime('now', '-30 days')`).run();
+                totalFlushed += result.changes;
+            });
+
+            console.log(`🧹 [MAINTENANCE] Cleaned up request_log (30d), ${purged} idempotency keys, and flushed ${totalFlushed} items from Recycle Bin.`);
+        } catch (err) {
+            console.error('❌ [MAINTENANCE] Periodic cleanup failed:', err);
+        }
     }, 24 * 60 * 60 * 1000); // 24 hours
     _maintInterval.unref();
 
     const _startupCleanup = setTimeout(() => {
-        try { _maintDb.prepare(_cleanupSql).run(); } catch (_) {}
+        try { 
+            _maintDb.prepare(_cleanupSql).run(); 
+            _recycleBinTables.forEach(table => {
+                _maintDb.prepare(`DELETE FROM ${table} WHERE deletedon < datetime('now', '-30 days')`).run();
+            });
+        } catch (_) {}
     }, 5000);
     _startupCleanup.unref();
+
+    // ── SCHEDULED BACKUP ──────────────────────────────────────────────────────
+    // 21:30 (9:30 PM) daily.
+    // IST is ensured by process.env.TZ = 'Asia/Kolkata' at the top of this file.
+    cron.schedule('30 21 * * *', async () => {
+        console.log('⏰ [SCHEDULED TASK] Starting daily backup (9:30 PM)...');
+        try {
+            await createBackup();
+            console.log('✅ [SCHEDULED TASK] Daily backup completed.');
+        } catch (err) {
+            console.error('❌ [SCHEDULED TASK] Daily backup failed:', err);
+        }
+    });
 }
 
 // ── 8. Start server ───────────────────────────────────────────────────────────

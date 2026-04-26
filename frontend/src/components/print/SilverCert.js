@@ -84,8 +84,8 @@ const SilverCertificateTemplate = ({ test, item, recordType = 'silver' }) => {
                         </td>
                     </tr>
                     {!isTest && (
-                        <tr>
-                            <td colSpan={2}>
+                        <tr className="purity-row">
+                            <td colSpan={2} className="purity-number">
                                 <span className="cert-h5" style={{ marginLeft: '1.6cm' }}>
                                     {purity.toFixed(2)}
                                 </span>

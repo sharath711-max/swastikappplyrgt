@@ -99,6 +99,8 @@
   min-height: 10.5in;
   background: white;
   box-sizing: border-box;
+  margin-left: 27vw;
+  margin-top: 2cm;
 }
 .gt-cert-container .cert-slip-table {
   width: 14.5cm;
@@ -142,6 +144,14 @@
 .gc-cert-container .cert-no-gold { font-size: 1.7rem; }
 .gc-cert-container .cert-right { text-align: right; }
 .gc-cert-container .cert-purity-words { font-weight: 800; font-style: italic; }
+
+/* Purity row (last two rows) */
+.cert-slip-table tr.purity-row {
+  margin-top: -1rem;
+}
+.cert-slip-table td.purity-number .cert-h5 {
+  margin-top: 0;
+}
 
 /* ── Memo/Payment containers (keep A4) ── */
 .memo-container,

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
     FaTachometerAlt, FaUsers, FaCheckDouble, FaBars, FaChevronDown,
-    FaUserShield, FaFileInvoiceDollar
+    FaUserShield, FaFileInvoiceDollar, FaDatabase, FaTrash
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
 import { APP_CONFIG } from '../../utils/Constants';
@@ -57,6 +57,18 @@ const Sidebar = ({ sidebarCollapsed }) => {
             subItems: [
                 { name: 'Users', path: '/admin/users' },
             ],
+        },
+        {
+            name: 'Back up',
+            path: '/admin/backup',
+            icon: <FaDatabase />,
+            roles: ['admin'],
+        },
+        {
+            name: 'Recycle Bin',
+            path: '/admin/recycle-bin',
+            icon: <FaTrash />,
+            roles: ['admin'],
         },
     ], []);
 

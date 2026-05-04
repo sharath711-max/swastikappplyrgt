@@ -266,7 +266,7 @@ class WorkflowService {
     //   • Correlation    — requestId threaded through audit log and DB row
     // ─────────────────────────────────────────────────────────────────────────
 
-    async finalizeItem(type, id, actor = {}, expectedVersion = null) {
+    async finalizeItem(type, id, actor = {}, expectedVersion = null, paymentOpts = {}) {
         const table = TABLE_MAP[type];
         if (!table) {
             throw new BusinessError(`Invalid workflow type: ${type}`, ERR.INVALID_TYPE, 400);
@@ -320,7 +320,7 @@ class WorkflowService {
         }
 
         // ── 3b. Certificate finalization (gold_cert / silver_cert / photo_cert)
-        return this._finalizeCert(type, id, table, actor, requestId, expectedVersion);
+        return this._finalizeCert(type, id, table, actor, requestId, expectedVersion, paymentOpts);
     }
 
     // ── INTERNAL: test finalize ───────────────────────────────────────────────
@@ -476,7 +476,7 @@ class WorkflowService {
 
     // ── INTERNAL: certificate finalize ────────────────────────────────────────
 
-    _finalizeCert(type, id, certTable, actor, requestId, expectedVersion) {
+    _finalizeCert(type, id, certTable, actor, requestId, expectedVersion, paymentOpts = {}) {
         const certType = type.replace('_cert', '');
 
         // ── BEGIN IMMEDIATE: OCC + updateStatus (SAVEPOINT, writes hash) +
@@ -530,6 +530,23 @@ class WorkflowService {
                      SET completion_request_id = ?
                      WHERE id = ? AND deletedon IS NULL`
                 ).run(requestId, id);
+            }
+
+            // Persist mode_of_payment / gst from the frontend BEFORE the DONE transition.
+            // updateStatus (DONE) reads these columns for the ledger entry and snapshot,
+            // so they must be written while the cert is still IN_PROGRESS.
+            const { mode_of_payment, gst } = paymentOpts;
+            if (mode_of_payment !== undefined || gst !== undefined) {
+                const patches = [];
+                const vals    = [];
+                if (mode_of_payment !== undefined) { patches.push('mode_of_payment = ?'); vals.push(mode_of_payment); }
+                if (gst !== undefined)              { patches.push('gst = ?');             vals.push(gst ? 1 : 0); }
+                if (patches.length) {
+                    db.prepare(
+                        `UPDATE ${certTable} SET ${patches.join(', ')}, lastmodified = ?
+                         WHERE id = ? AND deletedon IS NULL`
+                    ).run(...vals, new Date().toISOString(), id);
+                }
             }
 
             // updateStatus becomes a SAVEPOINT inside our BEGIN IMMEDIATE.

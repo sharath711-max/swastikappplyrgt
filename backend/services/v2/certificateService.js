@@ -197,7 +197,8 @@ function _insertItemsWork(type, certId, autoNumber, rawItems, ts, startSeq = 1) 
         itemSeq++;
 
         const normInput = _normaliseItem(raw, type);
-        const calc      = calcSvc.calculateItem(type, normInput);
+        // purity may be 0 at creation time (entered later in Phase2Modal)
+        const calc      = calcSvc.calculateItem(type, normInput, { requirePurity: false });
 
         const baseFields = [
             'id', c.fkColumn, 'item_number', 'certificate_number',

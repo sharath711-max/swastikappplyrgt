@@ -496,10 +496,8 @@ function saveTestDraft(type, id, data) {
             audit.statusChange('testService.saveTestDraft', id, 'TODO', 'IN_PROGRESS');
         }
 
-        const printSvc = require('./printService');
-        const { getRequestId } = require('../../utils/audit');
-        const { snapshotJson, snapshotHash, snapshotKeyVersion } = printSvc.serializeSnapshot('test', type, id, getRequestId() || null);
-        db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, id);
+        // Snapshot is deferred to finalization — skip here to keep save-draft fast.
+        // The final print_snapshot is written by completeTest / finalizeTest.
 
         writeAuditLog({ action: 'SAVE_TEST_DRAFT', entityType: type, entityId: id });
         return { success: true };

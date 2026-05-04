@@ -16,7 +16,10 @@ const PhotoCertificateTemplate = ({ test, item, photos = [] }) => {
     const getMediaUrl = (path) => {
         if (!path) return '';
         if (path.startsWith('blob:') || path.startsWith('data:')) return path;
-        const base = `${window.location.protocol}//${window.location.hostname}:6000`;
+        const apiRoot = process.env.REACT_APP_API_URL
+            ? process.env.REACT_APP_API_URL.replace(/\/api\/?$/, '')
+            : `${window.location.protocol}//${window.location.hostname}:5000`;
+        const base = apiRoot;
         return path.startsWith('http') ? path : `${base}/${path}`;
     };
 

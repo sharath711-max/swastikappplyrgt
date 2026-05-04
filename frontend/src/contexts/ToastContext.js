@@ -8,7 +8,7 @@ export const ToastProvider = ({ children }) => {
         const options = {
             autoClose: duration || 5000,
             position: "top-right",
-            pauseOnHover: true,
+            pauseOnHover: false,
             draggable: true
         };
 

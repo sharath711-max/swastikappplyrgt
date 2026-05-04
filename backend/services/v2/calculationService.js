@@ -60,7 +60,7 @@ function _validatePurity(purity, required, errors) {
 }
 
 // ─── Per-type calculation ─────────────────────────────────────────────────────
-function _calcGoldItem(input) {
+function _calcGoldItem(input, requirePurity = true) {
     const gross      = dec(input.gross_weight);
     const test       = dec(input.test_weight);
     const purity     = dec(input.purity);
@@ -69,7 +69,7 @@ function _calcGoldItem(input) {
 
     const errors = [];
     _validateWeights(gross, test, errors);
-    _validatePurity(purity, true, errors);
+    _validatePurity(purity, requirePurity, errors);
     if (rate.lt(0)) errors.push('rate_per_gram must be ≥ 0');
     if (errors.length) throw new ValidationError('Gold item validation failed', errors);
 
@@ -128,8 +128,9 @@ function _calcSilverItem(input) {
  * @throws {ValidationError} on invalid input
  * @throws {BusinessError}   on unknown type
  */
-function calculateItem(type, input) {
-    if (type === 'gold')   return _calcGoldItem(input);
+function calculateItem(type, input, opts = {}) {
+    const requirePurity = opts.requirePurity !== false; // default true
+    if (type === 'gold')   return _calcGoldItem(input, requirePurity);
     if (type === 'silver') return _calcSilverItem(input);
     throw new BusinessError(
         `Unknown metal type: "${type}". Expected 'gold' or 'silver'.`,

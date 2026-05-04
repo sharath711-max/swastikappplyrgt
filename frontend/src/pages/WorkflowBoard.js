@@ -12,7 +12,7 @@ import { useSocket } from '../hooks/useSocket';
 import { usePrint } from '../contexts/PrintContext';
 import './WorkflowBoard.css';
 
-const COLUMN_LIMIT = 50;
+const COLUMN_LIMIT = 200;
 const createRequestId = () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 // ── Board mutation helpers (pure — take board object, return new board object) ──

@@ -64,3 +64,8 @@ scripts/output/
 migrate_all_certificates.sql
 migrate_customers.sql
 id_mapping.json
+
+# claude ignore
+.claude/
+.gemini/
+.openai/    

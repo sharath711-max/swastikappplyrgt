@@ -192,7 +192,7 @@ class PhotoCertificateRepository {
                         ).run(feeTotal, timestamp, id);
 
                         // Step 4: Ledger (cert still IN_PROGRESS)
-                        ledgerSvc.recordRevenue('photo', {
+                        ledgerSvc.recordRevenue('gold', {
                             customer_id    : current.customer_id,
                             amount         : feeTotal,
                             entry_type     : 'DEBIT',
@@ -215,7 +215,8 @@ class PhotoCertificateRepository {
                 const result = this.db.prepare(`
                     UPDATE photo_certificate
                     SET status = 'DONE', done_at = COALESCE(done_at, ?),
-                        print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?, lastmodified = ?
+                        print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ?,
+                        version = version + 1, lastmodified = ?
                     WHERE id = ? AND deletedon IS NULL
                 `).run(timestamp, snapshotJson, snapshotHash, snapshotKeyVersion, timestamp, id);
 

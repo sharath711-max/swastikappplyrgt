@@ -249,11 +249,14 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                         show_kt: !!i.show_kt,
                         returned: !!i.returned,
                         purity: Number(i.purity),
-                        media: i.media || null
+                        // Omit media: the upload loop already persisted it; sending null here
+                        // would overwrite the just-saved path for newly-uploaded photos.
+                        ...(i.media && !photos[i.id] ? { media: i.media } : {}),
                     }))
                 });
             } else {
-                await api.post(endpoint, {
+                const method = (isGoldTest || isSilverTest) ? 'put' : 'post';
+                await api[method](endpoint, {
                     ...baseData,
                     items: items.map((i) => ({
                         id: i.id,
@@ -323,9 +326,17 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
         }
 
         if (nextStatus === 'DONE' && isCertificate) {
+            const valError = validate();
+            if (valError) { setError(valError); return; }
+
             setLoading(true);
             try {
-                await api.post('/workflow/finalize', { testId: test.id, type: test.type });
+                await api.post('/workflow/finalize', {
+                    testId: test.id,
+                    type: test.type,
+                    mode_of_payment: modeOfPayment,
+                    gst: includeGst ? 1 : 0,
+                });
                 addToast('Moved to Completed ✓', 'success');
                 if (onSuccess) onSuccess();
                 onHide();
@@ -341,6 +352,15 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
         // Skip closemodal on handlesave to manage it here
         const saved = await handleSave(false);
         if (!saved) return;
+
+        // For gold/silver tests going TODO → IN_PROGRESS, saveTestDraft already
+        // auto-advances the status. Skip the redundant PATCH and close directly.
+        if ((isGoldTest || isSilverTest) && nextStatus === 'IN_PROGRESS') {
+            addToast('Moved to Tested', 'success');
+            onSuccess?.();
+            onHide();
+            return;
+        }
 
         const targetLabel = nextStatus === 'IN_PROGRESS' ? 'Tested' : 'Completed';
         setLoading(true);
@@ -437,7 +457,9 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
         }
     };
 
-    const modalTitle = isTodoStage ? 'Add Test Results' : isDoneStage ? 'Completed Details' : 'Payment Details';
+    const modalTitle = isTodoStage
+        ? (isCertificate ? 'Add Certificate Results' : 'Add Test Results')
+        : isDoneStage ? 'Completed Details' : 'Payment Details';
     const totalWeightLoss = items.reduce((acc, it) => acc + getWeights(it).loss, 0);
 
     return (
@@ -587,7 +609,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                         </td>
                                         {(isGoldTest || isSilverTest) && (
                                             <td className="text-center">
-                                                {isDoneStage ? (
+                                                {!isTodoStage ? (
                                                     <Badge bg={item.certificate_required === 1 ? 'success' : item.certificate_required === 0 ? 'secondary' : 'warning'} className="small">
                                                         {item.certificate_required === 1 ? 'Cert' : item.certificate_required === 0 ? 'No Cert' : 'Auto'}
                                                     </Badge>

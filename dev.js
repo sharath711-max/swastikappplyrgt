@@ -236,13 +236,9 @@ function startWithPM2(lanIp) {
             log('=================================================', colors.bright + colors.green);
             console.log('\n');
 
-            log('📡 ACCESS LINKS:', colors.cyan);
-            log(`   Backend API:    http://localhost:5000`, colors.white);
-            log(`   Health Check:   http://localhost:5000/health`, colors.dim);
-            console.log('\n');
-
-            log('🌐 NETWORK ACCESS:', colors.cyan);
-            log(`   Backend API:    http://${lanIp}:5000`, colors.white);
+            log('🌐 ACCESS (Network IP):', colors.cyan);
+            log(`   Backend API:    http://${lanIp}:5000`, colors.bright + colors.green);
+            log(`   Health Check:   http://${lanIp}:5000/health`, colors.dim);
             console.log('\n');
 
             log('📊 PM2 MANAGEMENT:', colors.cyan);
@@ -360,9 +356,9 @@ function startBackendProcess(processes, lanIp) {
 
     try {
         const corsAllowedOrigins = [
+            `http://${lanIp}:3000`,
             'http://localhost:3000',
             'http://127.0.0.1:3000',
-            `http://${lanIp}:3000`
         ].join(',');
 
         const server = spawn('npm', ['run', 'dev'], {
@@ -495,15 +491,10 @@ async function start() {
         log('=================================================', colors.bright + colors.green);
         console.log('\n');
 
-        log('📡 ACCESS LINKS:', colors.cyan);
-        log(`   Backend API:    http://localhost:5000`, colors.white);
-        log(`   Frontend App:   http://localhost:3000`, colors.white);
-        log(`   Health Check:   http://localhost:5000/health`, colors.dim);
-        console.log('\n');
-
-        log('🌐 NETWORK ACCESS:', colors.cyan);
+        log('🌐 ACCESS (Network IP — share with any device on LAN):', colors.cyan);
+        log(`   Frontend App:   http://${lanIp}:3000`, colors.bright + colors.green);
         log(`   Backend API:    http://${lanIp}:5000`, colors.white);
-        log(`   Frontend App:   http://${lanIp}:3000`, colors.white);
+        log(`   Health Check:   http://${lanIp}:5000/health`, colors.dim);
         console.log('\n');
 
         log('🔐 DEFAULT CREDENTIALS:', colors.cyan);

@@ -79,20 +79,58 @@ function _generateGlobalSequenceWork(_type, opts = {}) {
     _ensureGlobal(DATE_KEY, today);
     _ensureGlobal(SEQ_KEY,  '0');
 
-    // 2. Daily reset: if stored date ≠ today, reset seq and stamp date
+    // 2. Daily reset: if stored date ≠ today, stamp the new date and reset only
+    //    TEST sequences.  Certificate sequences are NOT reset daily because their
+    //    auto_number values are globally UNIQUE in the DB — resetting would produce
+    //    collisions with certs created on previous days.
     const dateRow = db.prepare('SELECT value FROM globals WHERE key = ?').get(DATE_KEY);
     if (!dateRow || dateRow.value !== today) {
         db.prepare(
             'UPDATE globals SET value = ?, lastmodified = CURRENT_TIMESTAMP WHERE key = ?'
         ).run(today, DATE_KEY);
-        // Reset ALL sequences to '0' on a new day
+        // Only reset test sequences (their auto_numbers are displayed per-day, not globally unique)
         db.prepare(
-            `UPDATE globals SET value = '0', lastmodified = CURRENT_TIMESTAMP 
-             WHERE key IN ('GST_CERT_SEQ', 'NON_GST_CERT_SEQ', 'GOLD_TEST_SEQ', 'SILVER_TEST_SEQ')`
+            `UPDATE globals SET value = '0', lastmodified = CURRENT_TIMESTAMP
+             WHERE key IN ('GOLD_TEST_SEQ', 'SILVER_TEST_SEQ')`
         ).run();
     }
 
-    // 3. Atomic increment — RETURNING gives updated value in one statement
+    // 3. For test sequences: self-heal if counter is behind the max existing auto_number.
+    //    This prevents UNIQUE constraint failures after a daily reset when the year-prefixed
+    //    format (e.g. GT26-001) matches a record from a previous day in the same year.
+    if (!isCert) {
+        const curRow = db.prepare('SELECT CAST(value AS INTEGER) AS v FROM globals WHERE key = ?').get(SEQ_KEY);
+        const cur = curRow?.v || 0;
+        const yyEarly    = today.slice(2, 4);   // e.g. '26' from '20260503'
+        const testTable  = _type === 'gold' ? 'gold_test'   : 'silver_test';
+        const testPrefix = _type === 'gold' ? `GT${yyEarly}-` : `ST${yyEarly}-`;
+        const maxRow = db.prepare(
+            `SELECT MAX(CAST(SUBSTR(auto_number, INSTR(auto_number,'-')+1) AS INTEGER)) AS m
+             FROM ${testTable} WHERE auto_number LIKE ?`
+        ).get(`${testPrefix}%`);
+        const maxExisting = maxRow?.m || 0;
+        if (maxExisting > cur) {
+            db.prepare('UPDATE globals SET value = ?, lastmodified = CURRENT_TIMESTAMP WHERE key = ?')
+                .run(String(maxExisting), SEQ_KEY);
+        }
+    }
+
+    // 4. For cert sequences: self-heal if the counter is behind the max existing
+    //    auto_number (can happen after a day-boundary reset or DB restore).
+    if (isCert) {
+        const curRow = db.prepare('SELECT CAST(value AS INTEGER) AS v FROM globals WHERE key = ?').get(SEQ_KEY);
+        const cur = curRow?.v || 0;
+        // Extract max numeric suffix from existing auto_numbers (format: N26-009 or G26-009)
+        const maxGold   = db.prepare(`SELECT MAX(CAST(SUBSTR(auto_number, INSTR(auto_number,'-')+1) AS INTEGER)) AS m FROM gold_certificate   WHERE auto_number IS NOT NULL AND auto_number NOT LIKE 'GCR%'`).get()?.m || 0;
+        const maxSilver = db.prepare(`SELECT MAX(CAST(SUBSTR(auto_number, INSTR(auto_number,'-')+1) AS INTEGER)) AS m FROM silver_certificate WHERE auto_number IS NOT NULL AND auto_number NOT LIKE 'SCR%'`).get()?.m || 0;
+        const maxExisting = Math.max(maxGold, maxSilver, 0);
+        if (maxExisting > cur) {
+            db.prepare('UPDATE globals SET value = ?, lastmodified = CURRENT_TIMESTAMP WHERE key = ?')
+                .run(String(maxExisting), SEQ_KEY);
+        }
+    }
+
+    // Atomic increment — RETURNING gives updated value in one statement
     const row = db.prepare(`
         UPDATE globals
         SET    value        = CAST(CAST(value AS INTEGER) + 1 AS TEXT),
@@ -196,8 +234,13 @@ function peekGlobalSequence() {
  * Generate a unique GST bill number or NON-GST bill number.
  * COMPOSABLE BARE-DB — must be called inside the same transaction that inserts the certificate.
  *
- * Sequence is YEARLY (not daily). Gaps are legally acceptable; duplicates are not.
- * The UNIQUE index on gst_bill_number provides the DB-level enforcement.
+ * Sequence is YEARLY (not daily) and uses its own dedicated keys
+ * (NON_GST_BILL_SEQ / GST_BILL_SEQ) that are NEVER reset daily.
+ * This is intentionally decoupled from NON_GST_CERT_SEQ / GST_CERT_SEQ
+ * which reset at midnight and are only used for daily auto_number generation.
+ *
+ * On first call the key is seeded to MAX(existing bill numbers) so that
+ * no past value can be re-issued after a day boundary reset.
  *
  * Format:  G26-0001  (GST)  |  N26-0001  (Non-GST)
  *
@@ -206,14 +249,23 @@ function peekGlobalSequence() {
  * @throws {SystemError} if sequence row missing (table corruption)
  */
 function getNextBillNumber(isGst) {
-    const seqKey = isGst ? 'GST_CERT_SEQ' : 'NON_GST_CERT_SEQ';
-    const prefix = isGst ? 'G' : 'N';
-    const yy     = String(nowIST().getUTCFullYear()).slice(-2);
+    const seqKey  = isGst ? 'GST_BILL_SEQ'     : 'NON_GST_BILL_SEQ';
+    const table   = isGst ? 'gold_certificate'  : 'gold_certificate';  // both share the same gst flag
+    const prefix  = isGst ? 'G'                 : 'N';
+    const yy      = String(nowIST().getUTCFullYear()).slice(-2);
 
-    // Ensure row exists (idempotent on first call after migration)
-    db.prepare(
-        'INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
-    ).run(seqKey, '0');
+    // Seed from max existing bill number on first use (self-healing after counter desync)
+    const existing = db.prepare(`SELECT value FROM globals WHERE key = ?`).get(seqKey);
+    if (!existing) {
+        // Find the max numeric part across both cert tables to be safe
+        const maxGold   = db.prepare(`SELECT MAX(CAST(REPLACE(REPLACE(gst_bill_number,'N${yy}-',''),'G${yy}-','') AS INTEGER)) AS m FROM gold_certificate   WHERE gst_bill_number IS NOT NULL`).get()?.m || 0;
+        const maxSilver = db.prepare(`SELECT MAX(CAST(REPLACE(REPLACE(gst_bill_number,'N${yy}-',''),'G${yy}-','') AS INTEGER)) AS m FROM silver_certificate WHERE gst_bill_number IS NOT NULL`).get()?.m || 0;
+        const maxPhoto  = db.prepare(`SELECT MAX(CAST(REPLACE(REPLACE(gst_bill_number,'N${yy}-',''),'G${yy}-','') AS INTEGER)) AS m FROM photo_certificate  WHERE gst_bill_number IS NOT NULL`).get()?.m || 0;
+        const seed = String(Math.max(maxGold, maxSilver, maxPhoto, 0));
+        db.prepare(
+            'INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+        ).run(seqKey, seed);
+    }
 
     // Atomic increment — single round-trip, no read-before-write
     const row = db.prepare(`

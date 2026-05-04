@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
 // GET /api/workflow/kanban
 router.get('/kanban', async (req, res) => {
     try {
-        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 50);
+        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 200);
         const board = await workflowService.getKanbanBoard(limit);
         res.json({ success: true, data: board });
     } catch (error) {
@@ -67,14 +67,19 @@ router.post('/move', async (req, res) => {
 });
 
 // POST /api/workflow/finalize
-// Body: { testId, type, version? }
+// Body: { testId, type, version?, mode_of_payment?, gst? }
 // version: optional OCC guard (same as /move)
+// mode_of_payment / gst: for certificate types only — persisted atomically before DONE transition
 router.post('/finalize', async (req, res) => {
     try {
-        const { testId, type, version = null } = req.body;
+        const { testId, type, version = null, mode_of_payment, gst } = req.body;
         if (!testId || !type) {
             return res.status(400).json({ success: false, error: 'testId and type are required' });
         }
+
+        const paymentOpts = (mode_of_payment !== undefined || gst !== undefined)
+            ? { mode_of_payment, gst }
+            : {};
 
         const result = await workflowService.finalizeItem(
             type, testId,
@@ -85,6 +90,7 @@ router.post('/finalize', async (req, res) => {
                 userAgent: req.headers['user-agent'],
             },
             version !== null && version !== undefined ? Number(version) : null,
+            paymentOpts,
         );
 
         res.json({ success: true, data: result });

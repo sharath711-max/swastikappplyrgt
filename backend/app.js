@@ -22,7 +22,7 @@ const cron                    = require('node-cron');
 const { createBackup }        = require('./scripts/backup');
 
 const app  = express();
-const PORT = process.env.PORT || 6000;
+const PORT = process.env.PORT || 5000;
 
 const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
 const isAllowedCorsOrigin = (origin) => !origin || allowedCorsOrigins.has(origin);

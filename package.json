@@ -7,6 +7,8 @@
   ],
   "scripts": {
     "dev": "node dev.js",
+    "manager": "node manager.js",
+    "seed:superadmin": "node seed_superadmin.js",
     "start": "node backend/app.js",
     "setup": "run.bat",
     "windows": "run.bat",

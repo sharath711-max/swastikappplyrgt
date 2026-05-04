@@ -38,6 +38,12 @@ function _formatAmount(amt) {
     return amt.toFixed(2);
 }
 
+// Weight fields use 3dp to match Python WEIGHT_DP = 3 (Decimal precision)
+function _formatWeight(wt) {
+    if (typeof wt !== 'number') return '0.000';
+    return wt.toFixed(3);
+}
+
 function _snapshotSecret(version = CURRENT_SNAPSHOT_KEY_VERSION) {
     try {
         if (version === 'v1') {
@@ -264,6 +270,11 @@ function getPrintLayout(resourceType, metalType, id, forceRegenerate = false) {
         throw new BusinessError(`Customer not found for ${resourceType} ${id}`, ERR.CUSTOMER_NOT_FOUND, 404);
     }
 
+    // GAP 3/14/21 fix: never serve a stale snapshot for non-DONE records.
+    // Pre-finalization snapshots capture zero-fee / zero-purity state and must
+    // not be treated as canonical print output.
+    if (data.status !== 'DONE') forceRegenerate = true;
+
     if (data.print_snapshot && !forceRegenerate) {
         try {
             const parsed = JSON.parse(data.print_snapshot);
@@ -326,11 +337,15 @@ function getPrintLayout(resourceType, metalType, id, forceRegenerate = false) {
                 certificate_number : item.certificate_number || null,
                 name               : personName,      // person/customer name for this item
                 item_type          : itemType,         // metal item description
-                gross_weight       : _formatAmount(item.gross_weight),
-                test_weight        : _formatAmount(item.test_weight),
-                net_weight         : _formatAmount(item.net_weight),
-                purity             : _formatAmount(item.purity),
-                fine_weight        : _formatAmount(item.fine_weight),
+                gross_weight       : _formatWeight(item.gross_weight),
+                test_weight        : _formatWeight(item.test_weight),
+                net_weight         : _formatWeight(item.net_weight),
+                purity             : _formatAmount(item.purity),   // purity = 2dp (percentage, not a weight)
+                // PRINT GAP 1 fix: Python renders "NO GOLD" for zero/null purity on gold test certs
+                purity_label       : (Number(item.purity) > 0)
+                    ? _formatAmount(item.purity) + '%'
+                    : 'NO GOLD',
+                fine_weight        : _formatWeight(item.fine_weight), // fine_weight = weight field = 3dp
                 item_total         : itemTotal,
                 returned           : item.returned == 1 || item.returned === true,
 

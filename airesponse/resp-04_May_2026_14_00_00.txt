@@ -1,0 +1,5 @@
+Got it. I'll save every response to the `airesponse/` folder using the same timestamp naming format (`resp-DD_Mon_YYYY_HH_MM_SS`).
+
+Saved feedback memory: Always save AI responses to airesponse/ folder with filename format resp-DD_Mon_YYYY_HH_MM_SS (no extension). Updated MEMORY.md index.
+
+Understood — from now on every substantive response in this project will be written to the airesponse/ folder automatically.

@@ -143,6 +143,27 @@ function _validateCreateTest(type, data) {
     }
 }
 
+// RULE 11: backend precision parity — reject values exceeding allowed decimal places
+// or that are not valid finite numbers.
+function _assertMaxDecimals(value, maxDp, label) {
+    if (value === undefined || value === null || value === '') return;
+    const n = parseFloat(value);
+    if (!Number.isFinite(n)) {
+        throw new BusinessError(
+            `${label} is not a valid number (got "${value}")`,
+            ERR.VALIDATION, 422
+        );
+    }
+    const str = String(value);
+    const dot = str.indexOf('.');
+    if (dot !== -1 && str.length - dot - 1 > maxDp) {
+        throw new BusinessError(
+            `${label} exceeds maximum precision: ${maxDp} decimal place(s) allowed (got "${str}")`,
+            ERR.VALIDATION, 422
+        );
+    }
+}
+
 function _validateSaveResults(type, id, data) {
     _assertFoundAndMutable(type, id);
     for (const item of (data.items ?? [])) {
@@ -156,19 +177,29 @@ function _validateSaveResults(type, id, data) {
                     ERR.INVALID_PURITY, 422
                 );
             }
+            _assertMaxDecimals(item.purity, 2, `${label} purity`);
         }
 
         // Validate weight relationship only when both values are explicitly in the payload.
         // Partial updates (test_weight only, no gross_weight) are allowed — the DB holds gross.
-        if (item.test_weight !== undefined && item.gross_weight !== undefined) {
-            const gw = parseFloat(item.gross_weight);
+        if (item.test_weight !== undefined) {
             const tw = parseFloat(item.test_weight);
-            if (tw > gw) {
+            if (Number.isFinite(tw) && tw < 0) {
                 throw new BusinessError(
-                    `${label}: test_weight (${tw}g) cannot exceed gross_weight (${gw}g)`,
+                    `${label}: test_weight cannot be negative (got ${tw}g)`,
                     ERR.VALIDATION, 422
                 );
             }
+            if (item.gross_weight !== undefined) {
+                const gw = parseFloat(item.gross_weight);
+                if (Number.isFinite(tw) && Number.isFinite(gw) && tw > gw) {
+                    throw new BusinessError(
+                        `${label}: test_weight (${tw}g) cannot exceed gross_weight (${gw}g)`,
+                        ERR.VALIDATION, 422
+                    );
+                }
+            }
+            _assertMaxDecimals(item.test_weight, 3, `${label} test_weight`);
         }
         if (item.net_weight !== undefined) {
             const nw = parseFloat(item.net_weight);
@@ -178,6 +209,7 @@ function _validateSaveResults(type, id, data) {
                     ERR.VALIDATION, 422
                 );
             }
+            _assertMaxDecimals(item.net_weight, 3, `${label} net_weight`);
         }
     }
 }
@@ -536,7 +568,7 @@ function finalizeTest(type, id, data) {
         const finalItems = db.prepare(
             `SELECT * FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
         ).all(id);
-        const TEST_FEE_RATE = 150;
+        const TEST_FEE_RATE = 30;
         const testFeeTotal = TEST_FEE_RATE * finalItems.length;
 
         db.prepare(
@@ -686,7 +718,7 @@ function completeTest(type, testId, data) {
         const isFullConvert = (certItems.length > 0 && nonCertItems.length === 0);
 
         // Compute fees before any status writes
-        const TEST_FEE_RATE = 150;
+        const TEST_FEE_RATE = 30;
         const CERT_FEE_RATE = 50;
         const applyGst = cert.gst ?? false;
 

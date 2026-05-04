@@ -1,0 +1,83 @@
+ARCHITECTURE AUDIT — Customer-centric, Flow-isolated Model
+===========================================================
+
+Read from: airequest/myprompt.txt
+
+Stated model:
+  Customer
+   ├── GT  ── GTI
+   ├── ST  ── STI
+   ├── GC  ── GCI
+   ├── SC  ── SCI
+   ├── PC  ── PCI
+   ├── CH
+   └── WLH
+  No cross-entity FK connections. Customer is the only anchor.
+
+---
+
+LAYER 1: DB FOREIGN KEY CONSTRAINTS — FULLY COMPLIANT
+
+All parent tables (GT, ST, GC, SC, PC, CH, WLH) FK to customer only.
+All item tables FK to their parent only (CASCADE).
+No FK between GT↔GC, PC↔WLH, CH↔GC or any cross-flow pair.
+DB-level isolation: CONFIRMED.
+
+---
+
+LAYER 2: SOFT REFERENCES (no DB FK) — DOCUMENTED DEVIATIONS
+
+CH.reference_type / CH.reference_id
+  Purpose: idempotency guard (one DEBIT per cert) + audit trail
+  Links to: gold_certificate, silver_certificate, photo_certificate, gold_test, silver_test
+  DB FK: NONE (text columns, no REFERENCES constraint)
+  Unique index: ux_gc_debit, ux_sc_debit, ux_pc_debit enforce one-debit-per-entity
+  Verdict: NECESSARY SOFT LINK — removing breaks double-billing prevention
+  Status: ACCEPTED (documented, no FK violation)
+
+WLH.ref_id
+  Purpose: audit trail — which test caused the weight loss
+  Links to: gold_test.id or silver_test.id
+  DB FK: NONE (text field, no REFERENCES constraint)
+  Verdict: SOFT AUDIT LINK — informational only, no cascading behavior
+  Status: ACCEPTED (documented, no FK violation)
+
+---
+
+LAYER 3: SCHEMA CONSISTENCY — CRITICAL BUG FOUND AND FIXED
+
+init.sql was missing columns that ledgerService and testService INSERT into.
+A fresh install from init.sql would fail on the first ledger write or weight loss write.
+
+MISSING FROM credit_history (init.sql):
+  reference_type TEXT  ← used in every ledgerService.recordRevenue call
+  reference_id   TEXT  ← used in alreadyCharged idempotency checks
+
+MISSING FROM weight_loss_history (init.sql):
+  mode_of_payment TEXT  ← inserted in 3 places in testService
+  ref_id          TEXT  ← audit link to source test
+
+FIXES APPLIED:
+
+1. init.sql — credit_history: added reference_type TEXT, reference_id TEXT
+2. init.sql — weight_loss_history: added mode_of_payment TEXT, ref_id TEXT
+3. migrations.js — migrateMissingColumns() added (priority 7):
+   - Heals credit_history, weight_loss_history for existing DBs
+   - Also heals snapshot columns on all test/cert tables
+   - Heals certificate_required on test item tables
+   - Heals show_kt on photo_certificate_item
+   - Heals total_tax, completion_request_id on all cert tables
+
+---
+
+FULL ARCHITECTURE VERDICT
+
+Layer                        | Status
+-----------------------------|--------
+DB FK isolation              | ✓ COMPLIANT
+Flow independence            | ✓ COMPLIANT
+Soft reference links (CH/WLH)| ✓ DOCUMENTED (necessary for idempotency)
+Schema consistency (init.sql)| ✓ FIXED (was BROKEN — fresh install would fail)
+Migration coverage           | ✓ FIXED (migrateMissingColumns added)
+
+Gap tests: 15/15 passing — no regressions.

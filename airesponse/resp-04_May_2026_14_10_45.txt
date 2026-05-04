@@ -1,0 +1,86 @@
+GAP CATEGORY STATUS — Python vs SERN (10 Categories)
+======================================================
+
+Read from: airequest/myprompt.txt
+
+---
+
+GAP 1: Architecture Parity
+  Python: unified flow model
+  SERN: type-isolated (GT/ST/GC/SC/PC separate tables + services)
+  Status: INTENTIONAL DIVERGENCE — explicit isolation is more maintainable
+  Action: None
+
+GAP 2: Decimal/Numeric Engine
+  Python: decimal.Decimal (exact)
+  SERN backend: Decimal.js (exact) ✓
+  SERN frontend calcs: Decimal.js (exact) ✓
+  SERN getWeights helper: plain JS Number — float artifact risk
+  Bug found: gross - test could produce 9.998000000000001 instead of 9.998
+  Fix applied (Phase2Modal.js):
+    net = parseFloat((gross - test).toFixed(3)) when net_weight not entered
+    loss = parseFloat((gross - (test + net)).toFixed(3))
+  Status: RESOLVED
+
+GAP 3: Snapshot Generation Timing
+  Python: snapshot at finalize only
+  SERN: was regenerating for non-DONE records
+  Fix applied (previous session): if (data.status !== 'DONE') forceRegenerate = true
+  Status: RESOLVED ✓
+
+GAP 4: Ledger Link Model
+  Python: direct relational linkage
+  SERN: soft reference (reference_type/reference_id, no FK)
+  Idempotency enforced via unique partial indexes (ux_gc_debit, ux_sc_debit, ux_pc_debit)
+  Status: INTENTIONAL DIVERGENCE — documented, accepted
+
+GAP 5: Input Pipeline
+  Python: server-side validation only
+  SERN: keydown → paste → blur → submit → backend (multi-layer)
+  Status: SERN ADVANTAGE — stricter than Python. Resolved ✓
+
+GAP 6: Enum/Status Model
+  Python: ongoing / pending / completed
+  SERN: TODO / IN_PROGRESS / DONE
+  Status: DOCUMENTED — migration maps ongoing→TODO, pending→IN_PROGRESS, completed→DONE ✓
+
+GAP 7: Print Engine
+  Python: authoritative print generator with WEIGHT_DP=3
+  SERN: snapshot-based rendering
+  Bug found: printService._formatAmount used for weight fields → toFixed(2) → 2dp
+  Weight fields must be 3dp to match Python WEIGHT_DP = 3
+  Fix applied (printService.js):
+    Added _formatWeight(wt) → toFixed(3)
+    gross_weight: _formatWeight ✓
+    test_weight: _formatWeight ✓
+    net_weight: _formatWeight ✓
+    fine_weight: _formatWeight ✓
+    purity: kept _formatAmount (2dp — it is a percentage, not a weight)
+  purity_label: "NO GOLD" for zero purity ✓ (previous session)
+  Status: RESOLVED
+
+GAP 8: Schema Flexibility
+  Python: stable production schema
+  SERN: dynamic schema healing (migrations)
+  migrateMissingColumns() added — heals all schema drift on existing DBs
+  Status: HANDLED — intentional SERN design ✓
+
+GAP 9: Flow Isolation
+  Python: possibly shared logic
+  SERN: strict isolation (GT != GC != PC)
+  Status: INTENTIONAL DIVERGENCE — strict isolation prevents cross-flow drift
+
+GAP 10: Error Handling Strictness
+  Python: implicit tolerance (Decimal handles edge cases)
+  SERN: explicit rejection (_assertMaxDecimals, NaN guard, negative check)
+  Status: SERN ADVANTAGE — more strict than Python ✓
+
+---
+
+FINAL GAP STATE
+
+Resolved (fixed this session or previous): 2, 3, 5, 6, 7, 8, 10
+Intentional divergence (accepted): 1, 4, 9
+Open: NONE
+
+Gap tests: 15/15 passing.

@@ -1,0 +1,28 @@
+SYNC POINT — FINAL SYSTEM STATE CONFIRMED
+==========================================
+
+Read from: airequest/myprompt.txt
+
+RESOLVED GAPS (7)
+  GAP 2  - Numeric engine: Decimal.js backend + frontend; getWeights float artifacts eliminated
+  GAP 3  - Snapshot timing: forceRegenerate=true when status !== DONE
+  GAP 5  - Input pipeline: keydown → paste → blur → submit → backend; all layers hardened
+  GAP 6  - Status enum: Migration maps ongoing/pending/completed → TODO/IN_PROGRESS/DONE
+  GAP 7  - Print precision: _formatWeight enforces 3dp for weights; purity stays 2dp
+  GAP 8  - Schema alignment: migrateMissingColumns() heals all column drift
+  GAP 10 - Validation strictness: _assertMaxDecimals, NaN guard, negative check
+
+INTENTIONAL DIVERGENCE (3)
+  GAP 1 - Architecture: unified (Python) vs type-isolated (SERN) — prevents cross-flow drift
+  GAP 4 - Ledger: FK (Python) vs soft reference + unique index (SERN) — idempotency without cascade risk
+  GAP 9 - Flow isolation: shared logic (Python) vs strict per-type (SERN) — explicit over implicit
+
+OPEN GAPS: NONE
+
+Tests: 15/15 passing
+
+System character:
+  Behaviorally equivalent to Python
+  Structurally independent
+  Strictly validated
+  Customer-centric and flow-isolated

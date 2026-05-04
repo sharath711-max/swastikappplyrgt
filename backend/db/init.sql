@@ -259,6 +259,9 @@ CREATE TABLE IF NOT EXISTS credit_history (
   description TEXT,
   previous_balance REAL,
   request_id TEXT,
+  -- Soft audit link to source entity (no DB FK — used for idempotency checks only)
+  reference_type TEXT,
+  reference_id   TEXT,
   created DATETIME NOT NULL,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
@@ -271,6 +274,9 @@ CREATE TABLE IF NOT EXISTS weight_loss_history (
   customer_id TEXT NOT NULL,
   amount REAL NOT NULL,
   reason TEXT,
+  mode_of_payment TEXT,
+  -- Soft audit link to the test that caused the loss (no DB FK — text reference only)
+  ref_id TEXT,
   created DATETIME NOT NULL,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );

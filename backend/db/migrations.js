@@ -366,6 +366,50 @@ function migrateImmutabilityTriggers() {
     `);
 }
 
+// ─── 7. Schema column backfills ───────────────────────────────────────────────
+//
+// init.sql was missing these columns — added here so existing DBs are healed
+// without requiring a manual DROP/CREATE.  All are idempotent (ensureCol checks
+// PRAGMA table_info before ALTER TABLE).
+
+function migrateMissingColumns() {
+    // credit_history: soft audit link added for ledgerService idempotency checks
+    ensureCol('credit_history', 'reference_type', 'TEXT');
+    ensureCol('credit_history', 'reference_id',   'TEXT');
+
+    // weight_loss_history: payment context + soft link to source test
+    ensureCol('weight_loss_history', 'mode_of_payment', 'TEXT');
+    ensureCol('weight_loss_history', 'ref_id',          'TEXT');
+
+    // gold_test / silver_test: snapshot columns added by printService
+    ensureCol('gold_test',    'print_snapshot',       'TEXT');
+    ensureCol('gold_test',    'snapshot_hash',        'TEXT');
+    ensureCol('gold_test',    'snapshot_key_version', 'TEXT');
+    ensureCol('silver_test',  'print_snapshot',       'TEXT');
+    ensureCol('silver_test',  'snapshot_hash',        'TEXT');
+    ensureCol('silver_test',  'snapshot_key_version', 'TEXT');
+
+    // Certificates: snapshot + total_tax columns
+    for (const t of ['gold_certificate', 'silver_certificate', 'photo_certificate']) {
+        ensureCol(t, 'print_snapshot',       'TEXT');
+        ensureCol(t, 'snapshot_hash',        'TEXT');
+        ensureCol(t, 'snapshot_key_version', 'TEXT');
+        ensureCol(t, 'total_tax',            'REAL DEFAULT 0');
+        ensureCol(t, 'completion_request_id','TEXT');
+    }
+
+    // gold_test_item / silver_test_item: certificate_required operator flag
+    ensureCol('gold_test_item',   'certificate_required', 'INTEGER');
+    ensureCol('silver_test_item', 'certificate_required', 'INTEGER');
+
+    // gold_test / silver_test: total_tax column
+    ensureCol('gold_test',   'total_tax', 'REAL DEFAULT 0');
+    ensureCol('silver_test', 'total_tax', 'REAL DEFAULT 0');
+
+    // photo_certificate_item: show_kt flag
+    ensureCol('photo_certificate_item', 'show_kt', 'INTEGER DEFAULT 0');
+}
+
 // ─── Public entry point ───────────────────────────────────────────────────────
 
 function applyMigrations() {
@@ -375,6 +419,7 @@ function applyMigrations() {
     migrateIndexes();                   // priority 4
     migrateReferenceTypeGuard();        // priority 5
     migrateImmutabilityTriggers();      // priority 6
+    migrateMissingColumns();            // priority 7 — heal any schema drift
 }
 
 module.exports = { applyMigrations };

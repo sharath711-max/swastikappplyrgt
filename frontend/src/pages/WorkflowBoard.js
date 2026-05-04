@@ -284,9 +284,10 @@ const WorkflowBoard = () => {
                         mode_of_payment: card.mode_of_payment,
                         weight_loss: Math.max(0, totalWtLoss),
                         cert: { gst: false }
-                    });
+                    }, { headers: { 'X-Request-Id': createRequestId() } });
                 } else {
-                    await api.post('/workflow/finalize', { testId: card.id, type: card.type });
+                    await api.post('/workflow/finalize', { testId: card.id, type: card.type },
+                        { headers: { 'X-Request-Id': createRequestId() } });
                 }
                 count++;
             } catch (err) {

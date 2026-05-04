@@ -1,6 +1,6 @@
 const BaseRepository = require('./baseRepository');
 const { db, now, genId, getNextSequence, transaction } = require('../db/db');
-const SequenceService = require('../services/sequenceService');
+const seqSvc = require('../services/v2/sequenceService');
 const CertificateCalculationService = require('../services/certificateCalculationService');
 const { writeAuditLog } = require('../services/auditLogService');
 const ledgerSvc = require('../services/v2/ledgerService');
@@ -20,7 +20,9 @@ class PhotoCertificateRepository {
             const nowObj = new Date();
             const timestamp = nowObj.toISOString();
             const certId = genId('PCR');
-            const parentAutoNumber = SequenceService.generateGlobalSequence();
+            // GAP 9 fix: use bare-DB composable helper so the sequence increment
+            // participates in the outer transaction (SAVEPOINT-safe and explicit).
+            const parentAutoNumber = seqSvc._generateGlobalSequenceWork('photo', { context: 'CERT', isGst: Boolean(gst) });
 
             // 1. Insert Parent
             this.db.prepare(`
@@ -191,16 +193,17 @@ class PhotoCertificateRepository {
                             `UPDATE photo_certificate SET total = ?, lastmodified = ? WHERE id = ?`
                         ).run(feeTotal, timestamp, id);
 
-                        // Step 4: Ledger (cert still IN_PROGRESS)
+                        // Step 4: Ledger (cert still IN_PROGRESS — skip_status_check required)
                         ledgerSvc.recordRevenue('gold', {
-                            customer_id    : current.customer_id,
-                            amount         : feeTotal,
-                            entry_type     : 'DEBIT',
-                            description    : `Photo Certificate ${current.auto_number} — lab charges`,
-                            mode_of_payment: current.mode_of_payment || 'Cash',
+                            customer_id      : current.customer_id,
+                            amount           : feeTotal,
+                            entry_type       : 'DEBIT',
+                            description      : `Photo Certificate ${current.auto_number} — lab charges`,
+                            mode_of_payment  : current.mode_of_payment || 'Cash',
                             post_cash_register: false,
-                            reference_type : 'photo_certificate',
-                            reference_id   : id,
+                            reference_type   : 'photo_certificate',
+                            reference_id     : id,
+                            skip_status_check: true,
                         });
                     }
                 }

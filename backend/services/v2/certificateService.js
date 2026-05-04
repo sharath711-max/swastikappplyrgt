@@ -23,8 +23,10 @@ const seqSvc       = require('./sequenceService');
 const ledgerSvc    = require('./ledgerService');
 const customerRepo = require('../../repositories/customerRepository');
 
-// ─── Fee model (canonical, matches testService.completeTest) ─────────────────
-const CERT_FEE_RATE = 50;
+// ─── Fee model (canonical, matches Python source of truth) ────────────────────
+// Python GoldCertificate.PRICE = 50, SilverCertificate.PRICE = 100
+const CERT_FEE_RATE        = 50;   // Gold certificate
+const SILVER_CERT_FEE_RATE = 100;  // Silver certificate
 
 // ─── Type config ──────────────────────────────────────────────────────────────
 /** @typedef {'gold'|'silver'} MetalType */
@@ -82,9 +84,11 @@ function _assertMutable(type, id) {
          FROM ${c.parentTable} WHERE id = ? AND deletedon IS NULL`
     ).get(id);
     if (!row) throw new BusinessError(`${type} certificate not found: ${id}`, ERR.CERT_NOT_FOUND, 404);
-    if (row.status === 'DONE' || row.status === 'IN_PROGRESS') {
+    // GAP 8 fix: Python allows item edits in all pre-completed states.
+    // Only DONE records are immutable.
+    if (row.status === 'DONE') {
         throw new BusinessError(
-            `Certificate ${id} is ${row.status} and immutable — items freeze when work begins`,
+            `Certificate ${id} is DONE and immutable`,
             ERR.IMMUTABLE, 409
         );
     }
@@ -507,7 +511,8 @@ function updateStatus(type, id, newStatus, opts = {}) {
                 `SELECT COUNT(*) AS cnt FROM ${c.itemTable} WHERE ${c.fkColumn} = ? AND deletedon IS NULL`
             ).get(id).cnt;
 
-            const feeTotal = CERT_FEE_RATE * itemCount;
+            const feeRate  = type === 'silver' ? SILVER_CERT_FEE_RATE : CERT_FEE_RATE;
+            const feeTotal = feeRate * itemCount;
             const applyGst = Boolean(finalRow.gst);
             const feeTax   = applyGst ? (feeTotal - feeTotal / 1.18) : 0;
 

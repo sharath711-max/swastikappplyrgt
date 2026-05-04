@@ -1,0 +1,21 @@
+All 15/15 gap tests ✓. Here's the full result:
+
+
+PASS  tests/unit/gapAnalysis.test.js
+Gap	Test	Result	Fix Applied
+GAP 1 — GT/ST fee rate = 30	TEST_FEE_RATE must be 30	✓	testService.js: 150 → 30 (both finalizeTest + completeTest)
+GAP 1 — GC fee rate = 50	CERT_FEE_RATE must be 50	✓	Already correct
+GAP 1 — SC fee rate = 100	SILVER_CERT_FEE_RATE must be 100	✓	certificateService.js: added SILVER_CERT_FEE_RATE = 100, type-aware in updateStatus
+GAP 1 — GC uses CERT_FEE not SC rate	type=gold uses CERT_FEE_RATE	✓	feeRate = type === 'silver' ? SILVER_CERT_FEE_RATE : CERT_FEE_RATE
+GAP 1 — PC fee = 50	PHOTO_CERT_FEE_RATE must be 50	✓	Already correct
+GAP 9 — PC sequence composable	NOT standalone generateGlobalSequence()	✓	photoCertificateRepository.js: switched to seqSvc._generateGlobalSequenceWork
+GAP 9 — PC uses bare-DB helper	uses _generateGlobalSequenceWork	✓	Same fix above
+GAP 10 — PC ledger status check	skip_status_check:true present	✓	photoCertificateRepository.js: added skip_status_check: true
+GAP 3/14/21 — stale snapshot guard	forceRegenerate when not DONE	✓	printService.js: if (data.status !== 'DONE') forceRegenerate = true
+PRINT GAP 1 — purity_label field	purity_label in snapshot	✓	printService.js: added purity_label to item map
+PRINT GAP 1 — NO GOLD value	purity_label = "NO GOLD" when zero	✓	Same fix above
+GAP 8 — assertMutable allows IN_PROGRESS	only DONE is blocked	✓	certificateService.js: removed `
+GAP 13 — batch finalize idempotency	X-Request-Id in batch loop	✓	WorkflowBoard.js: added headers: { 'X-Request-Id': createRequestId() } to batch finalize calls
+GAP 22 — ST is SERN-only (documented)	silver extension documented	✓	No code change — documented divergence
+GAP 12 — status enum (migration)	TODO/IN_PROGRESS/DONE documented	✓	No code change — migration scripts handle mapping
+Tests: 15 passed, 15 total — 0 failures.

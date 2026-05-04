@@ -13,10 +13,50 @@ const CURRENT_SYSTEM = 'LAB';
 const getWeights = (item) => {
     const gross = Number(item.gross_weight || 0);
     const test  = Number(item.test_weight  || 0);
-    const net   = Number(item.net_weight   || (gross - test));
-    const loss  = Number((gross - (test + net)).toFixed(3));
+    // toFixed(3) on derived net prevents float artifacts (e.g. 9.998000000000001 → 9.998)
+    const net = (item.net_weight != null && item.net_weight !== '')
+        ? Number(item.net_weight)
+        : parseFloat((gross - test).toFixed(3));
+    const loss = parseFloat((gross - (test + net)).toFixed(3));
     return { gross, test, net, loss };
 };
+
+// Clamp to N decimal places on blur — enforces precision without blocking typing.
+// Returns '' for empty/invalid input (never converts '' → 0).
+const clampDecimals = (value, dp) => {
+    if (value === '' || value === null || value === undefined) return '';
+    const n = parseFloat(value);
+    if (isNaN(n)) return '';          // garbage input → clear, not preserve
+    return parseFloat(n.toFixed(dp)); // e.g. 91.6666 → 91.67 (dp=2)
+};
+
+// Block e / E / + / - from numeric inputs (type="number" still allows these by spec).
+const blockInvalidNumericKeys = (e) => {
+    if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+};
+
+// Strip invalid characters from pasted text and clamp to dp decimal places.
+// Prevents paste bypass of onKeyDown (e.g. pasting "1e10", "9.12345").
+const sanitizeNumericString = (raw, dp) => {
+    const stripped = String(raw).replace(/[^0-9.]/g, ''); // keep digits + dot only
+    const firstDot = stripped.indexOf('.');
+    const singleDot = firstDot === -1
+        ? stripped
+        : stripped.slice(0, firstDot + 1) + stripped.slice(firstDot + 1).replace(/\./g, '');
+    return clampDecimals(singleDot, dp);
+};
+
+// Normalize all item numeric fields before an API call — catches values that were
+// never blurred (e.g. user typed then immediately clicked Submit).
+const normalizeItemValues = (itemList) =>
+    itemList.map(item => ({
+        ...item,
+        purity     : item.purity !== '' ? clampDecimals(item.purity, 2) : '',
+        test_weight: item.test_weight != null && item.test_weight !== ''
+            ? clampDecimals(item.test_weight, 3) : item.test_weight,
+        net_weight : item.net_weight  != null && item.net_weight  !== ''
+            ? clampDecimals(item.net_weight, 3)  : item.net_weight,
+    }));
 
 const formatDate = (value) => {
     if (!value) return '-';
@@ -164,12 +204,13 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
 
     const buildBaseData = () => ({
         mode_of_payment: modeOfPayment,
-        total: parseFloat(amount || 0),
+        total: amount !== '' ? parseFloat(amount) : 0,
         gst: includeGst ? 1 : 0
     });
 
     const handleSaveDraft = async () => {
         if (isDoneStage || isModalReadOnly) return;
+        const normItems = normalizeItemValues(items); // normalize before API — catches submit-without-blur
         const draftEndpoint = getDraftEndpoint();
         if (!draftEndpoint) return;
         setLoading(true);
@@ -179,9 +220,9 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                 // Certificates: draft saved via POST /certificates/:id/results
                 // Status is NOT changed — stays TODO until "Submit to Tested" is clicked
                 await api.post(draftEndpoint, {
-                    items: items.map(i => ({
+                    items: normItems.map(i => ({
                         id: i.id,
-                        purity: Number(i.purity) || 0,
+                        purity: i.purity !== '' ? Number(i.purity) : 0,
                         returned: !!i.returned,
                         item_number: i.item_number || i.item_no,
                     }))
@@ -190,12 +231,12 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                 // Tests: draft saved via PUT /:type-tests/:id/save-draft
                 await api.put(draftEndpoint, {
                     mode_of_payment: modeOfPayment,
-                    items: items.map(i => ({
+                    items: normItems.map(i => ({
                         id: i.id,
-                        purity: Number(i.purity) || 0,
+                        purity: i.purity !== '' ? Number(i.purity) : 0,
                         returned: !!i.returned,
-                        test_weight: i.test_weight !== undefined ? Number(i.test_weight) : undefined,
-                        net_weight: i.net_weight !== undefined ? Number(i.net_weight) : undefined,
+                        test_weight: i.test_weight !== '' && i.test_weight !== undefined ? Number(i.test_weight) : undefined,
+                        net_weight: i.net_weight !== '' && i.net_weight !== undefined ? Number(i.net_weight) : undefined,
                         // Operator override: send null to reset to auto-rule
                         certificate_required: i.certificate_required,
                     }))
@@ -212,6 +253,8 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
     };
 
     const handleSave = async (closeModal = true) => {
+        const normItems = normalizeItemValues(items);
+        const normAmount = amount !== '' ? clampDecimals(amount, 2) : '';
         const valError = validate();
         if (valError) {
             setError(valError);
@@ -243,12 +286,12 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
 
                 await api.post(endpoint, {
                     type: 'photo',
-                    ...baseData,
-                    items: items.map((i) => ({
+                    ...buildBaseData(),
+                    items: normItems.map((i) => ({
                         id: i.id,
                         show_kt: !!i.show_kt,
                         returned: !!i.returned,
-                        purity: Number(i.purity),
+                        purity: i.purity !== '' ? Number(i.purity) : 0,
                         // Omit media: the upload loop already persisted it; sending null here
                         // would overwrite the just-saved path for newly-uploaded photos.
                         ...(i.media && !photos[i.id] ? { media: i.media } : {}),
@@ -257,10 +300,10 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
             } else {
                 const method = (isGoldTest || isSilverTest) ? 'put' : 'post';
                 await api[method](endpoint, {
-                    ...baseData,
-                    items: items.map((i) => ({
+                    ...buildBaseData(),
+                    items: normItems.map((i) => ({
                         id: i.id,
-                        purity: Number(i.purity),
+                        purity: i.purity !== '' ? Number(i.purity) : 0,
                         returned: !!i.returned,
                         item_number: i.item_number || i.item_no
                     }))
@@ -287,6 +330,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
 
     const handleSubmitFlow = async () => {
         if (!nextStatus) return;
+        const normItems = normalizeItemValues(items); // normalize before submit — catches no-blur path
 
         if (nextStatus === 'DONE' && (isGoldTest || isSilverTest)) {
             const valError = validate();
@@ -297,11 +341,11 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
 
             setLoading(true);
             try {
-                const totalWtLoss = items.reduce((acc, it) => acc + getWeights(it).loss, 0);
+                const totalWtLoss = normItems.reduce((acc, it) => acc + getWeights(it).loss, 0);
                 const testTypeStr = test.type === 'silver' ? 'silver' : 'gold';
 
                 await api.post(`/${testTypeStr}-tests/${test.id}/finalize`, {
-                    items: items.map(i => ({
+                    items: normItems.map(i => ({
                         id                  : i.id,
                         purity              : Number(i.purity),
                         returned            : !!i.returned,
@@ -532,20 +576,33 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                             <Form.Control
                                                 size="sm"
                                                 type="number"
+                                                step="0.001"
+                                                inputMode="decimal"
                                                 data-testid="item-test-weight"
-                                                value={item.test_weight}
+                                                value={item.test_weight ?? ''}
+                                                placeholder="0.000"
                                                 onChange={(e) => handleItemChange(idx, 'test_weight', e.target.value)}
+                                                onBlur={(e) => handleItemChange(idx, 'test_weight', clampDecimals(e.target.value, 3))}
+                                                onKeyDown={blockInvalidNumericKeys}
+                                                onPaste={(e) => { e.preventDefault(); handleItemChange(idx, 'test_weight', sanitizeNumericString(e.clipboardData.getData('text'), 3)); }}
                                                 disabled={isModalReadOnly}
                                                 style={{ width: 80 }}
                                             />
                                         </td>
                                         <td>
+                                            {/* GAP 1 fix: value starts empty; derived gross-test shown as placeholder only */}
                                             <Form.Control
                                                 size="sm"
                                                 type="number"
+                                                step="0.001"
                                                 data-testid="item-net-weight"
-                                                value={item.net_weight !== undefined ? item.net_weight : w.net}
+                                                value={item.net_weight ?? ''}
+                                                inputMode="decimal"
+                                                placeholder={String(w.net || '0.000')}
                                                 onChange={(e) => handleItemChange(idx, 'net_weight', e.target.value)}
+                                                onBlur={(e) => handleItemChange(idx, 'net_weight', clampDecimals(e.target.value, 3))}
+                                                onKeyDown={blockInvalidNumericKeys}
+                                                onPaste={(e) => { e.preventDefault(); handleItemChange(idx, 'net_weight', sanitizeNumericString(e.clipboardData.getData('text'), 3)); }}
                                                 disabled={isModalReadOnly}
                                                 style={{ width: 80 }}
                                             />
@@ -559,8 +616,12 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                                 max="100"
                                                 placeholder="0.00"
                                                 data-testid="item-purity"
+                                                inputMode="decimal"
                                                 value={item.purity}
                                                 onChange={(e) => handleItemChange(idx, 'purity', e.target.value)}
+                                                onBlur={(e) => handleItemChange(idx, 'purity', clampDecimals(e.target.value, 2))}
+                                                onKeyDown={blockInvalidNumericKeys}
+                                                onPaste={(e) => { e.preventDefault(); handleItemChange(idx, 'purity', sanitizeNumericString(e.clipboardData.getData('text'), 2)); }}
                                                 disabled={isModalReadOnly}
                                             />
                                         </td>
@@ -691,8 +752,12 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                             min="0"
                                             step="0.01"
                                             placeholder="0.00"
+                                            inputMode="decimal"
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
+                                            onBlur={(e) => setAmount(e.target.value !== '' ? clampDecimals(e.target.value, 2) : '')}
+                                            onKeyDown={blockInvalidNumericKeys}
+                                            onPaste={(e) => { e.preventDefault(); setAmount(sanitizeNumericString(e.clipboardData.getData('text'), 2)); }}
                                             disabled={isModalReadOnly}
                                         />
                                     </Form.Group>

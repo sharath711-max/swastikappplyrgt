@@ -57,15 +57,6 @@ export function getAgingBucket(createdOn, status, nowMs = Date.now()) {
     return AGING.FRESH;
 }
 
-// Used by the sidebar — input is the oldest open-item age (ms) for a workflow.
-export function getAgingBucketFromAgeMs(ageMs) {
-    if (!Number.isFinite(ageMs) || ageMs <= 0) return AGING.FRESH;
-    if (ageMs >= AGING_THRESHOLDS.COLD_MS) return AGING.COLD;
-    if (ageMs >= AGING_THRESHOLDS.HOT_MS)  return AGING.HOT;
-    if (ageMs >= AGING_THRESHOLDS.WARM_MS) return AGING.WARM;
-    return AGING.FRESH;
-}
-
 export function agingTitle(severity) {
     return SEVERITY_TITLE[severity] || '';
 }

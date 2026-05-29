@@ -218,6 +218,10 @@ function migrateIndexes() {
     ensureIndex('idx_wlh_created',
         `CREATE INDEX IF NOT EXISTS idx_wlh_created ON weight_loss_history(created DESC)`);
 
+    // ── Customer: name search (paged list endpoint, complements idx_customer_phone) ──
+    ensureIndex('idx_customer_name',
+        `CREATE INDEX IF NOT EXISTS idx_customer_name ON customer(name) WHERE deletedon IS NULL`);
+
     // ── Cert tables: completion_request_id (workflow idempotency guard) ──────
     ensureIndex('idx_gc_completion_req',
         `CREATE INDEX IF NOT EXISTS idx_gc_completion_req

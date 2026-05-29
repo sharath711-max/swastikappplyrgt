@@ -34,12 +34,58 @@ class CustomerRepository extends BaseRepository {
 
     findAll() {
         return this.db.prepare(`
-            SELECT c.*, 
+            SELECT c.*,
             c.created as created_at -- alias for compatibility
             FROM customer c
             WHERE c.deletedon IS NULL
             ORDER BY c.lastmodified DESC
         `).all();
+    }
+
+    findPaged({ page = 1, pageSize = 25, search = '', balanceFilter = 'all', sortBy = 'name', sortOrder = 'asc' } = {}) {
+        const wheres = ['c.deletedon IS NULL'];
+        const params = [];
+
+        if (search) {
+            wheres.push('(c.name LIKE ? OR c.phone LIKE ?)');
+            const like = `%${search}%`;
+            params.push(like, like);
+        }
+
+        if (balanceFilter === 'due')      wheres.push('c.balance > 0');
+        else if (balanceFilter === 'advance') wheres.push('c.balance < 0');
+        else if (balanceFilter === 'settled') wheres.push('(c.balance = 0 OR c.balance IS NULL)');
+
+        const whereClause = `WHERE ${wheres.join(' AND ')}`;
+
+        // Sort whitelist — never interpolate user input directly into ORDER BY.
+        // 'balance' mirrors the frontend's Math.abs(balance) DESC behavior so the
+        // server-driven sort doesn't visibly re-order on cutover.
+        const order = (() => {
+            const dir = sortOrder === 'desc' ? 'DESC' : 'ASC';
+            if (sortBy === 'balance') return `ABS(COALESCE(c.balance, 0)) DESC`;
+            if (sortBy === 'lastmodified') return `c.lastmodified ${dir}`;
+            if (sortBy === 'created') return `c.created ${dir}`;
+            return `c.name COLLATE NOCASE ${dir}`;
+        })();
+
+        const safePage = Math.max(1, parseInt(page, 10) || 1);
+        const safePageSize = Math.min(200, Math.max(1, parseInt(pageSize, 10) || 25));
+        const offset = (safePage - 1) * safePageSize;
+
+        const total = this.db.prepare(
+            `SELECT COUNT(*) AS n FROM customer c ${whereClause}`
+        ).get(...params).n;
+
+        const rows = this.db.prepare(
+            `SELECT c.*, c.created AS created_at
+             FROM customer c
+             ${whereClause}
+             ORDER BY ${order}
+             LIMIT ? OFFSET ?`
+        ).all(...params, safePageSize, offset);
+
+        return { rows, total, page: safePage, pageSize: safePageSize };
     }
 
     findByPhone(phone) {

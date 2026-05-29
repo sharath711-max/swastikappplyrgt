@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS customer (
 );
 
 CREATE INDEX IF NOT EXISTS idx_customer_phone ON customer(phone);
+CREATE INDEX IF NOT EXISTS idx_customer_name  ON customer(name);
 
 -- 🧪 TESTS (PARENT)
 CREATE TABLE IF NOT EXISTS gold_test (

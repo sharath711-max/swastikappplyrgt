@@ -5,6 +5,19 @@ class CustomerService {
         return customerRepository.findAll();
     }
 
+    async getCustomersPaged(opts) {
+        const { rows, total, page, pageSize } = customerRepository.findPaged(opts);
+        return {
+            data: rows,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages: Math.max(1, Math.ceil(total / pageSize)),
+            },
+        };
+    }
+
     async getCustomerById(id) {
         return customerRepository.findById(id);
     }

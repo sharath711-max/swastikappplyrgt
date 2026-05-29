@@ -8,10 +8,33 @@ const { db } = require('../db/db');
 router.use(authMiddleware);
 
 // GET /api/customers
+// Backwards-compatible: when no paging param is present, returns the legacy
+// bare array shape. When any paging param (page / pageSize / search /
+// balanceFilter / sortBy / sortOrder) is present, returns the paged shape
+// { data: [...], pagination: { page, pageSize, total, totalPages } }.
+//
+// Note: sortBy=balance currently sorts by ABS(balance) DESC regardless of
+// sortOrder, for parity with the legacy Customers.js Math.abs(balance) DESC
+// behavior. Revisit post-cutover.
 router.get('/', async (req, res) => {
     try {
-        const customers = await customerService.getAllCustomers();
-        res.json(customers);
+        const PAGING_PARAMS = ['page', 'pageSize', 'search', 'balanceFilter', 'sortBy', 'sortOrder'];
+        const isPaged = PAGING_PARAMS.some(k => req.query[k] !== undefined);
+
+        if (!isPaged) {
+            const customers = await customerService.getAllCustomers();
+            return res.json(customers);
+        }
+
+        const result = await customerService.getCustomersPaged({
+            page: req.query.page,
+            pageSize: req.query.pageSize,
+            search: req.query.search || '',
+            balanceFilter: req.query.balanceFilter || 'all',
+            sortBy: req.query.sortBy || 'name',
+            sortOrder: req.query.sortOrder || 'asc',
+        });
+        res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

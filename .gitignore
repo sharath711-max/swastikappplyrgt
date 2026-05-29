@@ -17,6 +17,8 @@ backend/db/*.sqlite3
 backend/db/*.db-wal
 backend/db/*.db-shm
 backend/db/init.sql.bak
+backend/db/*.db.backup-*
+backend/db/shadow_diff_*.json
 
 # Logs
 backend/logs/

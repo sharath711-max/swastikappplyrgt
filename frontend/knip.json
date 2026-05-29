@@ -1,0 +1,38 @@
+{
+    "$schema": "https://unpkg.com/knip@6/schema.json",
+
+    "//": [
+        "Knip configuration for the SERN frontend.",
+        "Goal: suppress the well-known false positives so future scans",
+        "(npx knip) only surface real orphans + real dead exports + real",
+        "dependency drift. Updated whenever the false-positive list changes.",
+        "Companion audit snapshot: ../docs/unused-inventory.md"
+    ],
+
+    "entry": [
+        "src/index.js",
+
+        "src/**/*.test.{js,jsx}",
+        "src/**/*.spec.{js,jsx}",
+        "tests/**/*.{js,jsx}",
+
+        "e2e/**/*.{js,jsx}"
+    ],
+
+    "project": [
+        "src/**/*.{js,jsx}",
+        "tests/**/*.{js,jsx}",
+        "e2e/**/*.{js,jsx}"
+    ],
+
+    "ignoreDependencies": [
+        "@testing-library/jest-dom",
+        "@testing-library/react",
+        "@testing-library/user-event",
+        "eslint",
+        "eslint-config-react-app",
+        "html-webpack-plugin",
+        "identity-obj-proxy",
+        "jest-transform-stub"
+    ]
+}

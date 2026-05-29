@@ -484,71 +484,16 @@
     color: #ffffff;
 }
 
-/* Workflow operational queues — primary navigation block */
-.workflow-nav-group {
-    display: flex;
-    flex-direction: column;
-    margin: 6px 8px 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    overflow: hidden;
-    background: #ffffff;
-}
+/* Workflow code badge — small monospace 2-letter identifier rendered on
+   the WorkflowBoard section title. Used alongside .workflow-code--lg and
+   the no-op per-key shells below.
 
-.workflow-nav-item {
-    display: flex;
-    align-items: stretch;
-    border-bottom: 1px solid #f1f5f9;
-    background: #ffffff;
-    transition: background 0.12s;
-}
-
-.workflow-nav-item:last-child {
-    border-bottom: none;
-}
-
-.workflow-nav-item:hover {
-    background: #f8fafc;
-}
-
-.workflow-nav-item.active {
-    background: #dbeafe;
-    box-shadow: inset 5px 0 0 #0176d3;
-}
-
-.workflow-nav-item.active .workflow-code {
-    background: #0176d3;
-    color: #ffffff;
-    border-color: #0176d3;
-}
-
-.workflow-nav-row {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border: none;
-    background: transparent;
-    padding: 8px 10px;
-    text-align: left;
-    cursor: pointer;
-    font-size: 13px;
-    color: #1e293b;
-    font-weight: 500;
-    transition: color 0.12s;
-}
-
-.workflow-nav-row:focus-visible {
-    outline: 2px solid #0176d3;
-    outline-offset: -2px;
-}
-
-.workflow-nav-item.active .workflow-nav-row {
-    color: #0f172a;
-    font-weight: 700;
-}
-
+   Sidebar nav rows render as plain icon+label since the sidebar
+   simplification (no chips, no aging dots, no '+ New' buttons, no
+   per-workflow count badge); the .workflow-nav-group / .workflow-nav-item
+   / .workflow-nav-row / .workflow-count* / .workflow-new-btn /
+   .workflow-code__aging-dot* selectors that powered that layout were
+   removed in the Pass 3 sweep. */
 .workflow-code {
     flex-shrink: 0;
     position: relative; /* aging dot anchors here */
@@ -564,34 +509,6 @@
     letter-spacing: 0.04em;
 }
 
-/* Per-workflow aging dot — anchored to the code badge so it stays visible
-   when the sidebar is collapsed and the label is hidden. Three severity
-   tiers match the kanban card badge (warm/hot/cold). Suppressed by .fresh
-   (we just do not render the dot in that case). */
-.workflow-code__aging-dot {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    border: 1.5px solid #ffffff;
-    box-sizing: border-box;
-    pointer-events: none;
-}
-.workflow-code__aging-dot--warm { background: #f59e0b; }
-.workflow-code__aging-dot--hot  { background: #ea580c; }
-.workflow-code__aging-dot--cold {
-    background: #dc2626;
-    /* Slow pulse for 1d+ items — operator-noticeable without being noisy. */
-    animation: workflow-aging-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes workflow-aging-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
-    50%      { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0); }
-}
-
 /* All 5 workflows render as one nav category. Per-key colour overrides
    removed by operator direction — the 2-letter code is the differentiator.
    Selectors retained as no-ops so WorkflowBoard.js + Sidebar.js can keep
@@ -604,89 +521,6 @@
 .workflow-code--silver_cert,
 .workflow-code--photo_cert {
     /* intentional: inherit the base .workflow-code neutral palette */
-}
-
-.workflow-label {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Open-item count = TODO + IN_PROGRESS. DONE is intentionally excluded so the
-   number tracks "what's pending right now," not lifetime volume. Severity
-   tint mirrors the aging dot so a single glance reads volume + age together. */
-.workflow-count {
-    flex-shrink: 0;
-    margin-left: 6px;
-    min-width: 22px;
-    padding: 1px 6px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.3;
-    text-align: center;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    background: #e2e8f0;
-    color: #334155;
-}
-.workflow-count--warm {
-    background: #fef3c7;
-    color: #92400e;
-    border-color: #fcd34d;
-}
-.workflow-count--hot {
-    background: #fed7aa;
-    color: #9a3412;
-    border-color: #fb923c;
-}
-.workflow-count--cold {
-    background: #fecaca;
-    color: #991b1b;
-    border-color: #f87171;
-}
-.workflow-nav-item.active .workflow-count {
-    /* On the active row the background is blue tinted; lift the count so it
-       stays legible without losing severity color. */
-    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
-}
-
-.workflow-new-btn {
-    flex-shrink: 0;
-    width: 32px;
-    border: none;
-    border-left: 1px solid #e5e7eb;
-    background: transparent;
-    color: #64748b;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    transition: background 0.12s, color 0.12s;
-    padding: 0;
-}
-
-.workflow-new-btn:hover {
-    background: #0176d3;
-    color: #ffffff;
-}
-
-.workflow-new-btn:focus-visible {
-    outline: 2px solid #0176d3;
-    outline-offset: -2px;
-}
-
-/* Collapsed sidebar — keep the code badge visible, drop label & + button */
-.sidebar-collapsed .workflow-nav-group {
-    margin: 6px 6px 10px;
-}
-
-.sidebar-collapsed .workflow-nav-row {
-    justify-content: center;
-    padding: 8px 4px;
 }
 
 .nav-section-label {

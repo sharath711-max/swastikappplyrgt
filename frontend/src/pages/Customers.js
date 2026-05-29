@@ -1,63 +1,100 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaUserPlus, FaSearch, FaPhone, FaSync, FaInbox, FaUserEdit } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FaUserPlus, FaSearch, FaPhone, FaSync, FaInbox, FaUserEdit, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import api from '../services/api';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import './Customers.css';
 
+const DEFAULT_PAGE_SIZE = 25;
+const SEARCH_DEBOUNCE_MS = 250;
+
 const Customers = () => {
     const { addToast } = useToast();
     const { openModal } = useModal();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // URL is the source of truth for page / filter / sort.
+    const page          = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const pageSize      = parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE), 10);
+    const search        = searchParams.get('search') || '';
+    const balanceFilter = searchParams.get('balanceFilter') || 'all';
+    const sortBy        = searchParams.get('sortBy') || 'name';
+
+    // Local search input — debounced into the URL.
+    const [searchInput, setSearchInput] = useState(search);
     const [customers, setCustomers] = useState([]);
-    const [filteredCustomers, setFilteredCustomers] = useState([]);
+    const [pagination, setPagination] = useState({ page: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0, totalPages: 1 });
     const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [balanceFilter, setBalanceFilter] = useState('all');
-    const [sortBy, setSortBy] = useState('name');
+    const [refetchTick, setRefetchTick] = useState(0);
 
-    const fetchCustomers = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/customers');
-            const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
-            setCustomers(data);
-        } catch (error) {
-            addToast('Failed to synchronize customer database', 'error');
-        } finally {
-            setLoading(false);
-        }
-    }, [addToast]);
+    // Keep input in sync when URL changes externally (back button, etc.)
+    useEffect(() => { setSearchInput(search); }, [search]);
 
+    // Debounce searchInput → URL.
+    const isFirstSearchSync = useRef(true);
     useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
+        if (isFirstSearchSync.current) { isFirstSearchSync.current = false; return; }
+        if (searchInput === search) return;
+        const t = setTimeout(() => {
+            setSearchParams(prev => {
+                const next = new URLSearchParams(prev);
+                if (searchInput) next.set('search', searchInput); else next.delete('search');
+                next.set('page', '1');
+                return next;
+            }, { replace: true });
+        }, SEARCH_DEBOUNCE_MS);
+        return () => clearTimeout(t);
+    }, [searchInput, search, setSearchParams]);
 
+    // Server fetch on any URL change or explicit refetch.
     useEffect(() => {
-        const lowerSearch = searchTerm.toLowerCase();
-        let result = customers.filter(c =>
-            (c.name && c.name.toLowerCase().includes(lowerSearch)) ||
-            (c.phone && c.phone.includes(searchTerm))
-        );
+        let cancelled = false;
+        const fetchPage = async () => {
+            setLoading(true);
+            try {
+                const qs = new URLSearchParams({
+                    page: String(page),
+                    pageSize: String(pageSize),
+                    search,
+                    balanceFilter,
+                    sortBy,
+                });
+                const res = await api.get(`/customers?${qs.toString()}`);
+                if (cancelled) return;
+                const body = res.data || {};
+                setCustomers(Array.isArray(body.data) ? body.data : []);
+                setPagination(body.pagination || { page, pageSize, total: 0, totalPages: 1 });
+            } catch (error) {
+                if (cancelled) return;
+                addToast('Failed to synchronize customer database', 'error');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        fetchPage();
+        return () => { cancelled = true; };
+    }, [page, pageSize, search, balanceFilter, sortBy, refetchTick, addToast]);
 
-        if (balanceFilter === 'due') result = result.filter(c => (c.balance || 0) > 0);
-        else if (balanceFilter === 'advance') result = result.filter(c => (c.balance || 0) < 0);
-        else if (balanceFilter === 'settled') result = result.filter(c => !c.balance || c.balance === 0);
+    const updateParam = useCallback((key, value) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (value === '' || value == null) next.delete(key); else next.set(key, String(value));
+            if (key !== 'page') next.set('page', '1');
+            return next;
+        }, { replace: true });
+    }, [setSearchParams]);
 
-        if (sortBy === 'name') result = [...result].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        else if (sortBy === 'balance') result = [...result].sort((a, b) => Math.abs(b.balance || 0) - Math.abs(a.balance || 0));
-
-        setFilteredCustomers(result);
-    }, [searchTerm, customers, balanceFilter, sortBy]);
+    const refetch = useCallback(() => setRefetchTick(t => t + 1), []);
 
     const handleEditCustomer = (e, customer) => {
         e.stopPropagation();
-        openModal('customer', { customer, reload: fetchCustomers });
+        openModal('customer', { customer, reload: refetch });
     };
 
     const handleAddCustomer = () => {
-        openModal('customer', { reload: fetchCustomers });
+        openModal('customer', { reload: refetch });
     };
 
     const getInitials = (name) => {
@@ -85,6 +122,10 @@ const Customers = () => {
         return 'Settled';
     };
 
+    const { total, totalPages } = pagination;
+    const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+    const rangeEnd   = Math.min(page * pageSize, total);
+
     return (
         <div className="customers-page">
 
@@ -96,7 +137,7 @@ const Customers = () => {
                         <small className="text-muted">Centralized ledger and profile management</small>
                     </div>
                     <div className="d-flex gap-2">
-                        <button className="btn-icon-action" onClick={fetchCustomers} disabled={loading} title="Sync">
+                        <button className="btn-icon-action" onClick={refetch} disabled={loading} title="Sync">
                             <FaSync className={loading ? 'fa-spin' : ''} />
                         </button>
                         <button className="btn btn-primary d-flex align-items-center gap-2" onClick={handleAddCustomer}>
@@ -115,15 +156,15 @@ const Customers = () => {
                             type="text"
                             className="customer-search-input"
                             placeholder="Search by name or phone..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                         />
                     </div>
 
                     <select
                         className="form-select w-auto"
                         value={balanceFilter}
-                        onChange={(e) => setBalanceFilter(e.target.value)}
+                        onChange={(e) => updateParam('balanceFilter', e.target.value === 'all' ? '' : e.target.value)}
                     >
                         <option value="all">All</option>
                         <option value="due">Due (DR)</option>
@@ -134,14 +175,28 @@ const Customers = () => {
                     <select
                         className="form-select w-auto"
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
+                        onChange={(e) => updateParam('sortBy', e.target.value === 'name' ? '' : e.target.value)}
                     >
                         <option value="name">Sort: Name</option>
                         <option value="balance">Sort: Balance</option>
                     </select>
 
+                    <select
+                        className="form-select w-auto"
+                        value={pageSize}
+                        onChange={(e) => updateParam('pageSize', e.target.value === String(DEFAULT_PAGE_SIZE) ? '' : e.target.value)}
+                        title="Page size"
+                    >
+                        <option value="25">25 / page</option>
+                        <option value="50">50 / page</option>
+                        <option value="100">100 / page</option>
+                    </select>
+
                     <div className="count-info">
-                        <strong>{filteredCustomers.length}</strong> / <strong>{customers.length}</strong>
+                        {total === 0
+                            ? <strong>0</strong>
+                            : <><strong>{rangeStart}</strong>–<strong>{rangeEnd}</strong> of <strong>{total}</strong></>
+                        }
                     </div>
                 </div>
             </div>
@@ -153,18 +208,22 @@ const Customers = () => {
                         <div className="spinner-border text-primary" role="status"></div>
                         <p className="mt-3 text-muted fw-bold">Connecting to Master Ledger...</p>
                     </div>
-                ) : filteredCustomers.length === 0 ? (
+                ) : customers.length === 0 ? (
                     <div className="empty-customers">
                         <FaInbox className="empty-icon" />
                         <h5>No Customers Found</h5>
-                        <p className="text-muted">Try a different filter or add a new record.</p>
+                        <p className="text-muted">
+                            {search || balanceFilter !== 'all'
+                                ? 'Try a different filter or add a new record.'
+                                : 'Add the first customer to get started.'}
+                        </p>
                         <button className="btn btn-primary mt-2" onClick={handleAddCustomer}>
                             <FaUserPlus className="me-2" /> Add Customer
                         </button>
                     </div>
                 ) : (
                     <div className="row g-3">
-                        {filteredCustomers.map(customer => (
+                        {customers.map(customer => (
                             <div key={customer.id} className="col-12 col-md-6 col-xl-4">
                                 <div
                                     className="card shadow-sm h-100 customer-item-card"
@@ -214,6 +273,29 @@ const Customers = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Pagination controls */}
+                {totalPages > 1 && (
+                    <div className="d-flex justify-content-center align-items-center gap-3 mt-4 mb-2">
+                        <button
+                            className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                            onClick={() => updateParam('page', page - 1)}
+                            disabled={loading || page <= 1}
+                        >
+                            <FaChevronLeft size={10} /> Prev
+                        </button>
+                        <span className="text-muted small">
+                            Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+                        </span>
+                        <button
+                            className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                            onClick={() => updateParam('page', page + 1)}
+                            disabled={loading || page >= totalPages}
+                        >
+                            Next <FaChevronRight size={10} />
+                        </button>
                     </div>
                 )}
             </div>

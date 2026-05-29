@@ -5,46 +5,12 @@
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* Header — compact utility bar (no glass, no oversized typography) */
-.board-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #ffffff;
-    padding: 10px 14px;
-    border-radius: 4px;
-    margin-bottom: 14px;
-    border: 1px solid #d1d5db;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    gap: 16px;
-}
-
-.board-title h1 {
-    color: #0f172a;
-    font-weight: 700;
-    margin: 0;
-    font-size: 1rem;
-    letter-spacing: 0;
-}
-
-.board-title p {
-    color: #64748b;
-    margin: 2px 0 0 0;
-    font-weight: 400;
-    font-size: 11px;
-}
-
-/* Compact search input in the header */
-.workflow-search-wrap {
-    position: relative;
-    min-width: 200px;
-}
-
+/* Search input custom classes — augment the SLDS form-element wrapper in
+   WorkflowBoard.js so the icon positioning + focus colour stay project-
+   specific. Other header chrome (.board-header, .board-title, search
+   wrapper / clear / refresh button) replaced by SLDS page-header during
+   the SLDS refresh; the orphaned rules were removed in the Pass 3 sweep. */
 .workflow-search-icon {
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
     color: #94a3b8;
     font-size: 12px;
     pointer-events: none;
@@ -65,20 +31,6 @@
 
 .workflow-search-input:focus {
     border-color: #0176d3;
-}
-
-.workflow-search-clear {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #94a3b8;
-    cursor: pointer;
-    font-size: 11px;
-}
-
-.workflow-search-clear:hover {
-    color: #0f172a;
 }
 
 /* Workflow Body — vertical rail + Kanban main */
@@ -494,22 +446,6 @@
 
 .btn-action:hover {
     background: #1e293b !important;
-}
-
-.btn-secondary-action {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    border: 1px solid #d1d5db !important;
-    padding: 6px 14px !important;
-    border-radius: 3px !important;
-    font-weight: 600 !important;
-    font-size: 12px !important;
-    transition: background 0.12s, border-color 0.12s !important;
-}
-
-.btn-secondary-action:hover {
-    background: #f1f5f9 !important;
-    border-color: #94a3b8 !important;
 }
 
 /* Context Menu — flat, compact */

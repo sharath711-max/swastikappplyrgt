@@ -7,19 +7,23 @@ class CustomerRepository extends BaseRepository {
     }
 
     create(customer) {
-        const { name, phone, notes } = customer;
+        const { name, phone, notes, balance = 0 } = customer;
         const id = genId('CUS');
         const timestamp = now();
 
         this.db.prepare(`
             INSERT INTO customer (id, name, phone, notes, balance, created, lastmodified)
-            VALUES (?, ?, ?, ?, 0, ?, ?)
-        `).run(id, name, phone, notes, timestamp, timestamp);
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(id, name, phone, notes, balance, timestamp, timestamp);
 
-        return { id, name, phone, notes, balance: 0, created: timestamp };
+        return { id, name, phone, notes, balance, created: timestamp };
     }
 
     update(id, customer) {
+        // Note: `balance` is intentionally NOT updated through this path.
+        // Customer balance moves through credit_history (DR/CR ledger entries).
+        // Direct edits would bypass the audit trail and the running-balance
+        // invariants enforced by the statement endpoint.
         const { name, phone, notes } = customer;
         const timestamp = now();
 

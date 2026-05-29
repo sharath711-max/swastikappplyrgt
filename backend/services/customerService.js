@@ -23,7 +23,7 @@ class CustomerService {
     }
 
     validateCustomer(customerData) {
-        const { name, phone, notes } = customerData;
+        const { name, phone, notes, balance } = customerData;
 
         // Name Validation
         if (!name || typeof name !== 'string') {
@@ -50,7 +50,22 @@ class CustomerService {
             throw new Error('Notes cannot exceed 255 characters');
         }
 
-        return { ...customerData, name: trimmedName };
+        // Balance Validation — optional opening balance on create. Defaults to 0.
+        // Update path ignores balance (see customerRepository.update); ledger
+        // moves use credit_history, not direct customer.balance writes.
+        let validatedBalance = 0;
+        if (balance !== undefined && balance !== null && balance !== '') {
+            const n = Number(balance);
+            if (!Number.isFinite(n)) {
+                throw new Error('Balance must be a number');
+            }
+            if (n < 0) {
+                throw new Error('Balance cannot be negative');
+            }
+            validatedBalance = n;
+        }
+
+        return { ...customerData, name: trimmedName, balance: validatedBalance };
     }
 
     async createCustomer(customerData) {

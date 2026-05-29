@@ -6,7 +6,7 @@
 
 const axios = require('axios');
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:6001/api';
 
 // Color output
 const log = {

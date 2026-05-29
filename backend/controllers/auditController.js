@@ -2,7 +2,6 @@
 
 const { db } = require('../db/db');
 const { BusinessError, ERR } = require('../services/v2/errors');
-const { createBackup } = require('../scripts/backup');
 
 const PAGE_SIZE_DEFAULT = 50;
 const PAGE_SIZE_MAX     = 200;
@@ -108,86 +107,8 @@ function listActions(req, res, next) {
     }
 }
 
-/**
- * POST /api/audit/backup
- * Triggers a manual snapshot.
- */
-async function performBackup(req, res, next) {
-    try {
-        // createBackup is async and handles its own errors
-        await createBackup();
-        return res.json({ success: true, message: 'Backup initiated successfully' });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-/**
- * GET /api/audit/recycle-bin
- * Returns list of deleted items from all main tables.
- */
-function getRecycleBin(req, res, next) {
-    try {
-        const rows = db.prepare(`
-            SELECT 'gold_test' as type, id, auto_number, customer_id, deletedon 
-            FROM gold_test WHERE deletedon IS NOT NULL
-            UNION ALL
-            SELECT 'silver_test' as type, id, auto_number, customer_id, deletedon 
-            FROM silver_test WHERE deletedon IS NOT NULL
-            UNION ALL
-            SELECT 'gold_certificate' as type, id, auto_number, customer_id, deletedon 
-            FROM gold_certificate WHERE deletedon IS NOT NULL
-            UNION ALL
-            SELECT 'silver_certificate' as type, id, auto_number, customer_id, deletedon 
-            FROM silver_certificate WHERE deletedon IS NOT NULL
-            UNION ALL
-            SELECT 'photo_certificate' as type, id, auto_number, customer_id, deletedon 
-            FROM photo_certificate WHERE deletedon IS NOT NULL
-            ORDER BY deletedon DESC
-            LIMIT 100
-        `).all();
-
-        const enriched = rows.map(row => {
-            const customer = db.prepare('SELECT name FROM customer WHERE id = ?').get(row.customer_id);
-            return { ...row, customer_name: customer?.name || 'Unknown' };
-        });
-
-        return res.json({ success: true, data: enriched });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-/**
- * POST /api/audit/restore/:type/:id
- * Restores a deleted item.
- */
-function restoreItem(req, res, next) {
-    try {
-        const { type, id } = req.params;
-        const validTypes = ['gold_test', 'silver_test', 'gold_certificate', 'silver_certificate', 'photo_certificate'];
-        
-        if (!validTypes.includes(type)) {
-            throw new BusinessError('Invalid item type', ERR.VALIDATION, 400);
-        }
-
-        const result = db.prepare(`UPDATE ${type} SET deletedon = NULL WHERE id = ?`).run(id);
-        
-        if (result.changes === 0) {
-            throw new BusinessError('Item not found or already restored', ERR.NOT_FOUND, 404);
-        }
-
-        return res.json({ success: true, message: 'Item restored successfully' });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-module.exports = { 
-    listAuditLogs, 
-    getEntityHistory, 
+module.exports = {
+    listAuditLogs,
+    getEntityHistory,
     listActions,
-    performBackup,
-    getRecycleBin,
-    restoreItem
 };

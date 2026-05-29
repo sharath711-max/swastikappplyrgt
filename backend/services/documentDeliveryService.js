@@ -32,7 +32,7 @@ class DocumentDeliveryService {
             process.env.PUBLIC_BASE_URL ||
             process.env.APP_PUBLIC_URL ||
             process.env.BACKEND_PUBLIC_URL ||
-            `http://localhost:${process.env.PORT || 5000}`
+            `http://localhost:${process.env.PORT || 6001}`
         ).replace(/\/+$/, '');
     }
 

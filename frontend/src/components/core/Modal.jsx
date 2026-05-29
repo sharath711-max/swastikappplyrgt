@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-
-let openModalCount = 0;
+import React, { useCallback } from 'react';
+import useModalLifecycle from '../../hooks/useModalLifecycle';
 
 const sizeClasses = {
     small: 'max-w-md',
@@ -9,37 +8,25 @@ const sizeClasses = {
     xlarge: 'max-w-6xl'
 };
 
-const Modal = ({ isOpen, show, onClose, onHide, title, children, size = 'medium', dark = false }) => {
+// Custom (non-react-bootstrap) modal primitive. All cross-modal concerns —
+// body lock, escape arbitration, focus restoration, duplicate suppression —
+// are delegated to the modalLifecycle singleton via useModalLifecycle. The
+// component itself only owns its own DOM and click-outside-to-close.
+const Modal = ({ isOpen, show, onClose, onHide, title, children, size = 'medium', dark = false, modalKey = null }) => {
     const isModalOpen = typeof isOpen === 'boolean' ? isOpen : !!show;
     const handleClose = useCallback(() => {
         if (onClose) onClose();
         else if (onHide) onHide();
     }, [onClose, onHide]);
 
-    useEffect(() => {
-        if (!isModalOpen) {
-            return undefined;
-        }
-
-        openModalCount += 1;
-        document.body.classList.add('modal-open');
-
-        const handleKeyDown = (event) => {
-            if (event.key === 'Escape') {
-                handleClose();
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            openModalCount = Math.max(0, openModalCount - 1);
-            if (openModalCount === 0) {
-                document.body.classList.remove('modal-open');
-            }
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [isModalOpen, handleClose]);
+    // Stack-aware lifecycle. Escape closes only when this modal is the
+    // topmost — handled inside the singleton, so we just pass the close
+    // handler as the escape callback.
+    useModalLifecycle({
+        isOpen: isModalOpen,
+        key: modalKey,
+        onEscape: handleClose,
+    });
 
     if (!isModalOpen) {
         return null;

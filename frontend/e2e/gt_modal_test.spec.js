@@ -1,7 +1,7 @@
 // gt_modal_test.spec.js — Gold Test full modal flow
 const { test, expect } = require('@playwright/test');
 
-const API = 'http://127.0.0.1:5000/api';
+const API = 'http://127.0.0.1:6001/api';
 
 async function login(page) {
     await page.goto('/login');
@@ -15,10 +15,11 @@ async function login(page) {
 async function goToGTTab(page) {
     await page.goto('/workflow?tab=gold');
     await page.waitForTimeout(1200);
-    const gtTab = page.locator('.tab-pill', { hasText: 'Gold Test' });
-    await gtTab.waitFor({ timeout: 8000 });
-    if (!(await gtTab.getAttribute('class')).includes('active')) {
-        await gtTab.click();
+    const gtRow = page.locator('.workflow-rail-row', { hasText: 'Gold Testing' });
+    await gtRow.waitFor({ timeout: 8000 });
+    const railItem = page.locator('.workflow-rail-item', { has: gtRow });
+    if (!(await railItem.getAttribute('class') || '').includes('is-active')) {
+        await gtRow.click();
         await page.waitForTimeout(600);
     }
 }
@@ -32,7 +33,7 @@ async function getToken(page) {
 }
 
 async function createGTViaUI(page) {
-    const newBtn = page.locator('.btn-action', { hasText: '+ New Gold Test' });
+    const newBtn = page.getByRole('button', { name: 'New Gold Testing' });
     await newBtn.waitFor({ timeout: 6000 });
     await newBtn.click();
     await page.waitForTimeout(500);

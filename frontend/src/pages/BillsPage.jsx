@@ -119,7 +119,7 @@ export default function BillsPage() {
       if (filters.max_amount !== '') params.set('max_amount', filters.max_amount);
 
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const base = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const base = process.env.REACT_APP_API_URL || 'http://localhost:6001/api';
       const res = await fetch(`${base}/credit-history/export?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });

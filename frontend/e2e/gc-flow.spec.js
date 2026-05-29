@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const API_BASE = process.env.E2E_API_URL || 'http://127.0.0.1:5000/api';
+const API_BASE = process.env.E2E_API_URL || 'http://127.0.0.1:6001/api';
 const DEFAULT_ADMIN = { username: 'admin', password: 'admin123' };
 const TEST_USER = {
     username: `pw_gc_${Date.now()}`,

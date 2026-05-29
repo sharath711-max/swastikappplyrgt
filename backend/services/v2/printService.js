@@ -355,7 +355,16 @@ function getPrintLayout(resourceType, metalType, id, forceRegenerate = false) {
                 total              : itemTotal,        // MemoCert: item.total
 
                 ...(resolvedMetalType === 'photo'
-                    ? { media_path: item.media_path || null }
+                    ? {
+                        media_path: item.media_path || null,
+                        // PC certs print a carat-value line ONLY when show_kt
+                        // is true on the source item. Python's photo cert
+                        // template reads `data.show_kt` directly; the SERN
+                        // print snapshot must expose it so PhotoCert.js can
+                        // gate the same row. Stored as INTEGER 0/1 in
+                        // photo_certificate_item; normalise to bool here.
+                        show_kt: item.show_kt === 1 || item.show_kt === true,
+                      }
                     : {}
                 ),
             };

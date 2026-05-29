@@ -1,6 +1,9 @@
 import React, { useRef } from 'react';
 import { Modal } from 'react-bootstrap';
 import CertificateForm from './CertificateForm';
+import NewGoldCertificateModal   from './NewGoldCertificateModal';
+import NewSilverCertificateModal from './NewSilverCertificateModal';
+import NewPhotoCertificateModal  from './NewPhotoCertificateModal';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { preventDuplicateCreate } from '../utils/certificateGuard';
@@ -10,6 +13,14 @@ const NewCertificateModal = ({ show, onHide, onSuccess, type }) => {
     const { addToast } = useToast();
     const [loading, setLoading] = React.useState(false);
     const submitReqIdRef = useRef(null);
+
+    // GC / SC / PC each have Python-parity layouts (multi-row inline, GST,
+    // customer balance, notes). PC adds per-row photo input. CertificateForm
+    // is kept as a fallback for any unforeseen types but is no longer the
+    // primary path for these three.
+    if (type === 'gold')   return <NewGoldCertificateModal   show={show} onHide={onHide} onSuccess={onSuccess} />;
+    if (type === 'silver') return <NewSilverCertificateModal show={show} onHide={onHide} onSuccess={onSuccess} />;
+    if (type === 'photo')  return <NewPhotoCertificateModal  show={show} onHide={onHide} onSuccess={onSuccess} />;
 
     const handleCreate = async (formData) => {
         setLoading(true);
@@ -57,19 +68,18 @@ const NewCertificateModal = ({ show, onHide, onSuccess, type }) => {
     };
 
     const titleMap = {
-        gold: 'New Gold Certificate Entry',
         silver: 'New Silver Certificate Entry',
         photo: 'New Photo Certificate Entry'
     };
 
     return (
-        <Modal show={show} onHide={onHide} centered dialogClassName="modal-container" className="new-sample-modal">
-            <Modal.Header closeButton className="new-sample-header">
-                <Modal.Title className="fw-bold">
+        <Modal show={show} onHide={onHide} centered size="lg" backdrop="static" className="new-cert-modal">
+            <Modal.Header closeButton style={{ background: '#f8f9fa', padding: '.75rem 1rem', borderBottom: '1px solid #e5e7eb' }}>
+                <Modal.Title className="fw-bold fs-6">
                     {titleMap[type] || 'New Certificate Entry'}
                 </Modal.Title>
             </Modal.Header>
-            <Modal.Body className="pt-3">
+            <Modal.Body className="p-3">
                 <CertificateForm
                     forcedType={type}
                     isOpen={show}

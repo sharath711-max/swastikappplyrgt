@@ -22,16 +22,35 @@ describe('Pillar 4: Visual/DOM Testing - Print Outputs', () => {
         show_kt: true
     };
 
-    test('Thermal Layout: Verify the .thermal-receipt container and purity-box rendering', () => {
-        render(<ThermalReceipt test={mockTest} items={[mockItem]} type="RESULT" />);
+    const buildSnapshot = (overrides = {}) => ({
+        lab: { name: 'Swastik Assayers' },
+        receipt: { number: '17', createdAt: '2026-04-16T13:21:00Z', type: 'GT', status: 'PENDING', ...overrides },
+        customer: { name: 'JAGANATH', phone: '+919999999999' },
+        items: [{ id: 'GTI-1', name: 'Gatti', weight: 15.650, sampleWeight: 0.500, amount: 30 }],
+        totals: { total: 30 },
+    });
 
-        const container = screen.getByTestId('thermal-container');
-        expect(container).toHaveClass('thermal-receipt');
+    test('Thermal Layout: renders branded wrapper, customer, grand total, thank-you (identical for ongoing & final)', () => {
+        const { container } = render(<ThermalReceipt snapshot={buildSnapshot()} />);
 
-        // 80mm check is usually via computed style in browser, 
-        // but we verify the existence of the purity box as requested.
-        expect(screen.getByTestId('purity-box')).toBeInTheDocument();
-        expect(screen.getByText('91.60%')).toBeInTheDocument();
+        expect(container.querySelector('.thermal-receipt-wrapper')).toBeInTheDocument();
+        expect(screen.getByText('Swastik Assayers')).toBeInTheDocument();
+        expect(screen.getByText('JAGANATH')).toBeInTheDocument();
+        expect(screen.getByText('Grand Total')).toBeInTheDocument();
+        expect(screen.getByText('Thank you for your business!')).toBeInTheDocument();
+        // Status banner & draft disclaimer must NOT exist (Python parity).
+        expect(screen.queryByTestId('tr-status')).toBeNull();
+        expect(screen.queryByTestId('tr-disclaimer')).toBeNull();
+    });
+
+    test('Thermal Layout: invoice number renders zero-padded 3-digit, prefix stripped', () => {
+        render(<ThermalReceipt snapshot={buildSnapshot({ number: 'GT26-17' })} />);
+        expect(screen.getByText('017')).toBeInTheDocument();
+    });
+
+    test('Thermal Layout: receipt type code maps to readable operational label', () => {
+        render(<ThermalReceipt snapshot={buildSnapshot({ type: 'GT' })} />);
+        expect(screen.getByText('Gold Testing')).toBeInTheDocument();
     });
 
     test('A4 Positioning: Verify PhotoCertificate positioning and dynamic field overlay', () => {

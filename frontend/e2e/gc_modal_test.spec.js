@@ -1,7 +1,7 @@
 // gc_modal_test.spec.js — Gold Certificate full modal flow
 const { test, expect } = require('@playwright/test');
 
-const API = 'http://127.0.0.1:5000/api';
+const API = 'http://127.0.0.1:6001/api';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -17,10 +17,11 @@ async function login(page) {
 async function goToGCTab(page) {
     await page.goto('/workflow?tab=gold_cert');
     await page.waitForTimeout(1200);
-    const gcTab = page.locator('.tab-pill', { hasText: 'Gold Cert' });
-    await gcTab.waitFor({ timeout: 8000 });
-    if (!(await gcTab.getAttribute('class')).includes('active')) {
-        await gcTab.click();
+    const gcRow = page.locator('.workflow-rail-row', { hasText: 'Gold Certificate' });
+    await gcRow.waitFor({ timeout: 8000 });
+    const railItem = page.locator('.workflow-rail-item', { has: gcRow });
+    if (!(await railItem.getAttribute('class') || '').includes('is-active')) {
+        await gcRow.click();
         await page.waitForTimeout(600);
     }
 }
@@ -36,7 +37,7 @@ async function getToken(page) {
 
 async function createCertViaUI(page) {
     // Opens the New Gold Cert modal, fills in a test cert, and submits it
-    const newBtn = page.locator('.btn-action', { hasText: '+ New Gold Cert' });
+    const newBtn = page.getByRole('button', { name: 'New Gold Certificate' });
     await newBtn.waitFor({ timeout: 6000 });
     await newBtn.click();
     await page.waitForTimeout(500);

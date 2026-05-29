@@ -1,173 +1,152 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaTachometerAlt, FaUsers, FaCheckDouble, FaBars, FaChevronDown,
-    FaUserShield, FaFileInvoiceDollar, FaDatabase, FaTrash
+    FaTachometerAlt, FaUsers, FaFileInvoiceDollar, FaChartBar,
+    FaUserShield, FaChevronDown,
+    FaCoins, FaBalanceScale, FaCertificate, FaFileAlt, FaImage,
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
+import { useWorkflow, WORKFLOWS } from '../../contexts/WorkflowContext';
 import { APP_CONFIG } from '../../utils/Constants';
+
+// Icon per workflow — matches WorkflowDispatchCards on the dashboard so the
+// operator sees the same glyph in two places (sidebar nav + dashboard tile).
+const WORKFLOW_ICONS = {
+    gold:        FaCoins,
+    gold_cert:   FaCertificate,
+    silver:      FaBalanceScale,
+    silver_cert: FaFileAlt,
+    photo_cert:  FaImage,
+};
+
+const WORKFLOW_ROLES = ['admin', 'manager', 'technician', 'front_desk'];
 
 const Sidebar = ({ sidebarCollapsed }) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const {
+        selectedWorkflow,
+        setSelectedWorkflow,
+        tryWorkflowSwitch,
+    } = useWorkflow();
 
-    const [expandedMenus, setExpandedMenus] = useState(() => ({
-        Admin: location.pathname.startsWith('/admin'),
-    }));
+    const [adminOpen, setAdminOpen] = useState(() => location.pathname.startsWith('/admin/users'));
 
-    const navigation = React.useMemo(() => [
-        { type: 'section', label: 'MAIN' },
-        {
-            name: 'Dashboard',
-            path: '/',
-            icon: <FaTachometerAlt />,
-            exact: true,
-            roles: ['admin', 'manager'],
-        },
-        {
-            name: 'Customers',
-            path: '/customers',
-            icon: <FaUsers />,
-            roles: ['admin', 'manager', 'front_desk'],
-        },
-        {
-            name: 'Workflow Board',
-            path: '/workflow',
-            icon: <FaCheckDouble />,
-            roles: ['admin', 'manager', 'technician', 'front_desk'],
-        },
-        { type: 'section', label: 'TOOLS' },
-        {
-            name: 'Bills',
-            path: '/module-bills',
-            icon: <FaFileInvoiceDollar />,
-            roles: ['admin', 'manager', 'front_desk'],
-        },
-        {
-            name: 'Reports',
-            path: '/list-views',
-            icon: <FaBars />,
-            roles: ['admin', 'manager'],
-        },
-        { type: 'section', label: 'SYSTEM' },
-        {
-            name: 'Admin',
-            path: '/admin/users',
-            icon: <FaUserShield />,
-            roles: ['admin'],
-            subItems: [
-                { name: 'Users', path: '/admin/users' },
-            ],
-        },
-        {
-            name: 'Back up',
-            path: '/admin/backup',
-            icon: <FaDatabase />,
-            roles: ['admin'],
-        },
-        {
-            name: 'Recycle Bin',
-            path: '/admin/recycle-bin',
-            icon: <FaTrash />,
-            roles: ['admin'],
-        },
-    ], []);
-
-    const isActive = React.useCallback((path, exact = false) => {
+    const isActive = (path, exact = false) => {
         if (!path) return false;
-        if (path.includes('?')) {
-            const [basePath, query] = path.split('?');
-            if (location.pathname !== basePath) return false;
-            const expected = new URLSearchParams(query);
-            const current = new URLSearchParams(location.search);
-            return Array.from(expected.entries()).every(([key, value]) => current.get(key) === value);
-        }
         if (exact) return location.pathname === path;
         return location.pathname.startsWith(path);
-    }, [location.pathname, location.search]);
+    };
 
-    const isGroupActive = React.useCallback((item) => {
-        if (!item.subItems) return isActive(item.path, item.exact);
-        return item.subItems.some(sub => isActive(sub.path));
-    }, [isActive]);
+    const onWorkflowsPath = location.pathname.startsWith('/workflow');
 
-    const toggleMenu = (name) => {
-        setExpandedMenus(prev => ({ ...prev, [name]: !prev[name] }));
+    const handleSelectWorkflow = (key) => {
+        if (!tryWorkflowSwitch(key)) return;
+        setSelectedWorkflow(key);
+        if (!onWorkflowsPath) navigate('/workflow');
     };
 
     return (
-        <aside className="app-sidebar">
+        <aside className="app-sidebar app-sidebar--flat">
             <nav className="sidebar-nav">
-                {navigation.map((item, index) => {
-                    if (item.type === 'section') {
-                        return (
-                            <div key={index} className="nav-section-label">
-                                {!sidebarCollapsed
-                                    ? <span>{item.label}</span>
-                                    : <hr className="nav-section-divider" />
-                                }
-                            </div>
-                        );
-                    }
+                {/* Dashboard */}
+                <ProtectedComponent roles={['admin', 'manager']}>
+                    <Link
+                        to="/"
+                        className={`nav-item ${isActive('/', true) ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaTachometerAlt /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Dashboard</span>}
+                    </Link>
+                </ProtectedComponent>
 
-                    const NavItemContent = (
-                        <div className="nav-section">
-                            {!item.subItems ? (
-                                <Link
-                                    to={item.path}
-                                    className={`nav-item ${isActive(item.path, item.exact) ? 'active' : ''}`}
-                                >
-                                    <span className="nav-icon">{item.icon}</span>
-                                    {!sidebarCollapsed && <span className="nav-label">{item.name}</span>}
-                                </Link>
-                            ) : (
-                                <div className={`nav-group ${isGroupActive(item) ? 'active' : ''}`}>
-                                    <div
-                                        className="nav-group-header"
-                                        onClick={() => !sidebarCollapsed && toggleMenu(item.name)}
-                                        style={{ cursor: !sidebarCollapsed ? 'pointer' : 'default' }}
-                                    >
-                                        <span className="nav-icon">{item.icon}</span>
-                                        {!sidebarCollapsed && (
-                                            <>
-                                                <span className="nav-label">{item.name}</span>
-                                                <FaChevronDown
-                                                    style={{
-                                                        marginLeft: 'auto',
-                                                        fontSize: '0.8em',
-                                                        transform: expandedMenus[item.name] ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                        transition: 'transform 0.2s'
-                                                    }}
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-                                    {!sidebarCollapsed && expandedMenus[item.name] && (
-                                        <div className="nav-subitems">
-                                            {item.subItems.map((subItem, subIndex) => (
-                                                <Link
-                                                    key={subIndex}
-                                                    to={subItem.path}
-                                                    className={`nav-subitem ${isActive(subItem.path) ? 'active' : ''}`}
-                                                >
-                                                    <span className="nav-icon-sm">{subItem.icon}</span>
-                                                    <span>{subItem.name}</span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                {/* Workflow operational queues — simple icon + label rows.
+                    Operator chose Python-style sidebar: no chips, no aging
+                    dots, no count badges, no "+ New" buttons. Aging /
+                    queue-pressure signal now lives on the dashboard
+                    WorkflowDispatchCards + on the WorkflowBoard itself. */}
+                <ProtectedComponent roles={WORKFLOW_ROLES}>
+                    {WORKFLOWS.map((w) => {
+                        const isCurrent = onWorkflowsPath && selectedWorkflow === w.key;
+                        const Icon = WORKFLOW_ICONS[w.key] || FaCoins;
+                        return (
+                            <button
+                                key={w.key}
+                                type="button"
+                                className={`nav-item nav-item--button ${isCurrent ? 'active' : ''}`}
+                                onClick={() => handleSelectWorkflow(w.key)}
+                                title={w.label}
+                                aria-current={isCurrent ? 'page' : undefined}
+                            >
+                                <span className="nav-icon"><Icon aria-hidden="true" /></span>
+                                {!sidebarCollapsed && <span className="nav-label">{w.label}</span>}
+                            </button>
+                        );
+                    })}
+                </ProtectedComponent>
+
+                {/* Customers / Bills / Reports */}
+                <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
+                    <Link
+                        to="/customers"
+                        className={`nav-item ${isActive('/customers') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaUsers /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Customers</span>}
+                    </Link>
+                </ProtectedComponent>
+                <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
+                    <Link
+                        to="/module-bills"
+                        className={`nav-item ${isActive('/module-bills') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaFileInvoiceDollar /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Bills</span>}
+                    </Link>
+                </ProtectedComponent>
+                <ProtectedComponent roles={['admin', 'manager']}>
+                    <Link
+                        to="/list-views"
+                        className={`nav-item ${isActive('/list-views') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaChartBar /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Reports</span>}
+                    </Link>
+                </ProtectedComponent>
+
+                {/* Admin group */}
+                <ProtectedComponent roles={['admin']}>
+                    <div className={`nav-group ${isActive('/admin/users') ? 'active' : ''}`}>
+                        <div
+                            className="nav-group-header"
+                            onClick={() => !sidebarCollapsed && setAdminOpen((v) => !v)}
+                            style={{ cursor: !sidebarCollapsed ? 'pointer' : 'default' }}
+                        >
+                            <span className="nav-icon"><FaUserShield /></span>
+                            {!sidebarCollapsed && (
+                                <>
+                                    <span className="nav-label">Admin</span>
+                                    <FaChevronDown
+                                        className="nav-group-toggle"
+                                        style={{
+                                            transform: adminOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                        }}
+                                    />
+                                </>
                             )}
                         </div>
-                    );
-
-                    return item.roles ? (
-                        <ProtectedComponent key={index} roles={item.roles}>
-                            {NavItemContent}
-                        </ProtectedComponent>
-                    ) : (
-                        <React.Fragment key={index}>{NavItemContent}</React.Fragment>
-                    );
-                })}
+                        {!sidebarCollapsed && adminOpen && (
+                            <div className="nav-subitems">
+                                <Link
+                                    to="/admin/users"
+                                    className={`nav-subitem ${isActive('/admin/users') ? 'active' : ''}`}
+                                >
+                                    <span>Users</span>
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+                </ProtectedComponent>
             </nav>
 
             {!sidebarCollapsed && (

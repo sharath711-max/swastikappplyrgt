@@ -74,7 +74,7 @@ if not exist "backend\.env" (
     echo  [WARN] backend\.env not found. Creating defaults...
     for /f "usebackq delims=" %%S in (`powershell -NoProfile -Command "$bytes = New-Object byte[] 48; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes); [Convert]::ToBase64String($bytes)"`) do set "GENERATED_JWT_SECRET=%%S"
     (
-        echo PORT=5000
+        echo PORT=6001
         echo HOST=0.0.0.0
         echo DB_PATH=./db/lab.db
         echo JWT_SECRET=!GENERATED_JWT_SECRET!
@@ -134,9 +134,9 @@ if not exist "frontend\node_modules" (
 echo  [OK] All dependencies ready
 echo.
 
-REM --- Kill any processes already on ports 3000 / 5000 ---
-echo  Releasing ports 3000 and 5000...
-for /f "tokens=5" %%p in ('netstat -aon 2^>nul ^| findstr "LISTENING" ^| findstr ":3000 :5000" 2^>nul') do (
+REM --- Kill any processes already on ports 3000 / 6001 ---
+echo  Releasing ports 3000 and 6001...
+for /f "tokens=5" %%p in ('netstat -aon 2^>nul ^| findstr "LISTENING" ^| findstr ":3000 :6001" 2^>nul') do (
     if not "%%p"=="0" (
         taskkill /F /T /PID %%p >nul 2>&1
     )
@@ -144,7 +144,7 @@ for /f "tokens=5" %%p in ('netstat -aon 2^>nul ^| findstr "LISTENING" ^| findstr
 REM --- Brief pause to let OS release sockets ---
 timeout /t 2 /nobreak >nul 2>&1
 REM --- Verify ports are free, force-kill stragglers ---
-for /f "tokens=5" %%p in ('netstat -aon 2^>nul ^| findstr "LISTENING" ^| findstr ":3000 :5000" 2^>nul') do (
+for /f "tokens=5" %%p in ('netstat -aon 2^>nul ^| findstr "LISTENING" ^| findstr ":3000 :6001" 2^>nul') do (
     if not "%%p"=="0" (
         taskkill /F /T /PID %%p >nul 2>&1
     )

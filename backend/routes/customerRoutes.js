@@ -48,7 +48,7 @@ router.get('/:id/statement', async (req, res) => {
                 description,
                 NULL            AS reason
             FROM credit_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
             UNION ALL
             SELECT
                 id, 'weight_loss' AS source,
@@ -59,7 +59,7 @@ router.get('/:id/statement', async (req, res) => {
                 NULL              AS description,
                 reason
             FROM weight_loss_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
             ORDER BY date DESC
         `).all(id, id);
 
@@ -176,7 +176,7 @@ router.get('/:id/timeline', async (req, res) => {
                 description,
                 created         AS event_date
             FROM credit_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
 
             UNION ALL
 
@@ -190,7 +190,7 @@ router.get('/:id/timeline', async (req, res) => {
                 reason          AS description,
                 created         AS event_date
             FROM weight_loss_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
 
             ORDER BY event_date DESC
         `).all(id, id, id, id, id, id, id);

@@ -121,62 +121,70 @@ CREATE TABLE IF NOT EXISTS silver_test_item (
 
 -- 📜 CERTIFICATES (PARENT — FINANCIAL OWNER)
 CREATE TABLE IF NOT EXISTS gold_certificate (
-  id                TEXT PRIMARY KEY,
-  auto_number       TEXT NOT NULL UNIQUE,
-  customer_id       TEXT NOT NULL,
-  status            TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-  total             REAL DEFAULT 0,
-  total_net_weight  REAL DEFAULT 0,
-  total_fine_weight REAL DEFAULT 0,
-  gst               INTEGER DEFAULT 0,
-  total_tax         REAL DEFAULT 0,
-  gst_bill_number   TEXT,
-  mode_of_payment   TEXT,
-  version           INTEGER NOT NULL DEFAULT 1,
-  created           DATETIME NOT NULL,
-  in_progress_at    DATETIME,
-  done_at           DATETIME,
-  lastmodified      DATETIME NOT NULL,
-  deletedon         DATETIME,
+  id                 TEXT PRIMARY KEY,
+  auto_number        TEXT NOT NULL UNIQUE,
+  customer_id        TEXT NOT NULL,
+  status             TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  total              REAL DEFAULT 0,
+  total_net_weight   REAL DEFAULT 0,
+  total_fine_weight  REAL DEFAULT 0,
+  gst                INTEGER DEFAULT 0,
+  total_tax          REAL DEFAULT 0,
+  gst_bill_number    TEXT,
+  mode_of_payment    TEXT,
+  -- Atomic idempotency gate for ledger charge.
+  ledger_charged_at  DATETIME,
+  version            INTEGER NOT NULL DEFAULT 1,
+  created            DATETIME NOT NULL,
+  in_progress_at     DATETIME,
+  done_at            DATETIME,
+  lastmodified       DATETIME NOT NULL,
+  deletedon          DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
 CREATE TABLE IF NOT EXISTS silver_certificate (
-  id               TEXT PRIMARY KEY,
-  auto_number      TEXT NOT NULL UNIQUE,
-  customer_id      TEXT NOT NULL,
-  status           TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-  total            REAL DEFAULT 0,
-  total_net_weight REAL DEFAULT 0,
-  gst              INTEGER DEFAULT 0,
-  total_tax        REAL DEFAULT 0,
-  gst_bill_number  TEXT,
-  mode_of_payment  TEXT,
-  version          INTEGER NOT NULL DEFAULT 1,
-  created          DATETIME NOT NULL,
-  in_progress_at   DATETIME,
-  done_at          DATETIME,
-  lastmodified     DATETIME NOT NULL,
-  deletedon        DATETIME,
+  id                 TEXT PRIMARY KEY,
+  auto_number        TEXT NOT NULL UNIQUE,
+  customer_id        TEXT NOT NULL,
+  status             TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  total              REAL DEFAULT 0,
+  total_net_weight   REAL DEFAULT 0,
+  gst                INTEGER DEFAULT 0,
+  total_tax          REAL DEFAULT 0,
+  gst_bill_number    TEXT,
+  mode_of_payment    TEXT,
+  -- Atomic idempotency gate for ledger charge.
+  ledger_charged_at  DATETIME,
+  version            INTEGER NOT NULL DEFAULT 1,
+  created            DATETIME NOT NULL,
+  in_progress_at     DATETIME,
+  done_at            DATETIME,
+  lastmodified       DATETIME NOT NULL,
+  deletedon          DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
 CREATE TABLE IF NOT EXISTS photo_certificate (
-  id              TEXT PRIMARY KEY,
-  auto_number     TEXT NOT NULL UNIQUE,
-  customer_id     TEXT NOT NULL,
-  status          TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
-  total           REAL DEFAULT 0,
-  gst             INTEGER DEFAULT 0,
-  total_tax       REAL DEFAULT 0,
-  gst_bill_number TEXT,
-  mode_of_payment TEXT,
-  version         INTEGER NOT NULL DEFAULT 1,
-  created         DATETIME NOT NULL,
-  in_progress_at  DATETIME,
-  done_at         DATETIME,
-  lastmodified    DATETIME NOT NULL,
-  deletedon       DATETIME,
+  id                 TEXT PRIMARY KEY,
+  auto_number        TEXT NOT NULL UNIQUE,
+  customer_id        TEXT NOT NULL,
+  status             TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
+  total              REAL DEFAULT 0,
+  gst                INTEGER DEFAULT 0,
+  total_tax          REAL DEFAULT 0,
+  gst_bill_number    TEXT,
+  mode_of_payment    TEXT,
+  -- Atomic idempotency gate for ledger charge. NULL = not yet charged;
+  -- DATETIME = first charge timestamp. Subsequent charges no-op via
+  -- UPDATE ... WHERE ledger_charged_at IS NULL (changes()=0 → already charged).
+  ledger_charged_at  DATETIME,
+  version            INTEGER NOT NULL DEFAULT 1,
+  created            DATETIME NOT NULL,
+  in_progress_at     DATETIME,
+  done_at            DATETIME,
+  lastmodified       DATETIME NOT NULL,
+  deletedon          DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
@@ -186,7 +194,7 @@ CREATE TABLE IF NOT EXISTS gold_certificate_item (
   item_number TEXT NOT NULL UNIQUE,
   gold_certificate_id TEXT NOT NULL,
 
-  certificate_number TEXT NOT NULL,   -- A01, A02 (PRINT ONLY)
+  certificate_number TEXT NOT NULL,   -- A001-A999, B001-..., Z999, then wraps to A001 (PRINT ONLY)
 
   name TEXT,
   item_type TEXT NOT NULL,
@@ -249,45 +257,53 @@ CREATE TABLE IF NOT EXISTS photo_certificate_item (
     REFERENCES photo_certificate(id) ON DELETE CASCADE
 );
 
--- 💰 CREDIT HISTORY (APPEND ONLY)
+-- 💰 CREDIT HISTORY — customer-centric business history.
+--    Standard lifecycle metadata: created / lastmodified / deletedon.
+--    Soft-delete is honored by all read paths (balance roll-up, list,
+--    analytics) via WHERE deletedon IS NULL.
 CREATE TABLE IF NOT EXISTS credit_history (
-  id TEXT PRIMARY KEY,
-  customer_id TEXT NOT NULL,
-  amount REAL DEFAULT 0,
-  type TEXT CHECK (type IN ('CREDIT','DEBIT')) NOT NULL,
-  mode_of_payment TEXT,
-  description TEXT,
+  id               TEXT PRIMARY KEY,
+  customer_id      TEXT NOT NULL,
+  amount           REAL DEFAULT 0,
+  type             TEXT CHECK (type IN ('CREDIT','DEBIT')) NOT NULL,
+  mode_of_payment  TEXT,
+  description      TEXT,
   previous_balance REAL,
-  request_id TEXT,
-  -- Soft audit link to source entity (no DB FK — used for idempotency checks only)
-  reference_type TEXT,
-  reference_id   TEXT,
-  created DATETIME NOT NULL,
+  request_id       TEXT,
+  created          DATETIME NOT NULL,
+  lastmodified     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deletedon        DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_history_request_id ON credit_history(request_id) WHERE request_id IS NOT NULL;
 
--- ⚖️ WEIGHT LOSS HISTORY (APPEND ONLY)
+-- ⚖️ WEIGHT LOSS HISTORY — customer-centric business history.
+--    Same lifecycle contract as credit_history.
 CREATE TABLE IF NOT EXISTS weight_loss_history (
-  id TEXT PRIMARY KEY,
-  customer_id TEXT NOT NULL,
-  amount REAL NOT NULL,
-  reason TEXT,
+  id              TEXT PRIMARY KEY,
+  customer_id     TEXT NOT NULL,
+  amount          REAL NOT NULL,
+  reason          TEXT,
   mode_of_payment TEXT,
-  -- Soft audit link to the test that caused the loss (no DB FK — text reference only)
-  ref_id TEXT,
-  created DATETIME NOT NULL,
+  created         DATETIME NOT NULL,
+  lastmodified    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deletedon       DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
--- 🧾 RECEIPTS (IMMUTABLE SNAPSHOTS)
+-- 🧾 RECEIPTS (IMMUTABLE SNAPSHOTS) — full lifecycle contract.
+--    Renamed created_at → created for naming consistency. lastmodified
+--    + deletedon added so receipts follow the same rule as other
+--    business entities.
 CREATE TABLE IF NOT EXISTS receipts (
-  id TEXT PRIMARY KEY,
-  customer_id TEXT NOT NULL,
-  snapshot TEXT NOT NULL,        -- JSON
-  snapshot_hash TEXT NOT NULL,   -- HMAC
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  id            TEXT PRIMARY KEY,
+  customer_id   TEXT NOT NULL,
+  snapshot      TEXT NOT NULL,        -- JSON
+  snapshot_hash TEXT NOT NULL,        -- HMAC
+  created       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  lastmodified  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deletedon     DATETIME,
   FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
@@ -326,6 +342,11 @@ CREATE TRIGGER IF NOT EXISTS update_sti_lastmodified AFTER UPDATE ON silver_test
 CREATE TRIGGER IF NOT EXISTS update_gci_lastmodified AFTER UPDATE ON gold_certificate_item BEGIN UPDATE gold_certificate_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 CREATE TRIGGER IF NOT EXISTS update_sci_lastmodified AFTER UPDATE ON silver_certificate_item BEGIN UPDATE silver_certificate_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 CREATE TRIGGER IF NOT EXISTS update_pci_lastmodified AFTER UPDATE ON photo_certificate_item BEGIN UPDATE photo_certificate_item SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+
+-- Lifecycle triggers for the customer-centric history + receipts tables.
+CREATE TRIGGER IF NOT EXISTS update_ch_lastmodified  AFTER UPDATE ON credit_history      BEGIN UPDATE credit_history      SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+CREATE TRIGGER IF NOT EXISTS update_wlh_lastmodified AFTER UPDATE ON weight_loss_history BEGIN UPDATE weight_loss_history SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+CREATE TRIGGER IF NOT EXISTS update_receipts_lastmodified AFTER UPDATE ON receipts       BEGIN UPDATE receipts            SET lastmodified = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 
 -- 📋 AUDIT LOGS (Gap 3: Compliance — who changed what)
 CREATE TABLE IF NOT EXISTS audit_logs (

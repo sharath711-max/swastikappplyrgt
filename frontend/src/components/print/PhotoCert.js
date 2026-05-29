@@ -18,7 +18,7 @@ const PhotoCertificateTemplate = ({ test, item, photos = [] }) => {
         if (path.startsWith('blob:') || path.startsWith('data:')) return path;
         const apiRoot = process.env.REACT_APP_API_URL
             ? process.env.REACT_APP_API_URL.replace(/\/api\/?$/, '')
-            : `${window.location.protocol}//${window.location.hostname}:5000`;
+            : `${window.location.protocol}//${window.location.hostname}:6001`;
         const base = apiRoot;
         return path.startsWith('http') ? path : `${base}/${path}`;
     };
@@ -26,7 +26,12 @@ const PhotoCertificateTemplate = ({ test, item, photos = [] }) => {
     const primaryPhoto = photos[0] || item.media_path || item.media;
     const purity  = Number(item.purity) || 0;
     const grossWt = (Number(item.gross_weight) || 0).toFixed(3);
-    const ktVal   = ((purity / 100) * 24).toFixed(2);
+    // Python `|in_carat` filter: round(n * 0.24, 2). Python's float repr keeps
+    // a minimum of one decimal (22 → "22.0", 22.5 → "22.5"). The "KT" suffix is
+    // PRE-PRINTED on PC paper — render the bare number only, otherwise the
+    // physical print shows the carat label twice.
+    const _ktRaw = Math.round(purity * 0.24 * 100) / 100;
+    const ktVal  = Number.isInteger(_ktRaw) ? `${_ktRaw}.0` : _ktRaw.toString();
     const date    = new Date(item.created_at || test.createdon || Date.now())
                         .toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit' });
     const certNo  = `${test.auto_number || test.bill_number || ''}-${item.item_no || item.item_number || 'A01'}`;
@@ -43,7 +48,7 @@ const PhotoCertificateTemplate = ({ test, item, photos = [] }) => {
                             <tr><td><span className="pc-h5">{certNo}</span></td></tr>
                             <tr><td><span className="pc-h5 pc-mb-extra">{(item.item_type || '').toUpperCase()}</span></td></tr>
                             <tr><td><span className="pc-h5 pc-weight">{grossWt}<span className="pc-gm"> GM</span></span></td></tr>
-                            <tr><td><span className="pc-h5">{item.show_kt ? `${ktVal} KT` : ''}</span></td></tr>
+                            <tr><td><span className="pc-h5">{item.show_kt ? ktVal : ''}</span></td></tr>
                             <tr><td><span className="pc-h5 pc-weight">{purity.toFixed(2)}</span></td></tr>
                             <tr><td><span className="pc-h5 signatory">Bhimram</span></td></tr>
                         </tbody>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import ParityModeBanner from './ParityModeBanner';
 import { APP_CONFIG } from '../../utils/Constants';
 import './AppShell.css';
 
@@ -15,6 +16,11 @@ const AppShell = ({ children }) => {
 
     return (
         <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            {/* Persistent governance-risk banner. Sits above the Header so it
+                is the topmost element on every page. Renders nothing when the
+                backend is in STRICT mode. */}
+            <ParityModeBanner />
+
             {/* Global Header */}
             <Header
                 sidebarCollapsed={sidebarCollapsed}

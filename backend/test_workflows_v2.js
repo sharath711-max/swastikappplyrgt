@@ -5,7 +5,7 @@
 
 const axios = require('axios');
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:6001/api';
 
 const log = {
   success: (msg) => console.log('\x1b[32m✅\x1b[0m', msg),

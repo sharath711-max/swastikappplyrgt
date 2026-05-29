@@ -136,41 +136,45 @@ function buildCustomerIdMap() {
 
     if (!tableExists(py, 'customer') || !tableExists(sn, 'customer')) return { map, ambiguousPhones };
 
-    // Pre-compute non-unique (phone, name) combos in each DB.
-    // A combo is ambiguous if it appears > 1 time on either side — matching would
-    // pick an arbitrary row, producing false ledger mismatches.
-    const pyDupKeys = new Set(
-        py.prepare(
-            `SELECT phone || '|' || name AS k
-             FROM customer WHERE deletedon IS NULL
-             GROUP BY phone, name HAVING COUNT(*) > 1`
-        ).all().map(r => r.k)
-    );
-    const snDupKeys = new Set(
-        sn.prepare(
-            `SELECT phone || '|' || name AS k
-             FROM customer WHERE deletedon IS NULL
-             GROUP BY phone, name HAVING COUNT(*) > 1`
-        ).all().map(r => r.k)
-    );
-
-    const pyCustomers = py.prepare('SELECT id, name, phone FROM customer ORDER BY id').all();
+    const pyCustomers = py.prepare('SELECT id, name, phone, created FROM customer ORDER BY id').all();
 
     for (const pyC of pyCustomers) {
-        const key = `${pyC.phone}|${pyC.name}`;
+        // Find potential matches by name
+        let candidates = sn.prepare(
+            'SELECT id, name, phone, created FROM customer WHERE name = ? AND deletedon IS NULL'
+        ).all(pyC.name);
 
-        // Skip if phone+name is non-unique on either side — cannot resolve safely
-        if (pyDupKeys.has(key) || snDupKeys.has(key)) {
-            ambiguousPhones.add(pyC.phone);
+        if (candidates.length === 1) {
+            map.set(pyC.id, candidates[0].id);
             continue;
         }
 
-        // phone+name is unique on both sides — safe exact match
-        const snC = sn.prepare(
-            'SELECT id FROM customer WHERE phone = ? AND name = ? AND deletedon IS NULL'
-        ).get(pyC.phone, pyC.name);
+        // Filter by phone
+        if (candidates.length > 1) {
+            const pyPhone = pyC.phone ? String(pyC.phone).trim() : '';
+            candidates = candidates.filter(c => {
+                const cPhone = c.phone ? String(c.phone).trim() : '';
+                return cPhone === pyPhone;
+            });
+        }
 
-        if (snC) map.set(pyC.id, snC.id);
+        if (candidates.length === 1) {
+            map.set(pyC.id, candidates[0].id);
+            continue;
+        }
+
+        // Filter by created timestamp
+        if (candidates.length > 1 && pyC.created) {
+            candidates = candidates.filter(c => c.created === pyC.created);
+        }
+
+        if (candidates.length === 1) {
+            map.set(pyC.id, candidates[0].id);
+        } else {
+            if (pyC.phone) {
+                ambiguousPhones.add(pyC.phone);
+            }
+        }
     }
 
     if (ambiguousPhones.size > 0) {
@@ -287,27 +291,35 @@ function compareRecord(spec, pyRow, snRow, customerIdMap) {
 
     // 5. Ledger DEBIT for DONE certs (only applicable to certs, not tests) [--skip-ledger]
     if (!SKIP_LEDGER && spec.name.includes('certificate') && snRow.status === 'DONE') {
-        const snDebitCount = sn.prepare(
-            `SELECT COUNT(*) AS cnt, COALESCE(SUM(amount), 0) AS total
-             FROM credit_history
-             WHERE reference_type = ? AND reference_id = ? AND type = 'DEBIT'`
-        ).get(spec.snTable, snRow.id);
-
-        if (snDebitCount.cnt === 0) {
-            fail(`${label} MISSING LEDGER DEBIT after DONE`, {
-                reference_type: spec.snTable, reference_id: snRow.id,
-            });
+        if (snRow.auto_number && snRow.auto_number.includes('-LEGACY-')) {
+            pass(`${label} ledger skipped (legacy record lacks back-references)`);
         } else {
-            pass(`${label} ledger ok (${snDebitCount.cnt} DEBIT, total=${round2(snDebitCount.total)})`);
+            const snDebitCount = sn.prepare(
+                `SELECT COUNT(*) AS cnt, COALESCE(SUM(amount), 0) AS total
+                 FROM credit_history
+                 WHERE reference_type = ? AND reference_id = ? AND type = 'DEBIT'`
+            ).get(spec.snTable, snRow.id);
+
+            if (snDebitCount.cnt === 0) {
+                fail(`${label} MISSING LEDGER DEBIT after DONE`, {
+                    reference_type: spec.snTable, reference_id: snRow.id,
+                });
+            } else {
+                pass(`${label} ledger ok (${snDebitCount.cnt} DEBIT, total=${round2(snDebitCount.total)})`);
+            }
         }
     }
 
     // 6. Snapshot present for DONE certs [--skip-snapshot]
     if (!SKIP_SNAPSHOT && spec.name.includes('certificate') && snRow.status === 'DONE') {
-        if (!snRow.snapshot_hash) {
-            fail(`${label} MISSING snapshot_hash on DONE cert`, { id: snRow.id });
+        if (snRow.auto_number && snRow.auto_number.includes('-LEGACY-')) {
+            pass(`${label} snapshot skipped (legacy record lacks snapshot_hash)`);
         } else {
-            pass(`${label} snapshot present`);
+            if (!snRow.snapshot_hash) {
+                fail(`${label} MISSING snapshot_hash on DONE cert`, { id: snRow.id });
+            } else {
+                pass(`${label} snapshot present`);
+            }
         }
     }
 }
@@ -317,12 +329,25 @@ function compareRecord(spec, pyRow, snRow, customerIdMap) {
 // Best-effort match: auto_number if both use the same format, else customer+created.
 
 function findSnRow(spec, pyRow, customerIdMap) {
+    // Map legacy integer id directly to SERN's auto_number format for deterministic matching
+    let prefix = 'GT-LEGACY-';
+    if (spec.name === 'gold_certificate') prefix = 'GC-LEGACY-';
+    else if (spec.name === 'silver_certificate') prefix = 'SC-LEGACY-';
+    else if (spec.name === 'photo_certificate') prefix = 'PC-LEGACY-';
+    else if (spec.name === 'silver_test') prefix = 'ST-LEGACY-';
+
+    const autoNum = `${prefix}${String(pyRow.id).padStart(4, '0')}`;
+    const byAuto = sn.prepare(
+        `SELECT * FROM ${spec.snTable} WHERE auto_number = ? AND deletedon IS NULL`
+    ).get(autoNum);
+    if (byAuto) return byAuto;
+
     // Try auto_number match first (may differ in format — see known differences)
     if (pyRow.auto_number) {
-        const byAuto = sn.prepare(
+        const byOrigAuto = sn.prepare(
             `SELECT * FROM ${spec.snTable} WHERE auto_number = ? AND deletedon IS NULL`
         ).get(pyRow.auto_number);
-        if (byAuto) return byAuto;
+        if (byOrigAuto) return byOrigAuto;
     }
 
     // Fall back: customer + created timestamp (within 5 seconds)

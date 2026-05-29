@@ -1,7 +1,7 @@
 // pc_modal_test.spec.js — Photo Certificate full modal flow
 const { test, expect } = require('@playwright/test');
 
-const API = 'http://127.0.0.1:5000/api';
+const API = 'http://127.0.0.1:6001/api';
 
 // Minimal 1×1 transparent PNG — used as a test photo upload
 const TEST_PNG = Buffer.from(
@@ -21,10 +21,11 @@ async function login(page) {
 async function goToPCTab(page) {
     await page.goto('/workflow?tab=photo_cert');
     await page.waitForTimeout(1200);
-    const pcTab = page.locator('.tab-pill', { hasText: 'Photo Cert' });
-    await pcTab.waitFor({ timeout: 8000 });
-    if (!(await pcTab.getAttribute('class')).includes('active')) {
-        await pcTab.click();
+    const pcRow = page.locator('.workflow-rail-row', { hasText: 'Photo Certificate' });
+    await pcRow.waitFor({ timeout: 8000 });
+    const railItem = page.locator('.workflow-rail-item', { has: pcRow });
+    if (!(await railItem.getAttribute('class') || '').includes('is-active')) {
+        await pcRow.click();
         await page.waitForTimeout(600);
     }
 }
@@ -38,7 +39,7 @@ async function getToken(page) {
 }
 
 async function createPCViaUI(page) {
-    const newBtn = page.locator('.btn-action', { hasText: '+ New Photo Cert' });
+    const newBtn = page.getByRole('button', { name: 'New Photo Certificate' });
     await newBtn.waitFor({ timeout: 6000 });
     await newBtn.click();
     await page.waitForTimeout(500);

@@ -2,6 +2,7 @@ const { db, now, genId, getNextSequence, transaction } = require('../db/db');
 const SequenceService = require('../services/sequenceService');
 const SilverTestCalculationService = require('../services/silverTestCalculationService');
 const { buildCompletionRequestId, claimCompletion } = require('../utils/completionGuard');
+const wlhRepo = require('./weightLossHistoryRepository');
 
 class SilverTestRepository {
     constructor() {
@@ -284,14 +285,14 @@ class SilverTestRepository {
 
             // 3. Record Weight Loss if applicable
             if (weightLossAmount > 0) {
-                const wlhId = genId('WLH');
                 const test = this.db.prepare("SELECT customer_id FROM silver_test WHERE id = ?").get(id);
-
                 if (test) {
-                    this.db.prepare(`
-                        INSERT INTO weight_loss_history (id, customer_id, amount, reason, created)
-                        VALUES (?, ?, ?, ?, ?)
-                    `).run(wlhId, test.customer_id, weightLossAmount, `Silver Test Finalization: ${id}`, timestamp);
+                    wlhRepo.insertWithinTransaction(this.db, {
+                        customer_id    : test.customer_id,
+                        amount         : weightLossAmount,
+                        reason         : `Silver Test Finalization: ${id}`,
+                        mode_of_payment: mode_of_payment || null,
+                    });
                 }
             }
 

@@ -17,12 +17,9 @@ const logger                  = require('./utils/logger');
 const { getAllowedCorsOrigins, getJwtSecret } = require('./config/env');
 const { correlationMiddleware, getRequestId } = require('./utils/audit');
 const { globalErrorHandler }  = require('./middleware/errorHandler');
-const { maintenanceMiddleware } = require('./middleware/maintenanceMiddleware');
-const cron                    = require('node-cron');
-const { createBackup }        = require('./scripts/backup');
 
 const app  = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 6001;
 
 const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
 const isAllowedCorsOrigin = (origin) => !origin || allowedCorsOrigins.has(origin);
@@ -62,9 +59,6 @@ try {
     process.exit(1);
 }
 
-// ── 4.5 Maintenance Lock ──────────────────────────────────────────────────────
-app.use(maintenanceMiddleware);
-
 // ── 5. API routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth',             require('./routes/authRoutes'));
 app.use('/api/public/documents', require('./routes/publicDocumentRoutes'));
@@ -84,6 +78,7 @@ app.use('/api/records',          require('./routes/recordRoutes'));
 app.use('/api/analytics',        require('./routes/analyticsRoutes'));
 app.use('/api/bills',            require('./routes/billsRoutes'));
 app.use('/api/audit',            require('./routes/auditRoutes'));
+app.use('/api/system',           require('./routes/systemRoutes'));
 
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', message: 'Swastik API is running' });
@@ -151,27 +146,14 @@ app.use(globalErrorHandler);
     _maintInterval.unref();
 
     const _startupCleanup = setTimeout(() => {
-        try { 
-            _maintDb.prepare(_cleanupSql).run(); 
+        try {
+            _maintDb.prepare(_cleanupSql).run();
             _recycleBinTables.forEach(table => {
                 _maintDb.prepare(`DELETE FROM ${table} WHERE deletedon < datetime('now', '-30 days')`).run();
             });
         } catch (_) {}
     }, 5000);
     _startupCleanup.unref();
-
-    // ── SCHEDULED BACKUP ──────────────────────────────────────────────────────
-    // 21:30 (9:30 PM) daily.
-    // IST is ensured by process.env.TZ = 'Asia/Kolkata' at the top of this file.
-    cron.schedule('30 21 * * *', async () => {
-        console.log('⏰ [SCHEDULED TASK] Starting daily backup (9:30 PM)...');
-        try {
-            await createBackup();
-            console.log('✅ [SCHEDULED TASK] Daily backup completed.');
-        } catch (err) {
-            console.error('❌ [SCHEDULED TASK] Daily backup failed:', err);
-        }
-    });
 }
 
 // ── 8. Start server ───────────────────────────────────────────────────────────

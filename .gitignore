@@ -68,4 +68,9 @@ id_mapping.json
 # claude ignore
 .claude/
 .gemini/
-.openai/    
+.openai/
+
+# Local credentials / secrets (never commit)
+credentials.local.txt
+*.local.txt
+*.secrets

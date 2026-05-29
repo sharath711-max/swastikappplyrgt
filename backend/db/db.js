@@ -76,10 +76,26 @@ function applyPostInitMigrations() {
     ensureColumn('audit_logs', 'url',           'TEXT');
     ensureColumn('audit_logs', 'metadata_json', 'TEXT');
 
-    ensureColumn('credit_history',       'reference_type',  'TEXT');
-    ensureColumn('credit_history',       'reference_id',    'TEXT');
-    ensureColumn('weight_loss_history',  'ref_id',          'TEXT');
+    // CH/WLH are customer-centric only — workflow back-references removed.
+    // The `reference_type`/`reference_id`/`ref_id` columns are dropped by
+    // migrateDropWorkflowLinks(); we no longer ensureColumn them on boot.
     ensureColumn('weight_loss_history',  'mode_of_payment', 'TEXT');
+
+    // Uniform lifecycle metadata for business-entity history tables.
+    // SQLite ALTER TABLE ADD COLUMN cannot take a non-constant DEFAULT,
+    // so columns are added as nullable; init.sql declares the NOT NULL
+    // default for fresh installs, and migrations.js backfills existing rows.
+    ensureColumn('credit_history',       'lastmodified',  'DATETIME');
+    ensureColumn('credit_history',       'deletedon',     'DATETIME');
+    ensureColumn('weight_loss_history',  'lastmodified',  'DATETIME');
+    ensureColumn('weight_loss_history',  'deletedon',     'DATETIME');
+    ensureColumn('receipts',             'lastmodified',  'DATETIME');
+    ensureColumn('receipts',             'deletedon',     'DATETIME');
+
+    // Atomic idempotency gate for cert charges
+    ensureColumn('gold_certificate',     'ledger_charged_at', 'DATETIME');
+    ensureColumn('silver_certificate',   'ledger_charged_at', 'DATETIME');
+    ensureColumn('photo_certificate',    'ledger_charged_at', 'DATETIME');
 
     ensureColumn('gold_test',         'print_snapshot',         'TEXT');
     ensureColumn('silver_test',       'print_snapshot',         'TEXT');
@@ -122,6 +138,13 @@ function applyPostInitMigrations() {
     seedGlobal.run('NON_GST_CERT_SEQ', '0');
     seedGlobal.run('GOLD_TEST_SEQ',    '0');
     seedGlobal.run('SILVER_TEST_SEQ',  '0');
+
+    // Global certificate item counters — A001-Z999, cycles back to A001 after Z999.
+    // Format diverges from Python's A01-Z99 (intentional spec change; see
+    // sequenceService.generateCertificateLabel).
+    seedGlobal.run('GOLD_CERT_ITEM_SEQ',   '0');
+    seedGlobal.run('SILVER_CERT_ITEM_SEQ', '0');
+    seedGlobal.run('PHOTO_CERT_ITEM_SEQ',  '0');
 
     db.exec(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_gc_bill_number_unique

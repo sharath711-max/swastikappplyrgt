@@ -21,7 +21,9 @@ const calcSvc      = require('./calculationService');
 const { assertTransitionAllowed } = require('../workflowStateMachine');
 const seqSvc       = require('./sequenceService');
 const ledgerSvc    = require('./ledgerService');
+const sharedValidationGate = require('./sharedValidationGate');
 const customerRepo = require('../../repositories/customerRepository');
+const wlhRepo     = require('../../repositories/weightLossHistoryRepository');
 
 // ─── Fee model (canonical, matches Python source of truth) ────────────────────
 // Python GoldCertificate.PRICE = 50, SilverCertificate.PRICE = 100
@@ -77,6 +79,7 @@ function _assertStatusMove(current, next) {
     }
 }
 
+// IMMUTABLE-on-DONE feature restored per Historical Truth Policy.
 function _assertMutable(type, id) {
     const c   = _cfg(type);
     const row = db.prepare(
@@ -84,12 +87,10 @@ function _assertMutable(type, id) {
          FROM ${c.parentTable} WHERE id = ? AND deletedon IS NULL`
     ).get(id);
     if (!row) throw new BusinessError(`${type} certificate not found: ${id}`, ERR.CERT_NOT_FOUND, 404);
-    // GAP 8 fix: Python allows item edits in all pre-completed states.
-    // Only DONE records are immutable.
     if (row.status === 'DONE') {
         throw new BusinessError(
-            `Certificate ${id} is DONE and immutable`,
-            ERR.IMMUTABLE, 409
+            `Certificate ${id} is finalized (DONE) and cannot be modified`,
+            ERR.STATUS_INVALID, 409
         );
     }
     return row;
@@ -197,7 +198,9 @@ function _insertItemsWork(type, certId, autoNumber, rawItems, ts, startSeq = 1) 
     for (const raw of rawItems) {
         const itemId     = genId(c.itemIdPrefix);
         const itemNumber = seqSvc.generateTestItemNumber(autoNumber, itemSeq);
-        const certLabel  = seqSvc.generateCertificateLabel(itemSeq);
+        // GAP 2 fix: use global counter for certificate_number (Python parity)
+        // Falls back to local seq label if raw already provides a certificate_number
+        const certLabel  = raw.certificate_number || seqSvc.getNextCertificateItemNumber(type);
         itemSeq++;
 
         const normInput = _normaliseItem(raw, type);
@@ -318,6 +321,10 @@ function _createCertificateWork(type, data, ts, tx = db) {
  */
 function createCertificate(type, data) {
     // ── Validate BEFORE transaction ──────────────────────────────────────────
+    // Shared domain validation runs first — single source of truth for item
+    // rules. Maps cert type ('gold' → 'GC', 'silver' → 'SC').
+    const workflowType = type === 'silver' ? 'SC' : 'GC';
+    sharedValidationGate.gateCreate(workflowType, data);
     _validateCreate(type, data);
     audit.validate('certificateService.createCertificate', {
         type,
@@ -335,25 +342,33 @@ function createCertificate(type, data) {
     const _txn = transaction(() => {
         const c  = _cfg(type);
         const tx = db;
+        // Temporal policy: server-side now() is the authoritative `created`.
+        // Any `created` field on `data` is intentionally ignored — backdating
+        // is not supported on this API surface (it would weaken DONE-state
+        // immutability, signed snapshot timestamps, balance roll-up ordering,
+        // and audit interpretability). For historical imports, use a separate
+        // import tool with explicit semantics.
         const ts   = now();
         const cert = _createCertificateWork(type, data, ts, tx);
 
-        // Ledger INSIDE transaction — failure rolls back cert + items
+        // Ledger INSIDE transaction — failure rolls back cert + items.
+        // chargeCertificate is atomic + idempotent (UPDATE … ledger_charged_at
+        // gate). The legacy alreadyCharged-then-recordRevenue pattern is gone.
         let ledgerEntry = null;
         if (post_ledger && cert.totals.grand_total > 0) {
             const cap  = type.charAt(0).toUpperCase() + type.slice(1);
             const desc = `${cap} Certificate ${cert.auto_number} — lab charges`;
 
-            ledgerEntry = ledgerSvc.recordRevenue(type, {
+            const result = ledgerSvc.chargeCertificate(type, {
+                cert_id        : cert.id,
                 customer_id    : data.customer_id,
                 amount         : cert.totals.grand_total,
                 entry_type     : 'DEBIT',
                 description    : desc,
                 mode_of_payment: data.mode_of_payment || 'Cash',
                 post_cash_register: false,
-                reference_type : c.parentTable,
-                reference_id   : cert.id,
             }, tx);
+            ledgerEntry = result.debit ? result : null;
         }
 
         const printSvc = require('./printService');
@@ -375,6 +390,10 @@ function createCertificate(type, data) {
             ledger_id  : result.ledger?.id,
         });
         audit.sequence('certificateService.createCertificate', result.auto_number, type, result.id);
+        // GAP 4 fix: emit cert:created event for real-time sync
+        const socket = require('../../socket');
+        socket.emit(`${type}_cert`, 'cert:created', { id: result.id, auto_number: result.auto_number, type });
+        socket.emit('workflow',     'cert:created', { id: result.id, type });
         return result;
     } catch (err) {
         audit.rollback('certificateService.createCertificate', err, { type, customer_id: data.customer_id });
@@ -521,24 +540,37 @@ function updateStatus(type, id, newStatus, opts = {}) {
                 `UPDATE ${c.parentTable} SET total = ?, total_tax = ?, lastmodified = ? WHERE id = ?`
             ).run(feeTotal, feeTax, ts, id);
 
-            // Step 5: Ledger (cert still IN_PROGRESS)
-            const alreadyCharged = db.prepare(
-                `SELECT COUNT(*) AS cnt FROM credit_history WHERE reference_type = ? AND reference_id = ? AND type = 'DEBIT'`
-            ).get(c.parentTable, id).cnt > 0;
-
-            if (feeTotal > 0 && !alreadyCharged) {
+            // Step 5: Ledger (cert still IN_PROGRESS).
+            // Idempotency is the cert's ledger_charged_at column; chargeCertificate
+            // returns alreadyCharged=true on the second call and is a no-op.
+            if (feeTotal > 0) {
                 const cap  = type.charAt(0).toUpperCase() + type.slice(1);
                 const desc = `${cap} Certificate ${finalRow.auto_number} — lab charges`;
-                ledgerEntry = ledgerSvc.recordRevenue(type, {
+                const result = ledgerSvc.chargeCertificate(type, {
+                    cert_id        : id,
                     customer_id    : finalRow.customer_id,
                     amount         : feeTotal,
                     entry_type     : 'DEBIT',
                     description    : desc,
                     mode_of_payment: finalRow.mode_of_payment || 'Cash',
                     post_cash_register: false,
-                    reference_type : c.parentTable,
-                    reference_id   : id,
                 }, tx);
+                ledgerEntry = result.debit ? result : null;
+            }
+
+            // Step 5b: Auto-link Weight Loss History (only when weight_loss > 0).
+            // Insert participates in the same transaction as the finalize — if the
+            // outer transaction rolls back, no WLH row persists. Helper guards
+            // against null / NaN / <= 0 amounts.
+            const weightLoss = Number(opts.weight_loss);
+            if (Number.isFinite(weightLoss) && weightLoss > 0) {
+                const cap = type.charAt(0).toUpperCase() + type.slice(1);
+                wlhRepo.insertWithinTransaction(tx, {
+                    customer_id    : finalRow.customer_id,
+                    amount         : weightLoss,
+                    reason         : `${cap} Certificate Finalization: ${id}`,
+                    mode_of_payment: finalRow.mode_of_payment || null,
+                });
             }
 
             // Step 6: Compute snapshot — must run after Step 4 so it captures the fee total

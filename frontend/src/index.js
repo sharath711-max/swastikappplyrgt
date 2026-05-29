@@ -1,6 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import 'bootstrap/dist/css/bootstrap.min.css';
+// Salesforce Lightning Design System — primary visual layer. Loaded AFTER
+// Bootstrap so SLDS utility classes win in specificity ties where the two
+// libraries overlap (rare, since SLDS is `slds-*` namespaced).
+import '@salesforce-ux/design-system/assets/styles/salesforce-lightning-design-system.min.css';
 import './styles/ModalContainer.css';
 import App from './App';
 

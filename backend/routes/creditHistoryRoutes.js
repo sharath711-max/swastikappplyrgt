@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const creditHistoryService = require('../services/creditHistoryService');
+const creditHistoryRepository = require('../repositories/creditHistoryRepository');
 const customerRepository = require('../repositories/customerRepository');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
@@ -89,15 +90,32 @@ router.get('/export', (req, res) => {
         return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
     };
 
-    const header = 'Date,Type,Amount,Mode,Description,Reference Type,Reference ID';
+    // Customer-centric history only — no workflow back-references in CSV.
+    const header = 'Date,Type,Amount,Mode,Description';
     const lines = rows.map(r => [
-        r.created, r.type, r.amount, r.mode_of_payment,
-        r.description, r.reference_type || '', r.reference_id || ''
+        r.created, r.type, r.amount, r.mode_of_payment, r.description
     ].map(escape).join(','));
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send([header, ...lines].join('\r\n'));
+});
+
+/**
+ * DELETE /api/credit-history/:id
+ * Soft-delete a CH row. Re-runs the customer balance roll-up, so the
+ * deleted entry is removed from the total. Idempotent.
+ */
+router.delete('/:id', (req, res) => {
+    try {
+        const result = creditHistoryRepository.softDelete(req.params.id);
+        if (!result.success) {
+            return res.status(404).json({ success: false, error: result.reason || 'not_found' });
+        }
+        res.json({ success: true, data: result });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 module.exports = router;

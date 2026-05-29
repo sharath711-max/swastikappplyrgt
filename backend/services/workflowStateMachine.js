@@ -76,13 +76,8 @@ function assertTransitionAllowed(type, fromStatus, toStatus) {
         );
     }
 
-    if (TERMINAL_STATUSES.has(fromStatus)) {
-        throw new BusinessError(
-            `${type} is already ${fromStatus} and cannot be moved`,
-            ERR.IMMUTABLE, 409,
-        );
-    }
-
+    // IMMUTABLE-on-DONE feature removed per operator request — terminal
+    // status (DONE) no longer blocks further state transitions.
     const from = STATUS_RANK[fromStatus];
     const to   = STATUS_RANK[toStatus];
     if (from === undefined || to === undefined) {

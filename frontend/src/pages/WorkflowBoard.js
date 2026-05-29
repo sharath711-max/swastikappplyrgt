@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Badge, Button, Spinner } from 'react-bootstrap';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Badge, Button } from 'react-bootstrap';
 import { useToast } from '../contexts/ToastContext';
 import api from '../services/api';
 import NewGoldTestModal from '../components/NewGoldTestModal';
 import NewSilverTestModal from '../components/NewSilverTestModal';
 import NewCertificateModal from '../components/NewCertificateModal';
 import Phase2Modal from '../components/Phase2Modal';
-import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes } from 'react-icons/fa';
+import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaCertificate, FaLock } from 'react-icons/fa';
 import { useSocket } from '../hooks/useSocket';
 import { usePrint } from '../contexts/PrintContext';
+import { useWorkflow, WORKFLOW_KEYS, WORKFLOW_BY_KEY } from '../contexts/WorkflowContext';
+import { getAgingBucket, agingTitle } from '../utils/aging';
 import './WorkflowBoard.css';
 
 const COLUMN_LIMIT = 200;
@@ -27,21 +29,6 @@ function replaceAcrossColumns(board, updated) {
     return result;
 }
 
-function moveToDoneColumn(board, id, type) {
-    let found = null;
-    const result = { TODO: [], IN_PROGRESS: [], DONE: [] };
-    for (const col of ['TODO', 'IN_PROGRESS', 'DONE']) {
-        result[col] = (board[col] || []).filter(item => {
-            if (item.id === id && item.type === type) {
-                found = { ...item, status: 'DONE' };
-                return false;
-            }
-            return true;
-        });
-    }
-    if (found) result.DONE = [found, ...result.DONE];
-    return result;
-}
 
 function removeFromAllColumns(board, id, type) {
     const result = {};
@@ -64,35 +51,54 @@ function prependToColumn(board, newItem) {
 
 const WorkflowBoard = () => {
     const { addToast } = useToast();
-    const navigate = useNavigate();
     const location = useLocation();
+    const navigate = useNavigate();
     const { triggerPrint } = usePrint();
+    const {
+        selectedWorkflow,
+        setSelectedWorkflow,
+        newRequest,
+        consumeNewRequest,
+        setOpenModalKey,
+        registerModalCloser,
+    } = useWorkflow();
+
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [batchMoving, setBatchMoving] = useState(false);
     const [showNewTestModal, setShowNewTestModal] = useState(false);
     const [showSilverTestModal, setShowSilverTestModal] = useState(false);
     const [certModal, setCertModal] = useState({ show: false, type: 'gold' });
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, item: null });
-    const [activeTab, setActiveTab] = useState('gold');
     const [searchTerm, setSearchTerm] = useState('');
     const [draggedItem, setDraggedItem] = useState(null);
     const [dragOverCol, setDragOverCol] = useState(null);
 
     const [phase2Modal, setPhase2Modal] = useState({ show: false, test: null, readOnly: false });
-    const [selected, setSelected]       = useState(new Set());
-    const [bulkLoading, setBulkLoading] = useState(false);
     const [board, setBoard] = useState({ TODO: [], IN_PROGRESS: [], DONE: [] });
+    // Low-frequency tick so aging-bucket boundaries (30m/2h/1d) cross without
+    // requiring a fetch. 60s is well under the smallest bucket width.
+    const [nowMs, setNowMs] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNowMs(Date.now()), 60 * 1000);
+        return () => clearInterval(id);
+    }, []);
     const fetchSequenceRef  = React.useRef(0);
     const actionSequenceRef = React.useRef(0);
     const lastVersions      = React.useRef({});   // { id: version } — stale-update guard
     const pendingIds        = React.useRef(new Set()); // ids of in-flight optimistic writes
 
+    // Legacy ?tab= URL support — map once into the context, then strip from URL
+    // so the sidebar (and not the URL) becomes the source of truth.
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const tab = params.get('tab');
-        if (tab) setActiveTab(tab);
-    }, [location.search]);
+        if (tab && WORKFLOW_KEYS.includes(tab)) {
+            setSelectedWorkflow(tab);
+            params.delete('tab');
+            const query = params.toString();
+            navigate(`${location.pathname}${query ? `?${query}` : ''}`, { replace: true });
+        }
+    }, [location.search, location.pathname, navigate, setSelectedWorkflow]);
 
     const fetchData = useCallback(async () => {
         const requestSeq = ++fetchSequenceRef.current;
@@ -239,66 +245,6 @@ const WorkflowBoard = () => {
         [fetchBoardItem]
     );
 
-    // ── BATCH MOVE ────────────────────────────────────────────────────────
-    const handleBatchTransferAll = async () => {
-        const testedItems = filteredItems.filter(t => t.status === 'IN_PROGRESS');
-        if (testedItems.length === 0) {
-            addToast('No items in Tested status to transfer.', 'info');
-            return;
-        }
-
-        const eligible = testedItems.filter(item => {
-            const amount = Number(item.total || 0);
-            return Number.isFinite(amount) && amount > 0 && !!item.mode_of_payment;
-        });
-
-        if (eligible.length === 0) {
-            addToast('No eligible items ready for completion. Add payment details first.', 'info');
-            return;
-        }
-
-        setBatchMoving(true);
-        addToast(`Moving ${eligible.length} items to Completed...`, 'info');
-        let count = 0;
-        for (const card of eligible) {
-            try {
-                let resultsEndpoint = '';
-                let statusEndpoint = `/workflow/${card.type}/${card.id}/status`;
-
-                if (card.type === 'gold') resultsEndpoint = `/gold-tests/${card.id}/results`;
-                else if (card.type === 'silver') resultsEndpoint = `/silver-tests/${card.id}/results`;
-                else resultsEndpoint = `/certificates/${card.id}/results`;
-
-                const res = await api.get(card.type === 'gold' ? `/gold-tests/${card.id}` :
-                    card.type === 'silver' ? `/silver-tests/${card.id}` :
-                        `/certificates/${card.id}?type=${card.type.replace('_cert', '')}`);
-                const detail = res.data.data || res.data;
-                const cardItems = detail.items || [];
-
-                if (card.type === 'gold' || card.type === 'silver') {
-                    const totalWtLoss = cardItems.reduce((acc, it) => acc + (
-                        Number(it.gross_weight || 0) - (Number(it.test_weight || 0) + Number(it.net_weight || 0))
-                    ), 0);
-                    await api.post(`/${card.type}-tests/${card.id}/finalize`, {
-                        items: cardItems.map(i => ({ id: i.id, purity: Number(i.purity), returned: !!i.returned, item_number: i.item_number || i.item_no })),
-                        mode_of_payment: card.mode_of_payment,
-                        weight_loss: Math.max(0, totalWtLoss),
-                        cert: { gst: false }
-                    }, { headers: { 'X-Request-Id': createRequestId() } });
-                } else {
-                    await api.post('/workflow/finalize', { testId: card.id, type: card.type },
-                        { headers: { 'X-Request-Id': createRequestId() } });
-                }
-                count++;
-            } catch (err) {
-                console.error(`Failed to move item ${card.id}:`, err);
-            }
-        }
-        setBatchMoving(false);
-        addToast(`${count} items moved to Completed.`, 'success');
-        fetchData();
-    };
-
     // ── CARD CLICK ────────────────────────────────────────────────────────
     const handleCardClick = async (item) => {
         try {
@@ -393,6 +339,11 @@ const WorkflowBoard = () => {
                         return Number.isFinite(p) && p > 0 && p <= 100;
                     });
                     if (!hasPurity) {
+                        // Gate rejected the move — roll back the optimistic
+                        // UI so the card returns to its source column rather
+                        // than visually stranding in IN_PROGRESS while
+                        // pendingIds blocks socket reconciliation.
+                        applyBoardState(previousBoard);
                         addToast('⚠️ Add test results (purity) before moving to Tested.', 'warning');
                         setDraggedItem(null);
                         return;
@@ -410,6 +361,9 @@ const WorkflowBoard = () => {
                 const amount = Number(draggedItem.total || 0);
                 const mode = (draggedItem.mode_of_payment || '').trim();
                 if (!(Number.isFinite(amount) && amount > 0 && mode)) {
+                    // Gate rejected the move — roll back the optimistic UI.
+                    // Same rationale as the TODO → IN_PROGRESS gate above.
+                    applyBoardState(previousBoard);
                     addToast('⚠️ Add payment details first before moving to Completed.', 'warning');
                     setDraggedItem(null);
                     return;
@@ -470,11 +424,20 @@ const WorkflowBoard = () => {
         return { accent: '#6366f1', light: '#eef2ff', type: 'cert' };
     };
 
-    const currentTheme = getTabTheme(activeTab);
+    const currentTheme = getTabTheme(selectedWorkflow);
+
+    // Clear search when switching workflows so filters don't carry across queues.
+    const lastSelectedRef = React.useRef(selectedWorkflow);
+    useEffect(() => {
+        if (lastSelectedRef.current !== selectedWorkflow) {
+            setSearchTerm('');
+            lastSelectedRef.current = selectedWorkflow;
+        }
+    }, [selectedWorkflow]);
 
     // ── SEARCH FILTER ─────────────────────────────────────────────────────
     const filteredItems = items.filter(item => {
-        if (item.type !== activeTab) return false;
+        if (item.type !== selectedWorkflow) return false;
         if (!searchTerm.trim()) return true;
         const q = searchTerm.toLowerCase();
         return (
@@ -484,6 +447,61 @@ const WorkflowBoard = () => {
         );
     });
 
+    // ── NEW-WORKFLOW REQUESTS FROM SIDEBAR ────────────────────────────────
+    // Sidebar + button publishes a {key, nonce} token. Atomic consume — the
+    // context drops the token on read, so Strict Mode double-invoke and
+    // multi-subscriber races can't replay the open.
+    // Guard: if the matching modal is already open, do nothing (operator
+    // repeat-click protection — preserves draft form state).
+    useEffect(() => {
+        if (!newRequest) return;
+        const token = consumeNewRequest();
+        if (!token) return;
+        const { key } = token;
+
+        const certType = key === 'photo_cert' ? 'photo' : key.replace('_cert', '');
+        const alreadyOpenForKey =
+            (key === 'gold'   && showNewTestModal) ||
+            (key === 'silver' && showSilverTestModal) ||
+            (key.endsWith('_cert') && certModal.show && certModal.type === certType);
+        if (alreadyOpenForKey) return;
+
+        if (key === 'gold') {
+            setShowNewTestModal(true);
+        } else if (key === 'silver') {
+            setShowSilverTestModal(true);
+        } else {
+            setCertModal({ show: true, type: certType });
+        }
+    }, [newRequest, consumeNewRequest, showNewTestModal, showSilverTestModal, certModal]);
+
+    // Report current open new-* modal to the context so the sidebar's
+    // workflow-switch guard knows when to prompt the operator.
+    useEffect(() => {
+        let key = null;
+        if (showNewTestModal) key = 'gold';
+        else if (showSilverTestModal) key = 'silver';
+        else if (certModal.show) {
+            const t = certModal.type;
+            key = t === 'gold' ? 'gold_cert'
+                : t === 'silver' ? 'silver_cert'
+                : t === 'photo' ? 'photo_cert'
+                : null;
+        }
+        setOpenModalKey(key);
+    }, [showNewTestModal, showSilverTestModal, certModal, setOpenModalKey]);
+
+    // Register the closer the switch guard calls when the operator confirms
+    // abandoning an in-progress entry. Closes every new-* modal type.
+    useEffect(() => {
+        const closer = () => {
+            setShowNewTestModal(false);
+            setShowSilverTestModal(false);
+            setCertModal((prev) => ({ ...prev, show: false }));
+        };
+        return registerModalCloser(closer);
+    }, [registerModalCloser]);
+
     const getTypeLabel = (type) => {
         switch (type) {
             case 'gold': return 'Gold Test';
@@ -492,6 +510,21 @@ const WorkflowBoard = () => {
             case 'silver_cert': return 'Silver Cert';
             case 'photo_cert': return 'Photo Cert';
             default: return type.toUpperCase();
+        }
+    };
+
+    // Section title for the current workflow, with the next-cert-item-number
+    // preview for GC / SC / PC. The peek value comes from the kanban response
+    // so it stays in sync with each refresh — read-only, does not increment.
+    const getSectionTitle = (key) => {
+        const seqs = board.nextCertSeqs || {};
+        switch (key) {
+            case 'gold':        return 'Gold Test';
+            case 'silver':      return 'Silver Test';
+            case 'gold_cert':   return `Gold Certificate Testing${seqs.gold   ? ` (${seqs.gold})`   : ''}`;
+            case 'silver_cert': return `Silver Certificate Testing${seqs.silver ? ` (${seqs.silver})` : ''}`;
+            case 'photo_cert':  return `Photo Certificate Testing${seqs.photo  ? ` (${seqs.photo})`  : ''}`;
+            default: return String(key || '').toUpperCase();
         }
     };
 
@@ -514,14 +547,68 @@ const WorkflowBoard = () => {
         setContextMenu({ visible: false, x: 0, y: 0, item: null });
     };
 
+    // Map workflow item.type → PrintContext route key.
+    // Tests print via the same route in both Receipt (layout:receipt) and
+    // Certificate (full layout) modes; certificates have their own routes.
+    const PRINT_ROUTE_BY_TYPE = {
+        gold       : 'gold-test',
+        silver     : 'silver-test',
+        gold_cert  : 'gold-certificate',
+        silver_cert: 'silver-certificate',
+        photo_cert : 'photo-certificate',
+    };
+
+    // Card-quick-print: one-click receipt direct from the kanban card
+    // without opening Phase2Modal. Reuses the same triggerPrint('receipt')
+    // path as the context-menu Receipt action. stopPropagation prevents
+    // the card body's onClick from firing in parallel.
+    const handleCardReceipt = async (e, item) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!item) return;
+        const printType = PRINT_ROUTE_BY_TYPE[item.type];
+        if (!printType) {
+            addToast('Receipt is only available for known workflows.', 'info');
+            return;
+        }
+        try {
+            await triggerPrint(printType, item.id, { layout: 'receipt' });
+        } catch (err) {
+            addToast('Failed to generate receipt. Please try again.', 'error');
+        }
+    };
+
     const handleReceipt = async () => {
         if (contextMenu.item) {
             const { type, id } = contextMenu.item;
-            const printType = `${type}-test`;
+            const printType = PRINT_ROUTE_BY_TYPE[type];
+            if (!printType) {
+                addToast('Receipt is only available for tests.', 'info');
+                handleCloseContextMenu();
+                return;
+            }
             try {
                 await triggerPrint(printType, id, { layout: 'receipt' });
             } catch (err) {
                 addToast('Failed to generate receipt. Please try again.', 'error');
+            }
+        }
+        handleCloseContextMenu();
+    };
+
+    const handleCertificate = async () => {
+        if (contextMenu.item) {
+            const { type, id } = contextMenu.item;
+            const printType = PRINT_ROUTE_BY_TYPE[type];
+            if (!printType) {
+                addToast('Unknown item type.', 'error');
+                handleCloseContextMenu();
+                return;
+            }
+            try {
+                await triggerPrint(printType, id);
+            } catch (err) {
+                addToast('Failed to generate certificate. Please try again.', 'error');
             }
         }
         handleCloseContextMenu();
@@ -556,176 +643,106 @@ const WorkflowBoard = () => {
     }
 
     return (
-        <div className="workflow-page">
+        <div className="workflow-page slds-scope">
 
-            {/* ── HEADER ── */}
-            <div className="board-header">
-                <div className="board-title">
-                    <h1>Laboratory Workflow</h1>
-                    <p>Real-time laboratory operations monitoring</p>
+            {/* ── HEADER — SLDS page-header pattern ── */}
+            <div className="slds-page-header workflow-page-header">
+                <div className="slds-page-header__row">
+                    <div className="slds-page-header__col-title">
+                        <div className="slds-media">
+                            <div className="slds-media__body">
+                                <div className="slds-page-header__name">
+                                    <div className="slds-page-header__name-title">
+                                        <h1>
+                                            <span className="slds-page-header__title slds-truncate" title="Laboratory Workflow">
+                                                Laboratory Workflow
+                                            </span>
+                                        </h1>
+                                    </div>
+                                </div>
+                                <p className="slds-page-header__meta-text">Real-time laboratory operations monitoring</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="slds-page-header__col-actions">
+                        <div className="slds-page-header__controls">
+                            {/* Search Filter — SLDS form-element + input-has-icon pattern */}
+                            <div className="slds-page-header__control">
+                                <div className="slds-form-element">
+                                    <div className="slds-form-element__control slds-input-has-icon slds-input-has-icon_left-right">
+                                        <FaSearch className="slds-icon slds-input__icon slds-input__icon_left slds-icon-text-default workflow-search-icon" aria-hidden="true" />
+                                        <input
+                                            id="workflow-search"
+                                            type="text"
+                                            className="slds-input workflow-search-input"
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                            placeholder="Search customer, token..."
+                                        />
+                                        {searchTerm && (
+                                            <button
+                                                type="button"
+                                                className="slds-button slds-button_icon slds-input__icon slds-input__icon_right"
+                                                onClick={() => setSearchTerm('')}
+                                                aria-label="Clear search"
+                                            >
+                                                <FaTimes aria-hidden="true" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="slds-page-header__control">
+                                <Button className="slds-button slds-button_neutral" onClick={fetchData}>
+                                    Refresh
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div className="d-flex gap-3 align-items-center flex-wrap">
-                    {/* Search Filter */}
-                    <div style={{ position: 'relative', minWidth: '200px' }}>
-                        <FaSearch style={{
-                            position: 'absolute', left: '10px', top: '50%',
-                            transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '13px'
-                        }} />
-                        <input
-                            id="workflow-search"
-                            type="text"
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            placeholder="Search customer, token..."
-                            style={{
-                                paddingLeft: '32px', paddingRight: searchTerm ? '30px' : '12px',
-                                height: '38px', border: '1.5px solid #e2e8f0', borderRadius: '10px',
-                                fontSize: '13px', outline: 'none', width: '100%',
-                                background: '#f8fafc'
-                            }}
-                        />
-                        {searchTerm && (
-                            <FaTimes
-                                onClick={() => setSearchTerm('')}
-                                style={{
-                                    position: 'absolute', right: '10px', top: '50%',
-                                    transform: 'translateY(-50%)', color: '#94a3b8',
-                                    cursor: 'pointer', fontSize: '12px'
-                                }}
-                            />
+            </div>
+
+            {/* ── BODY: full-width Kanban (workflow rail moved into Sidebar) ── */}
+            <div className={`workflow-body theme-${currentTheme.type}`}>
+                <div className="workflow-main">
+                    {/* ── SECTION TITLE — code echo anchors operator to the active queue ── */}
+                    <div className="section-title-row">
+                        {WORKFLOW_BY_KEY[selectedWorkflow] && (
+                            <span
+                                className={`workflow-code workflow-code--lg workflow-code--${selectedWorkflow}`}
+                                aria-hidden="true"
+                            >
+                                {WORKFLOW_BY_KEY[selectedWorkflow].code}
+                            </span>
                         )}
+                        <span className="section-title-text">{getSectionTitle(selectedWorkflow)}</span>
                     </div>
 
-                    <Button
-                        className="btn-secondary-action"
-                        onClick={handleBatchTransferAll}
-                        disabled={batchMoving}
-                    >
-                        {batchMoving ? <Spinner animation="border" size="sm" /> : <><FaCheck className="me-2" /> Batch Move</>}
-                    </Button>
-                    <Button className="btn-secondary-action" onClick={fetchData}>
-                        Refresh
-                    </Button>
+                    {(selectedWorkflow === 'gold_cert' ||
+                      selectedWorkflow === 'silver_cert' ||
+                      selectedWorkflow === 'photo_cert') && (
+                        <div className="sequence-policy-helper" role="note">
+                            Sequence numbers reset each calendar year. Existing records permanently retain their original sequence.
+                            Skipped numbers can occur after cancellations, retries, or protected audit flows.
+                        </div>
+                    )}
 
-                    {(() => {
-                        const btnText = `+ New ${getTypeLabel(activeTab)}`;
-                        const handleNew = () => {
-                            if (activeTab === 'gold') setShowNewTestModal(true);
-                            else if (activeTab === 'silver') setShowSilverTestModal(true);
-                            else {
-                                const type = activeTab === 'photo_cert' ? 'photo' : activeTab.replace('_cert', '');
-                                setCertModal({ show: true, type });
-                            }
-                        };
-                        return <Button className="btn-action" onClick={handleNew}>{btnText}</Button>;
-                    })()}
-                </div>
-            </div>
+                    {/* ── SEARCH RESULT INFO ── */}
+                    {searchTerm && (
+                        <div className="search-result-info">
+                            Showing <strong>{filteredItems.length}</strong> result{filteredItems.length !== 1 ? 's' : ''} for "<strong>{searchTerm}</strong>"
+                            <span
+                                onClick={() => setSearchTerm('')}
+                                className="search-result-clear"
+                            > × Clear</span>
+                        </div>
+                    )}
 
-            {/* ── TABS ── */}
-            <div className={`tab-navigation theme-${currentTheme.type}`}>
-                {['gold', 'silver', 'gold_cert', 'silver_cert', 'photo_cert'].map(tab => (
-                    <button
-                        key={tab}
-                        className={`tab-pill ${activeTab === tab ? 'active' : ''}`}
-                        onClick={() => { setActiveTab(tab); setSearchTerm(''); navigate(`?tab=${tab}`); }}
-                    >
-                        {getTypeLabel(tab)}
-                    </button>
-                ))}
-            </div>
-
-            {/* ── SEARCH RESULT INFO ── */}
-            {searchTerm && (
-                <div style={{
-                    padding: '6px 24px', fontSize: '12px', color: '#64748b',
-                    background: '#f8fafc', borderBottom: '1px solid #e2e8f0'
-                }}>
-                    Showing <strong>{filteredItems.length}</strong> result{filteredItems.length !== 1 ? 's' : ''} for "<strong>{searchTerm}</strong>"
-                    <span
-                        onClick={() => setSearchTerm('')}
-                        style={{ marginLeft: '8px', color: '#ef4444', cursor: 'pointer', fontWeight: 600 }}
-                    > × Clear</span>
-                </div>
-            )}
-
-            {/* ── BULK ACTION BAR ── */}
-            {selected.size > 0 && (
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '8px 16px', marginBottom: 12,
-                    background: '#eff6ff', borderRadius: 8, fontSize: 13,
-                }}>
-                    <span style={{ fontWeight: 500 }}>{selected.size} selected</span>
-                    <button
-                        className="btn btn-sm btn-primary"
-                        disabled={bulkLoading}
-                        onClick={async () => {
-                            setBulkLoading(true);
-                            try {
-                                const bulkItems = [...selected].map(id => {
-                                    const it = filteredItems.find(i => i.id === id);
-                                    return { type: it?.type, id };
-                                }).filter(i => i.type);
-                                await api.patch('/workflow/bulk-status', { items: bulkItems, status: 'IN_PROGRESS' }, {
-                                    headers: { 'X-Request-Id': createRequestId() }
-                                });
-                                setSelected(new Set());
-                                await fetchData();
-                                addToast(`${bulkItems.length} items moved to In Progress`, 'success');
-                            } catch (e) {
-                                addToast(e.message || 'Bulk update failed', 'error');
-                            } finally {
-                                setBulkLoading(false);
-                            }
-                        }}
-                    >
-                        {bulkLoading ? 'Updating...' : 'Move to In Progress'}
-                    </button>
-                    <button
-                        className="btn btn-sm btn-success"
-                        disabled={bulkLoading}
-                        onClick={async () => {
-                            setBulkLoading(true);
-                            try {
-                                const bulkItems = [...selected].map(id => {
-                                    const it = filteredItems.find(i => i.id === id);
-                                    return { type: it?.type, id };
-                                }).filter(i => i.type);
-                                for (const bulkItem of bulkItems) {
-                                    await api.post('/workflow/finalize', {
-                                        testId: bulkItem.id,
-                                        type: bulkItem.type,
-                                    }, {
-                                        headers: { 'X-Request-Id': createRequestId() }
-                                    });
-                                }
-                                setSelected(new Set());
-                                await fetchData();
-                                addToast(`${bulkItems.length} items completed`, 'success');
-                            } catch (e) {
-                                addToast(e.message || 'Bulk update failed', 'error');
-                            } finally {
-                                setBulkLoading(false);
-                            }
-                        }}
-                    >
-                        {bulkLoading ? 'Updating...' : 'Mark Done'}
-                    </button>
-                    <button
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={() => setSelected(new Set())}
-                    >
-                        Clear
-                    </button>
-                </div>
-            )}
-
-            {/* ── KANBAN GRID ── */}
-            <div className="kanban-grid">
+                    {/* ── KANBAN GRID — SLDS grid container, custom columns inside ── */}
+                    <div className="kanban-grid slds-grid slds-gutters slds-wrap">
                 {columnsConfig.map(col => {
                     const colItems = (board[col.id] || []).filter(item => {
-                        if (item.type !== activeTab) return false;
+                        if (item.type !== selectedWorkflow) return false;
                         if (!searchTerm.trim()) return true;
                         const q = searchTerm.toLowerCase();
                         return (
@@ -734,11 +751,29 @@ const WorkflowBoard = () => {
                             (item.id || '').toString().includes(q)
                         );
                     });
+                    // Column-level severity = oldest item in this column. DONE
+                    // is always fresh (aging excluded for sealed work), so the
+                    // Completed header never gets a severity chip.
+                    let colSeverity = 0;
+                    let colSeverityBucket = 'fresh';
+                    let colSeverityLabel = null;
+                    if (col.id !== 'DONE') {
+                        for (const item of colItems) {
+                            const a = getAgingBucket(item.createdon, item.status, nowMs);
+                            if (a.severity > colSeverity) {
+                                colSeverity = a.severity;
+                                colSeverityBucket = a.bucket;
+                                colSeverityLabel = a.label;
+                            }
+                            if (colSeverity === 3) break; // can't get worse than cold
+                        }
+                    }
+                    const showColSeverity = colSeverity > 0;
                     const isDragTarget = dragOverCol === col.id && draggedItem && draggedItem.status !== col.id;
                     return (
                         <div
                             key={col.id}
-                            className="kanban-column"
+                            className="kanban-column slds-col slds-size_1-of-1 slds-medium-size_1-of-3"
                             onDragOver={(e) => handleDragOver(e, col.id)}
                             onDragLeave={handleDragLeave}
                             onDrop={(e) => handleDrop(e, col.id)}
@@ -749,14 +784,31 @@ const WorkflowBoard = () => {
                                 transition: 'all 0.2s ease'
                             }}
                         >
-                            <div className="column-header" style={{ backgroundColor: col.color, color: 'white' }}>
-                                <h3 className="column-title">{col.title}</h3>
-                                <span className="column-count" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
-                                    {colItems.length}
-                                </span>
-                            </div>
+                            {/* SLDS card structure; column color preserved as the header band */}
+                            <article className="slds-card kanban-column__card">
+                                <div className="slds-card__header column-header" style={{ backgroundColor: col.color, color: 'white' }}>
+                                    <header className="slds-media slds-media_center slds-has-flexi-truncate">
+                                        <div className="slds-media__body">
+                                            <h3 className="slds-card__header-title column-title">{col.title}</h3>
+                                        </div>
+                                        <div className="slds-no-flex column-header__meta">
+                                            {showColSeverity && (
+                                                <span
+                                                    className={`column-severity column-severity--${colSeverityBucket}`}
+                                                    title={`Oldest ${col.title.toLowerCase()} item: ${agingTitle(colSeverity)}`}
+                                                    aria-label={`Oldest ${col.title.toLowerCase()} item: ${agingTitle(colSeverity)}`}
+                                                >
+                                                    {colSeverityLabel}
+                                                </span>
+                                            )}
+                                            <span className="slds-badge column-count" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
+                                                {colItems.length}
+                                            </span>
+                                        </div>
+                                    </header>
+                                </div>
 
-                            <div className="column-body">
+                                <div className="slds-card__body column-body">
                                 {/* DROP ZONE HINT */}
                                 {isDragTarget && (
                                     <div style={{
@@ -776,12 +828,14 @@ const WorkflowBoard = () => {
 
                                 {colItems.map(item => {
                                     const isReady = item.status === 'IN_PROGRESS' && Number(item.total || 0) > 0 && !!item.mode_of_payment;
+                                    const isSealed = item.status === 'DONE';
                                     const shortId = item.auto_number?.split('-')[1] || item.auto_number;
                                     const isDragging = draggedItem?.id === item.id && draggedItem?.type === item.type;
+                                    const aging = getAgingBucket(item.createdon, item.status, nowMs);
                                     return (
                                         <div
                                             key={`${item.type}-${item.id}`}
-                                            className="kanban-card mb-3"
+                                            className={`kanban-card mb-3 kanban-card--aging-${aging.bucket}${isSealed ? ' kanban-card--sealed' : ''}`}
                                             draggable
                                             onDragStart={(e) => handleDragStart(e, item)}
                                             onDragEnd={handleDragEnd}
@@ -793,30 +847,51 @@ const WorkflowBoard = () => {
                                                 transition: 'opacity 0.2s ease'
                                             }}
                                         >
-                                            <input
-                                            type="checkbox"
-                                            checked={selected.has(item.id)}
-                                            onChange={e => {
-                                                e.stopPropagation();
-                                                setSelected(prev => {
-                                                    const next = new Set(prev);
-                                                    e.target.checked ? next.add(item.id) : next.delete(item.id);
-                                                    return next;
-                                                });
-                                            }}
-                                            onClick={e => e.stopPropagation()}
-                                            style={{ marginRight: 8, cursor: 'pointer' }}
-                                        />
-                                        <div className="card-top d-flex justify-content-between">
+                                            <div className="card-top d-flex justify-content-between">
                                                 <div className="card-customer">{item.customer_name || 'Anonymous'}</div>
-                                                <Badge bg="dark" className="p-2">#{shortId}</Badge>
+                                                <div className="d-flex align-items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        className="kanban-card__receipt-btn"
+                                                        onClick={(e) => handleCardReceipt(e, item)}
+                                                        onMouseDown={(e) => e.stopPropagation()}
+                                                        aria-label="Print receipt"
+                                                        title="Print Receipt"
+                                                    >
+                                                        <FaFileInvoice aria-hidden="true" />
+                                                    </button>
+                                                    <Badge bg="dark" className="p-2">#{shortId}</Badge>
+                                                </div>
                                             </div>
                                             <div className="card-meta">
                                                 <FaClock className="me-1" /> {formatDate(item.createdon)}
+                                                {aging.label && (
+                                                    <span
+                                                        className={`kanban-card__aging-badge kanban-card__aging-badge--${aging.bucket}`}
+                                                        title={agingTitle(aging.severity)}
+                                                        aria-label={agingTitle(aging.severity)}
+                                                    >
+                                                        {aging.label}
+                                                    </span>
+                                                )}
                                             </div>
                                             {isReady && <div className="ready-indicator"><FaCheck /></div>}
+                                            {isSealed && (
+                                                <div
+                                                    className="kanban-card__sealed-indicator"
+                                                    aria-label="Sealed — finalized record, not editable"
+                                                    title="Sealed — finalized record, not editable"
+                                                >
+                                                    <FaLock aria-hidden="true" />
+                                                </div>
+                                            )}
                                             <div className="card-footer">
                                                 <span className="type-tag">{item.type.replace('_cert', '')}</span>
+                                                {isSealed && (
+                                                    <span className="card-sealed-tag" aria-hidden="true">
+                                                        SEALED
+                                                    </span>
+                                                )}
                                                 {item.status !== 'TODO' && item.total > 0 && (
                                                     <span className="card-amount" style={{ color: col.color }}>
                                                         ₹{Number(item.total).toLocaleString()}
@@ -831,9 +906,12 @@ const WorkflowBoard = () => {
                                     <div className="empty-state">No {col.title.toLowerCase()} items</div>
                                 )}
                             </div>
+                            </article>
                         </div>
                     );
                 })}
+                    </div>
+                </div>
             </div>
 
             {/* ── MODALS ── */}
@@ -863,12 +941,25 @@ const WorkflowBoard = () => {
 
             {contextMenu.visible && (
                 <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
-                    <button className="menu-item" onClick={handleReceipt}>
-                        <FaFileInvoice className="me-2" /> View Receipt
-                    </button>
-                    <button className="menu-item danger" onClick={handleDelete}>
-                        <FaTrash className="me-2" /> Delete Permanent
-                    </button>
+                    {/* Python parity: Tested/Completed show Certificate; Ongoing/Completed
+                        show Receipt (GT/ST only — certs have their own print path); Delete is
+                        hidden once DONE. */}
+                    {(contextMenu.item?.status === 'IN_PROGRESS' || contextMenu.item?.status === 'DONE') && (
+                        <button className="menu-item" onClick={handleCertificate}>
+                            <FaCertificate className="me-2" /> Certificate
+                        </button>
+                    )}
+                    {(contextMenu.item?.status === 'TODO' || contextMenu.item?.status === 'DONE')
+                        && (contextMenu.item?.type === 'gold' || contextMenu.item?.type === 'silver') && (
+                        <button className="menu-item" onClick={handleReceipt}>
+                            <FaFileInvoice className="me-2" /> Receipt
+                        </button>
+                    )}
+                    {contextMenu.item?.status !== 'DONE' && (
+                        <button className="menu-item danger" onClick={handleDelete}>
+                            <FaTrash className="me-2" /> Delete
+                        </button>
+                    )}
                 </div>
             )}
         </div>

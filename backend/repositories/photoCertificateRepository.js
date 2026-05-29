@@ -4,6 +4,7 @@ const seqSvc = require('../services/v2/sequenceService');
 const CertificateCalculationService = require('../services/certificateCalculationService');
 const { writeAuditLog } = require('../services/auditLogService');
 const ledgerSvc = require('../services/v2/ledgerService');
+const wlhRepo = require('./weightLossHistoryRepository');
 const { assertTransitionAllowed } = require('../services/workflowStateMachine');
 
 const PHOTO_CERT_FEE_RATE = 50;   // canonical fee: same as gold/silver cert
@@ -41,7 +42,10 @@ class PhotoCertificateRepository {
             for (const item of items) {
                 const itemId = genId('PCI');
                 const itemNumber = `${parentAutoNumber}-${itemSeq++}`;
-                const certNum = item.certificate_number || item.item_no || `${itemSeq - 1}`;
+                // Operator-supplied value wins (allows manual override / migration).
+                // Otherwise fall through to the global A001-Z999 generator that
+                // already serves GCI/SCI — same SEQ_KEY family (PHOTO_CERT_ITEM_SEQ).
+                const certNum = item.certificate_number || seqSvc.getNextCertificateItemNumber('photo');
 
                 this.db.prepare(`
                     INSERT INTO photo_certificate_item (
@@ -183,29 +187,35 @@ class PhotoCertificateRepository {
 
                 const feeTotal = PHOTO_CERT_FEE_RATE * itemCount;
                 if (feeTotal > 0) {
-                    const alreadyCharged = this.db.prepare(
-                        `SELECT COUNT(*) AS cnt FROM credit_history WHERE reference_type = 'photo_certificate' AND reference_id = ? AND type = 'DEBIT'`
-                    ).get(id).cnt > 0;
+                    // Step 3: Stamp canonical fee BEFORE DONE (cert still IN_PROGRESS — no trigger conflict)
+                    this.db.prepare(
+                        `UPDATE photo_certificate SET total = ?, lastmodified = ? WHERE id = ?`
+                    ).run(feeTotal, timestamp, id);
 
-                    if (!alreadyCharged) {
-                        // Step 3: Stamp canonical fee BEFORE DONE (cert still IN_PROGRESS — no trigger conflict)
-                        this.db.prepare(
-                            `UPDATE photo_certificate SET total = ?, lastmodified = ? WHERE id = ?`
-                        ).run(feeTotal, timestamp, id);
+                    // Step 4: Atomic + idempotent ledger charge. The cert's
+                    // ledger_charged_at gate makes a second call a no-op —
+                    // no need for a pre-flight COUNT(*) on credit_history.
+                    ledgerSvc.chargeCertificate('photo', {
+                        cert_id          : id,
+                        customer_id      : current.customer_id,
+                        amount           : feeTotal,
+                        entry_type       : 'DEBIT',
+                        description      : `Photo Certificate ${current.auto_number} — lab charges`,
+                        mode_of_payment  : current.mode_of_payment || 'Cash',
+                        post_cash_register: false,
+                    });
+                }
 
-                        // Step 4: Ledger (cert still IN_PROGRESS — skip_status_check required)
-                        ledgerSvc.recordRevenue('gold', {
-                            customer_id      : current.customer_id,
-                            amount           : feeTotal,
-                            entry_type       : 'DEBIT',
-                            description      : `Photo Certificate ${current.auto_number} — lab charges`,
-                            mode_of_payment  : current.mode_of_payment || 'Cash',
-                            post_cash_register: false,
-                            reference_type   : 'photo_certificate',
-                            reference_id     : id,
-                            skip_status_check: true,
-                        });
-                    }
+                // Step 4b: Auto-link Weight Loss History (only when weight_loss > 0).
+                // Same transaction as the finalize — rollback removes the WLH row.
+                const weightLoss = Number(opts.weight_loss);
+                if (Number.isFinite(weightLoss) && weightLoss > 0) {
+                    wlhRepo.insertWithinTransaction(this.db, {
+                        customer_id    : current.customer_id,
+                        amount         : weightLoss,
+                        reason         : `Photo Certificate Finalization: ${id}`,
+                        mode_of_payment: current.mode_of_payment || null,
+                    });
                 }
 
                 // Step 5: Compute snapshot — must run after Step 3 so it captures the fee total

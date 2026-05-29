@@ -4,11 +4,13 @@
   "scripts": {
     "dev": "nodemon app.js",
     "start": "node app.js",
-    "backup": "node utils/backup.js",
     "logs:maintain": "node scripts/log_maintenance.js",
-    "test": "jest tests/unit tests/integration",
-    "test:unit": "jest tests/unit",
-    "test:integration": "jest tests/integration",
+    "report:restore-drill": "node scripts/backup_restore_drill_report.js",
+    "report:media": "node scripts/media_verification_report.js",
+    "report:migration": "node scripts/migration_acceptance_report.js",
+    "test": "jest --runInBand tests/unit tests/integration",
+    "test:unit": "jest --runInBand tests/unit",
+    "test:integration": "jest --runInBand tests/integration",
     "test:workflow": "node test_workflows.js",
     "test:workflow:v2": "node test_workflows_v2.js",
     "test:watch": "jest --watch tests/unit tests/integration"
@@ -26,7 +28,6 @@
     ]
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1004.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.5.0",
     "chokidar": "5.0.0",
@@ -36,8 +37,6 @@
     "express": "^4.21.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
-    "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.6",
     "socket.io": "^4.8.3",
     "zod": "^3.25.76"
   },

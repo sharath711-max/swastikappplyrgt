@@ -1,128 +1,167 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCustomerSearch } from '../hooks/useCustomerSearch';
-import { Modal, Button, Form, Row, Col, InputGroup, ListGroup, Badge } from 'react-bootstrap';
-import { FaPlus, FaTrash, FaSearch, FaCopy } from 'react-icons/fa';
+import { Modal, Button, Form, Row, Col, InputGroup, ListGroup } from 'react-bootstrap';
+import { FaPlus, FaTrash } from 'react-icons/fa';
 import api from '../services/api';
-import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import { preventDuplicateCreate } from '../utils/certificateGuard';
 import runModalSubmit from '../utils/handleSubmit';
+import { validateItem, OPERATIONS, ACTORS } from '../shared/domain/validation';
+import useSafeModalClose from '../hooks/useSafeModalClose';
+import useEnterAdvance from '../hooks/useEnterAdvance';
+import DraftStateFooter from './core/DraftStateFooter';
 
 const MAX_ITEMS = 20;
+const WORKFLOW_TYPE = 'GT';
 
-const emptyDraft = {
-    item: '',
-    grossWeight: '',
-    sampleWeight: '',
-    returned: false,
-};
+const emptyRow = () => ({
+    id:          (window.crypto?.randomUUID?.() || `r${Date.now()}${Math.random().toString(36).slice(2)}`),
+    name:        '',
+    item:        '',
+    totalWeight: '',
+    testWeight:  '0',
+    returned:    false,
+    errors:      {},
+});
 
-const parseWeight = (value) => {
-    if (value === '' || value === null || value === undefined) return null;
-    const num = parseFloat(value);
-    return Number.isFinite(num) ? num : null;
-};
+const emptyNewCustomer = { name: '', phone: '', balance: '0', notes: '' };
 
-const toFixedNumber = (value, digits) => {
-    const num = Number(value);
-    if (!Number.isFinite(num)) return null;
-    return Number(num.toFixed(digits));
-};
-
-const deriveWeights = (draft) => {
-    const gross  = parseWeight(draft.grossWeight)  || 0;
-    const sample = parseWeight(draft.sampleWeight) || 0;
-    const net    = Math.max(0, toFixedNumber(gross - sample, 3));
-    return { gross, sample, net };
-};
-
-const emptyNewCustomer = { name: '', phone: '', balance: '', notes: '' };
-
-const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
-    const { addToast }  = useToast();
-    const { openModal } = useModal();
-
-    // Customer state
-    const [searchTerm,        setSearchTerm]        = useState('');
-    const [showSuggestions,   setShowSuggestions]   = useState(false);
-    const [selectedCustomer,  setSelectedCustomer]  = useState(null);
-
-    const { filteredCustomers, reload: reloadCustomers } = useCustomerSearch({
-        show, searchTerm, addToast, limit: 6,
+const formatDate = (d) =>
+    d.toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true,
     });
 
-    // Inline new-customer form
-    const [showNewCust,  setShowNewCust]  = useState(false);
-    const [newCustData,  setNewCustData]  = useState(emptyNewCustomer);
-    const [savingCust,   setSavingCust]   = useState(false);
+const toValidationData = (row) => ({
+    item_type:     row.item,
+    description:   row.name || row.item,
+    gross_weight:  row.totalWeight,
+    sample_weight: row.testWeight,
+    returned:      row.returned,
+});
 
-    // Item entry state
-    const [sampleDraft,  setSampleDraft]  = useState(emptyDraft);
-    const [sampleItems,  setSampleItems]  = useState([]);
-    const [errors,       setErrors]       = useState({});
-    const [loading,      setLoading]      = useState(false);
+const customerDisplay = (c) =>
+    c ? `${c.name}${c.phone ? ` (+91 ${c.phone})` : ''}` : '';
 
-    const dropdownRef   = useRef(null);
-    const itemTypeRef   = useRef(null);     // auto-focus after each add
-    const submitReqRef  = useRef(null);
+const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
+    const { addToast } = useToast();
 
-    const currentDate = new Date().toLocaleDateString('en-US');
+    // Customer state
+    const [searchTerm,       setSearchTerm]       = useState('');
+    const [showSuggestions,  setShowSuggestions]  = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-    // ── Data loading ──────────────────────────────────────────────────────────
-    const resetForm = useCallback(() => {
-        setSearchTerm('');
-        setShowSuggestions(false);
-        setSelectedCustomer(null);
-        setSampleDraft(emptyDraft);
-        setSampleItems([]);
-        setErrors({});
-    }, []);
+    const { filteredCustomers, reload: reloadCustomers } = useCustomerSearch({
+        show, searchTerm, addToast, limit: 100,
+    });
 
+    // Inline new-customer form (default visible — matches Python initial state)
+    const [showNewCust, setShowNewCust] = useState(true);
+    const [newCustData, setNewCustData] = useState(emptyNewCustomer);
+    const [savingCust,  setSavingCust]  = useState(false);
+
+    // Sample rows — multi-row inline editing
+    const [sampleRows, setSampleRows] = useState([emptyRow()]);
+    const [loading,    setLoading]    = useState(false);
+
+    const dropdownRef  = useRef(null);
+    const submitReqRef = useRef(null);
+
+    const dateDisplay = formatDate(new Date());
+
+    // Draft-dirty derivation — any user-provided content counts. Balance
+    // defaults to '0' on the inline new-customer form; we do not treat the
+    // default value as a draft because operators routinely leave it alone.
+    const hasDraftEntries = (
+        !!selectedCustomer
+        || (searchTerm && searchTerm.trim() !== '')
+        || (newCustData.name && newCustData.name.trim() !== '')
+        || (newCustData.phone && newCustData.phone.trim() !== '')
+        || (newCustData.notes && newCustData.notes.trim() !== '')
+        || sampleRows.some(r => r.name || r.item || r.totalWeight || r.returned || (r.testWeight && r.testWeight !== '0'))
+    );
+
+    // Centralized safe-close: backdrop sweep, body-scroll unlock, focus
+    // restore, rapid-click guard, async-after-unmount guard.
+    const resetTransientState = () => { setLoading(false); };
+    const { safeClose, mountedRef } = useSafeModalClose({ show, onHide });
+    const closeSafely = () => safeClose({ reset: resetTransientState });
+
+    // Enter-rhythm: Enter on a text/number input advances to the next focusable
+    // element inside the modal instead of submitting. Restores the legacy
+    // Python intake cadence without changing tab order.
+    const onEnterAdvance = useEnterAdvance();
+
+    // Reset on open
     useEffect(() => {
-        if (show) resetForm();
-    }, [show, resetForm]);
+        if (show) {
+            setSearchTerm('');
+            setShowSuggestions(false);
+            setSelectedCustomer(null);
+            setShowNewCust(true);
+            setNewCustData(emptyNewCustomer);
+            setSampleRows([emptyRow()]);
+            submitReqRef.current = null;
+        }
+    }, [show]);
 
-    // Close dropdown on outside click
+    // Close suggestion dropdown on outside click
     useEffect(() => {
         const handler = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target))
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
                 setShowSuggestions(false);
+            }
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // ── Customer helpers ──────────────────────────────────────────────────────
-    const customerDisplay = (c) =>
-        c ? `${c.name}${c.phone ? ` (+91 ${c.phone})` : ''}` : '';
-
     const handleCustomerSelect = (c) => {
         setSelectedCustomer(c);
         setSearchTerm(customerDisplay(c));
         setShowSuggestions(false);
-        setErrors(prev => ({ ...prev, customer: false }));
-        // Move focus to item entry
-        setTimeout(() => itemTypeRef.current?.focus(), 50);
+        setShowNewCust(false);
     };
 
+    const handleAddCustomerLinkClick = (e) => {
+        e.preventDefault();
+        setShowNewCust(true);
+        setSelectedCustomer(null);
+        setSearchTerm('');
+        setShowSuggestions(false);
+    };
 
     const saveNewCustomer = async (e) => {
         e.preventDefault();
-        if (!newCustData.name.trim()) { addToast('Name is required', 'error'); return; }
+        if (!newCustData.name.trim()) {
+            addToast('Name is required', 'error');
+            return;
+        }
+        if (newCustData.phone && newCustData.phone.length !== 10) {
+            addToast('Phone must be 10 digits', 'error');
+            return;
+        }
         setSavingCust(true);
         try {
-            const res = await api.post('/customers', {
-                name   : newCustData.name.trim(),
-                phone  : newCustData.phone.trim() || undefined,
-                balance: parseFloat(newCustData.balance) || 0,
-                notes  : newCustData.notes.trim() || undefined,
+            await runModalSubmit({
+                action: async () => {
+                    const res = await api.post('/customers', {
+                        name:    newCustData.name.trim(),
+                        phone:   newCustData.phone.trim() || undefined,
+                        balance: parseFloat(newCustData.balance) || 0,
+                        notes:   newCustData.notes.trim() || undefined,
+                    });
+                    addToast('Customer created', 'success');
+                    return res.data?.data ?? res.data;
+                },
+                close: () => {
+                    setNewCustData(emptyNewCustomer);
+                },
+                reload: async (created) => {
+                    await reloadCustomers();
+                    if (created) handleCustomerSelect(created);
+                },
             });
-            const created = res.data?.data ?? res.data;
-            addToast('Customer created', 'success');
-            setShowNewCust(false);
-            setNewCustData(emptyNewCustomer);
-            await reloadCustomers();
-            if (created) handleCustomerSelect(created);
         } catch (err) {
             addToast(err?.response?.data?.error || err.message, 'error');
         } finally {
@@ -130,93 +169,96 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
         }
     };
 
-    // ── Item entry ────────────────────────────────────────────────────────────
-    const addSampleToList = () => {
-        if (sampleItems.length >= MAX_ITEMS) {
+    // ── Row helpers ──────────────────────────────────────────────────────────
+    const updateRow = (idx, field, value) => {
+        setSampleRows(rows => rows.map((r, i) =>
+            i === idx
+                ? { ...r, [field]: value, errors: { ...r.errors, [field]: undefined } }
+                : r
+        ));
+    };
+
+    const addRow = () => {
+        if (sampleRows.length >= MAX_ITEMS) {
             addToast(`A test cannot have more than ${MAX_ITEMS} items`, 'error');
             return;
         }
-
-        const item = sampleDraft.item.trim();
-        const { gross, sample, net } = deriveWeights(sampleDraft);
-
-        const localErrors = {};
-        if (!item)       localErrors.item = true;
-        if (gross <= 0)  localErrors.grossWeight = true;
-
-        if (Object.keys(localErrors).length > 0) {
-            setErrors(prev => ({ ...prev, sample: localErrors }));
-            addToast('Item Type and Gross Weight are required', 'error');
-            return;
-        }
-        if (sample > gross) {
-            setErrors(prev => ({ ...prev, sample: { ...prev.sample, sampleWeight: true } }));
-            addToast('Sample weight cannot exceed gross weight', 'error');
-            return;
-        }
-
-        setErrors(prev => ({ ...prev, sample: {} }));
-        setSampleItems(prev => [
-            ...prev,
-            {
-                id: `${Date.now()}-${Math.random()}`,
-                seq: prev.length + 1,
-                item,
-                grossWeight:  gross,
-                sampleWeight: sample,
-                netWeight:    net,
-                returned:     sampleDraft.returned,
-            },
-        ]);
-
-        // Reset draft but keep item type for fast same-type multi-entry
-        setSampleDraft(prev => ({ ...emptyDraft, item: prev.item }));
-        setTimeout(() => itemTypeRef.current?.focus(), 30);
+        setSampleRows(rows => [...rows, emptyRow()]);
     };
 
-    // Enter key inside item form → add to list
-    const handleItemFormKeyDown = (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); addSampleToList(); }
+    const removeRow = (idx) => {
+        setSampleRows(rows => rows.length === 1 ? rows : rows.filter((_, i) => i !== idx));
     };
 
-    const removeSample = (id) =>
-        setSampleItems(prev =>
-            prev.filter(s => s.id !== id).map((s, i) => ({ ...s, seq: i + 1 }))
-        );
+    // ── Submit ──────────────────────────────────────────────────────────────
+    const validateRows = () => {
+        let firstErrorMsg = null;
+        const validated = sampleRows.map(row => {
+            const errors = {};
 
-    // Duplicate last item: keep type, gross, sample — clear only purity/returned
-    const duplicateLast = () => {
-        const last = sampleItems[sampleItems.length - 1];
-        if (!last) return;
-        setSampleDraft({
-            item:         last.item,
-            grossWeight:  String(last.grossWeight),
-            sampleWeight: String(last.sampleWeight),
-            returned:     false,
+            if (!row.item.trim()) {
+                errors.item = 'Item type is required';
+            }
+
+            const total = parseFloat(row.totalWeight);
+            if (!Number.isFinite(total) || total <= 0) {
+                errors.totalWeight = 'Total weight must be greater than 0';
+            }
+
+            const test = parseFloat(row.testWeight);
+            if (Number.isFinite(test) && test < 0) {
+                errors.testWeight = 'Test weight cannot be negative';
+            }
+            if (Number.isFinite(total) && Number.isFinite(test) && test > total) {
+                errors.testWeight = `Test weight (${test}g) cannot exceed total weight (${total}g)`;
+            }
+
+            // Shared domain validation if structural checks pass
+            if (Object.keys(errors).length === 0) {
+                const result = validateItem({
+                    workflow_type: WORKFLOW_TYPE,
+                    context: { operation: OPERATIONS.CREATE, actor: ACTORS.USER },
+                    data: toValidationData(row),
+                });
+                if (!result.valid) {
+                    const fieldMap = {
+                        item_type:     'item',
+                        description:   'item',
+                        gross_weight:  'totalWeight',
+                        sample_weight: 'testWeight',
+                    };
+                    result.errors.forEach(err => {
+                        const uiField = fieldMap[err.field] || err.field;
+                        if (!errors[uiField]) errors[uiField] = err.message;
+                    });
+                }
+            }
+
+            if (!firstErrorMsg) {
+                const k = Object.keys(errors)[0];
+                if (k) firstErrorMsg = errors[k];
+            }
+            return { ...row, errors };
         });
-        setTimeout(() => itemTypeRef.current?.focus(), 30);
+
+        setSampleRows(validated);
+        return { valid: !firstErrorMsg, firstErrorMsg };
     };
 
-    const toggleReturned = (id) =>
-        setSampleItems(prev =>
-            prev.map(s => s.id === id ? { ...s, returned: !s.returned } : s)
-        );
-
-    // ── Submit ────────────────────────────────────────────────────────────────
-    const handleSave = async (e) => {
+    const handleSubmit = async (e) => {
         if (e) e.preventDefault();
 
         if (!selectedCustomer) {
-            setErrors(prev => ({ ...prev, customer: true }));
             addToast('Please select a customer', 'error');
             return;
         }
-        if (sampleItems.length === 0) {
-            addToast('Add at least one sample item before saving', 'error');
+
+        const { valid, firstErrorMsg } = validateRows();
+        if (!valid) {
+            addToast(firstErrorMsg || 'Please fix validation errors', 'error');
             return;
         }
 
-        setErrors({});
         setLoading(true);
         try {
             await runModalSubmit({
@@ -229,633 +271,319 @@ const NewGoldTestModal = ({ show, onHide, onSuccess }) => {
 
                     await api.post('/gold-tests', {
                         customer_id: selectedCustomer.id,
-                        items: sampleItems.map(s => ({
-                            item_name:     s.item,
-                            gross_weight:  s.grossWeight,
-                            test_weight:   s.sampleWeight,
-                            sample_weight: s.sampleWeight,
-                            returned:      s.returned,
+                        items: sampleRows.map(r => ({
+                            item_name:    r.name || r.item,
+                            item_type:    r.item,
+                            description:  r.name || '',
+                            gross_weight: parseFloat(r.totalWeight),
+                            total_weight: parseFloat(r.totalWeight),
+                            test_weight:  parseFloat(r.testWeight) || 0,
+                            sample_weight:parseFloat(r.testWeight) || 0,
+                            returned:     r.returned,
                         })),
                     }, { headers: { 'X-Request-Id': submitReqRef.current } });
 
-                    addToast(`Gold Test created — ${sampleItems.length} item(s)`, 'success');
+                    addToast(`Gold Test created — ${sampleRows.length} item(s)`, 'success');
                 },
                 reload: onSuccess,
                 close: () => {
                     submitReqRef.current = null;
-                    resetForm();
-                    onHide();
+                    closeSafely();
                 },
             });
-        } catch (error) {
-            if (error.message === 'Duplicate gold test submission blocked') {
+        } catch (err) {
+            if (!mountedRef.current) return;
+            if (err.message === 'Duplicate gold test submission blocked') {
                 addToast('Gold Test creation is already in progress', 'warning');
                 return;
             }
-            addToast(error.response?.data?.error || 'Failed to create test', 'error');
+            // Error path: leave modal usable.
+            addToast(err?.response?.data?.error || 'Failed to create test', 'error');
         } finally {
-            setLoading(false);
+            if (mountedRef.current) setLoading(false);
         }
     };
 
-    // ── Derived ───────────────────────────────────────────────────────────────
-    const { net: draftNet } = deriveWeights(sampleDraft);
-    const itemsRemaining    = MAX_ITEMS - sampleItems.length;
-    const canAddMore        = sampleItems.length < MAX_ITEMS;
+    const sampleBlockVisible = selectedCustomer && !showNewCust;
 
     return (
+        <>
         <Modal
             show={show}
-            onHide={onHide}
-            centered
-            size="lg"
+            onHide={closeSafely}
             backdrop="static"
-            className="gt-modal"
+            centered
+            dialogClassName="modal-xxl"
         >
-            {/* ── Header ──────────────────────────────────────────────────── */}
-            <Modal.Header closeButton className="gt-header">
-                <div>
-                    <Modal.Title className="fw-bold fs-5">New Gold Test</Modal.Title>
-                    <div className="gt-subtitle">
-                        Fill one item at a time → Add → repeat → Save when done
-                    </div>
-                </div>
+            <Modal.Header closeButton>
+                <Modal.Title as="h3" id="newTestModalTitle">New Gold Test</Modal.Title>
             </Modal.Header>
 
-            <Modal.Body className="p-0">
+            <Modal.Body className="m-3 mb-0" onKeyDown={onEnterAdvance}>
+                <div className="sequence-policy-helper" role="note">
+                    Sequence numbers reset each calendar year. Existing records permanently retain their original sequence.
+                    Skipped numbers can occur after cancellations, retries, or protected audit flows.
+                </div>
 
-                {/* ── Customer strip ──────────────────────────────────────── */}
-                <div className="gt-section" ref={dropdownRef}>
-                    <div className="gt-section-label">Customer</div>
-                    <InputGroup>
-                        <InputGroup.Text className="gt-input-icon"><FaSearch /></InputGroup.Text>
+                {/* Customer + Balance row */}
+                <div ref={dropdownRef} className="position-relative">
+                    <InputGroup size="lg" className="mb-3 w-100">
+                        <InputGroup.Text className="fw-bold">Customer</InputGroup.Text>
                         <Form.Control
-                            className={`gt-input ${errors.customer ? 'is-invalid' : ''}`}
-                            placeholder="Search by name or phone…"
+                            type="text"
+                            placeholder="Search by name or phone..."
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
                                 setShowSuggestions(true);
                                 if (!e.target.value.trim()) setSelectedCustomer(null);
-                                setErrors(prev => ({ ...prev, customer: false }));
                             }}
                             onFocus={() => setShowSuggestions(true)}
+                            autoComplete="off"
                         />
-                        {selectedCustomer && (
-                            <InputGroup.Text className="gt-selected-badge">
-                                ✓ Selected
-                            </InputGroup.Text>
-                        )}
+                        <InputGroup.Text className="fw-bold">Balance</InputGroup.Text>
+                        <Form.Control
+                            value={selectedCustomer?.balance ?? 0}
+                            style={{ flex: '0 0 20%' }}
+                            disabled
+                            readOnly
+                        />
                     </InputGroup>
-                    {errors.customer && (
-                        <div className="gt-error-text">Customer selection is required</div>
-                    )}
 
                     {showSuggestions && searchTerm && (
-                        <ListGroup className="gt-suggestion-list">
+                        <ListGroup
+                            className="position-absolute w-100 shadow"
+                            style={{ zIndex: 1050, maxHeight: 260, overflowY: 'auto', top: '100%' }}
+                        >
                             {filteredCustomers.length > 0 ? filteredCustomers.map(c => (
                                 <ListGroup.Item
                                     key={c.id}
                                     action
                                     onClick={() => handleCustomerSelect(c)}
-                                    className="d-flex justify-content-between align-items-center py-2"
                                 >
-                                    <div>
-                                        <div className="fw-bold">{c.name}</div>
-                                        {c.phone && <small className="text-muted">+91 {c.phone}</small>}
-                                    </div>
-                                    <Badge bg={c.deletedon ? 'danger' : 'success'} className="ms-2">
-                                        {c.deletedon ? 'Inactive' : 'Active'}
-                                    </Badge>
+                                    {c.name}{c.phone && ` (+91 ${c.phone})`}
                                 </ListGroup.Item>
                             )) : (
-                                <ListGroup.Item className="py-2">
-                                    <div className="text-center text-muted mb-1 small">No match found.</div>
-                                    {!showNewCust ? (
-                                        <div className="text-center">
-                                            <Button variant="link" size="sm" className="p-0"
-                                                onClick={() => { setShowNewCust(true); setShowSuggestions(false); }}>
-                                                + Add new customer?
-                                            </Button>
-                                        </div>
-                                    ) : null}
+                                <ListGroup.Item className="text-muted text-center">
+                                    No match found
                                 </ListGroup.Item>
                             )}
                         </ListGroup>
                     )}
                 </div>
 
-                {/* ── Inline new-customer form ────────────────────────────── */}
+                {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
+                <a href="#" id="addCustomerBtn" onClick={handleAddCustomerLinkClick}>
+                    Add New Customer?
+                </a>
+
+                {/* Add Customer block — visible by default, hides on customer select */}
                 {showNewCust && (
-                    <div className="gt-section" style={{ background: '#f0fdf4', borderTop: '2px solid #198754' }}>
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                            <div className="gt-section-label mb-0 text-success">New Customer</div>
-                            <Button variant="link" size="sm" className="p-0 text-muted"
-                                onClick={() => { setShowNewCust(false); setNewCustData(emptyNewCustomer); }}>
-                                Cancel
-                            </Button>
-                        </div>
-                        <Form onSubmit={saveNewCustomer}>
-                            <Row className="g-2">
-                                <Col xs={12} sm={6}>
-                                    <Form.Control size="sm" placeholder="Name *" required
-                                        value={newCustData.name}
-                                        onChange={e => setNewCustData(p => ({ ...p, name: e.target.value }))} />
+                    <div id="addCustomerBlock">
+                        <hr />
+                        <Form id="addCustomerForm" onSubmit={saveNewCustomer} autoComplete="off" noValidate>
+                            <Row>
+                                <Col lg={6}>
+                                    <InputGroup size="lg" className="mb-3">
+                                        <InputGroup.Text className="fw-bold">Name</InputGroup.Text>
+                                        <Form.Control
+                                            name="name"
+                                            type="text"
+                                            value={newCustData.name}
+                                            onChange={(e) => setNewCustData(p => ({ ...p, name: e.target.value }))}
+                                            required
+                                        />
+                                    </InputGroup>
                                 </Col>
-                                <Col xs={12} sm={6}>
-                                    <Form.Control size="sm" placeholder="Phone"
-                                        value={newCustData.phone}
-                                        onChange={e => setNewCustData(p => ({ ...p, phone: e.target.value }))} />
+                                <Col lg={6}>
+                                    <InputGroup size="lg" className="mb-3">
+                                        <InputGroup.Text className="fw-bold">Phone</InputGroup.Text>
+                                        <InputGroup.Text>+91</InputGroup.Text>
+                                        <Form.Control
+                                            name="phone"
+                                            type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]{10}"
+                                            minLength={10}
+                                            maxLength={10}
+                                            value={newCustData.phone}
+                                            onChange={(e) => setNewCustData(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
+                                        />
+                                    </InputGroup>
                                 </Col>
-                                <Col xs={6}>
-                                    <Form.Control size="sm" type="number" placeholder="Initial Balance (₹)" min="0"
-                                        value={newCustData.balance}
-                                        onChange={e => setNewCustData(p => ({ ...p, balance: e.target.value }))} />
+                                <Col lg={6}>
+                                    <InputGroup size="lg" className="mb-3">
+                                        <InputGroup.Text className="fw-bold">Initial Balance</InputGroup.Text>
+                                        <Form.Control
+                                            name="balance"
+                                            type="number"
+                                            value={newCustData.balance}
+                                            onChange={(e) => setNewCustData(p => ({ ...p, balance: e.target.value }))}
+                                        />
+                                    </InputGroup>
                                 </Col>
-                                <Col xs={6} className="d-flex align-items-end">
-                                    <Button size="sm" type="submit" variant="success" className="w-100" disabled={savingCust}>
-                                        {savingCust ? 'Saving…' : 'Create & Select'}
-                                    </Button>
-                                </Col>
+                                <InputGroup size="lg" className="mb-3">
+                                    <InputGroup.Text className="fw-bold">Notes</InputGroup.Text>
+                                    <Form.Control
+                                        name="notes"
+                                        as="textarea"
+                                        value={newCustData.notes}
+                                        onChange={(e) => setNewCustData(p => ({ ...p, notes: e.target.value }))}
+                                    />
+                                </InputGroup>
                             </Row>
+                            <div className="d-flex justify-content-end">
+                                <Button
+                                    id="addCustomerSubmitBtn"
+                                    type="submit"
+                                    variant="primary"
+                                    className="m-1"
+                                    disabled={savingCust}
+                                >
+                                    {savingCust && (
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                    )}
+                                    Add
+                                </Button>
+                            </div>
                         </Form>
                     </div>
                 )}
 
-                {/* ── Item entry form ─────────────────────────────────────── */}
-                <div className="gt-section gt-item-section">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                        <div className="gt-section-label mb-0">
-                            Sample Item Entry
-                            <span className="gt-hint ms-2">Press Enter to add</span>
-                        </div>
-                        <div className="d-flex align-items-center gap-2">
-                            {sampleItems.length > 0 && (
-                                <Button
-                                    variant="outline-secondary"
-                                    size="sm"
-                                    className="gt-dup-btn"
-                                    onClick={duplicateLast}
-                                    title="Copy last item's type & weights into the form"
-                                >
-                                    <FaCopy className="me-1" />Duplicate last
-                                </Button>
-                            )}
-                            <span className={`gt-count-badge ${!canAddMore ? 'gt-count-full' : ''}`}>
-                                {sampleItems.length} / {MAX_ITEMS}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="gt-entry-card" onKeyDown={handleItemFormKeyDown}>
-                        {/* Item type */}
-                        <Form.Group className="mb-3">
-                            <Form.Label className="gt-field-label">Item Type <span className="gt-required">*</span></Form.Label>
-                            <Form.Control
-                                ref={itemTypeRef}
-                                className={`gt-input ${errors.sample?.item ? 'is-invalid' : ''}`}
-                                placeholder="e.g. Ring, Necklace, Bangle…"
-                                value={sampleDraft.item}
-                                onChange={(e) => {
-                                    setSampleDraft(prev => ({ ...prev, item: e.target.value }));
-                                    setErrors(prev => ({ ...prev, sample: { ...prev.sample, item: false } }));
-                                }}
-                            />
-                            {errors.sample?.item && <div className="gt-error-text">Item type is required</div>}
-                        </Form.Group>
-
-                        {/* Weights row */}
-                        <Row className="g-2 mb-2">
-                            <Col xs={4}>
-                                <Form.Label className="gt-field-label">Gross Wt (g) <span className="gt-required">*</span></Form.Label>
+                {/* Sample Details block — visible after customer selected */}
+                {sampleBlockVisible && (
+                    <div id="sampleDetailsBlock">
+                        <hr />
+                        <div className="d-flex justify-content-between align-items-center my-4">
+                            <h4 className="m-0">Sample Details</h4>
+                            <InputGroup style={{ width: '25%' }}>
+                                <InputGroup.Text className="fw-bold">Date</InputGroup.Text>
                                 <Form.Control
-                                    type="number"
-                                    step="0.001"
-                                    min="0"
-                                    className={`gt-input gt-weight ${errors.sample?.grossWeight ? 'is-invalid' : ''}`}
-                                    placeholder="0.000"
-                                    value={sampleDraft.grossWeight}
-                                    onChange={(e) => {
-                                        setSampleDraft(prev => ({ ...prev, grossWeight: e.target.value }));
-                                        setErrors(prev => ({ ...prev, sample: { ...prev.sample, grossWeight: false } }));
-                                    }}
-                                />
-                                {errors.sample?.grossWeight && <div className="gt-error-text">Required, &gt; 0</div>}
-                            </Col>
-                            <Col xs={4}>
-                                <Form.Label className="gt-field-label">Sample Wt (g)</Form.Label>
-                                <Form.Control
-                                    type="number"
-                                    step="0.001"
-                                    min="0"
-                                    className={`gt-input gt-weight ${errors.sample?.sampleWeight ? 'is-invalid' : ''}`}
-                                    placeholder="0.000"
-                                    value={sampleDraft.sampleWeight}
-                                    onChange={(e) => {
-                                        setSampleDraft(prev => ({ ...prev, sampleWeight: e.target.value }));
-                                        setErrors(prev => ({ ...prev, sample: { ...prev.sample, sampleWeight: false } }));
-                                    }}
-                                />
-                                {errors.sample?.sampleWeight && <div className="gt-error-text">Cannot exceed gross</div>}
-                            </Col>
-                            <Col xs={4}>
-                                <Form.Label className="gt-field-label">Net Wt (g)</Form.Label>
-                                <Form.Control
-                                    className="gt-input gt-weight gt-net"
-                                    value={draftNet}
+                                    id="dateTimePicker"
+                                    value={dateDisplay}
                                     readOnly
-                                    tabIndex={-1}
                                 />
-                            </Col>
-                        </Row>
+                            </InputGroup>
+                        </div>
 
-                        {/* Returned toggle + Add button */}
-                        <div className="d-flex align-items-center justify-content-between mt-2">
-                            <Form.Check
-                                type="switch"
-                                id="gt-returned-switch"
-                                label="Returned (No Charge)"
-                                checked={sampleDraft.returned}
-                                onChange={(e) => setSampleDraft(prev => ({ ...prev, returned: e.target.checked }))}
-                                className="gt-returned-switch"
-                            />
+                        <div id="sampleDetailsContainer">
+                            {sampleRows.map((row, idx) => (
+                                <div className="sampleDetails input-group input-group-lg mb-4" key={row.id}>
+                                    <div className="input-group input-group-lg mb-1">
+                                        <span className="input-group-text fw-bold">Name</span>
+                                        <Form.Control
+                                            type="text"
+                                            name="name"
+                                            placeholder="Name"
+                                            maxLength={32}
+                                            value={row.name}
+                                            onChange={(e) => updateRow(idx, 'name', e.target.value)}
+                                        />
+                                        <span className="input-group-text fw-bold">Item</span>
+                                        <Form.Control
+                                            type="text"
+                                            name="item"
+                                            placeholder="Item type"
+                                            maxLength={32}
+                                            value={row.item}
+                                            onChange={(e) => updateRow(idx, 'item', e.target.value)}
+                                            isInvalid={!!row.errors?.item}
+                                            required
+                                        />
+                                        <span className="input-group-text fw-bold">Weight</span>
+                                        <Form.Control
+                                            type="number"
+                                            name="total_weight"
+                                            placeholder="Total weight"
+                                            min={0}
+                                            step="any"
+                                            value={row.totalWeight}
+                                            onChange={(e) => updateRow(idx, 'totalWeight', e.target.value)}
+                                            isInvalid={!!row.errors?.totalWeight}
+                                            required
+                                        />
+                                        <span className="input-group-text">/</span>
+                                        <Form.Control
+                                            type="number"
+                                            name="test_weight"
+                                            placeholder="Test weight"
+                                            min={0}
+                                            step="any"
+                                            value={row.testWeight}
+                                            onChange={(e) => updateRow(idx, 'testWeight', e.target.value)}
+                                            isInvalid={!!row.errors?.testWeight}
+                                            required
+                                        />
+                                        <span className="input-group-text">
+                                            <Form.Check
+                                                type="checkbox"
+                                                name="returned"
+                                                checked={row.returned}
+                                                onChange={(e) => updateRow(idx, 'returned', e.target.checked)}
+                                                className="mt-0"
+                                                label={<span className="ms-1 fw-bold">Sample Returned</span>}
+                                            />
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            variant="danger"
+                                            className={`deleteSampleDetailsBtn ${sampleRows.length === 1 ? 'invisible' : ''}`}
+                                            onClick={() => removeRow(idx)}
+                                            aria-label="Delete sample row"
+                                        >
+                                            <FaTrash />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="d-flex justify-content-center">
                             <Button
-                                className="gt-add-btn"
-                                onClick={addSampleToList}
-                                disabled={!canAddMore}
-                                title={canAddMore ? 'Add this item (Enter)' : `Max ${MAX_ITEMS} items reached`}
+                                id="addSampleBtn"
+                                type="button"
+                                variant="outline-info"
+                                className="w-50"
+                                onClick={addRow}
+                                disabled={sampleRows.length >= MAX_ITEMS}
+                                aria-label="Add sample row"
                             >
-                                <FaPlus className="me-2" />
-                                Add Item
-                                {sampleItems.length > 0 && (
-                                    <span className="gt-add-count ms-2">#{sampleItems.length + 1}</span>
+                                <FaPlus />
+                            </Button>
+                        </div>
+
+                        <div className="d-flex justify-content-end">
+                            <Button
+                                id="sampleDetailsSubmitBtn"
+                                type="button"
+                                variant="primary"
+                                size="lg"
+                                className="d-flex align-items-center m-1"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                            >
+                                {loading && (
+                                    <span className="spinner-border spinner-border-sm text-light me-3" role="status" />
                                 )}
+                                Submit
                             </Button>
                         </div>
                     </div>
-                </div>
+                )}
 
-                {/* ── Items list ───────────────────────────────────────────── */}
-                <div className="gt-list-section">
-                    <div className="gt-list-header">
-                        <span>Items Added</span>
-                        <span className="gt-list-count">
-                            {sampleItems.length === 0
-                                ? 'None yet'
-                                : `${sampleItems.length} item${sampleItems.length > 1 ? 's' : ''}`}
-                        </span>
-                    </div>
-
-                    {sampleItems.length === 0 ? (
-                        <div className="gt-empty-state">
-                            <div className="gt-empty-icon">⬆</div>
-                            <div className="gt-empty-text">Fill the form above and click <strong>Add Item</strong></div>
-                            <div className="gt-empty-sub">You can add up to {MAX_ITEMS} items per test</div>
-                        </div>
-                    ) : (
-                        <div className="gt-table-wrap">
-                            <table className="gt-table">
-                                <thead>
-                                    <tr>
-                                        <th style={{ width: 32 }}>#</th>
-                                        <th>Item Type</th>
-                                        <th style={{ width: 80 }}>Gross</th>
-                                        <th style={{ width: 80 }}>Sample</th>
-                                        <th style={{ width: 80 }}>Net</th>
-                                        <th style={{ width: 64 }}>Ret?</th>
-                                        <th style={{ width: 40 }}></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {sampleItems.map(s => (
-                                        <tr key={s.id} className={s.returned ? 'gt-row-returned' : ''}>
-                                            <td className="gt-seq">{s.seq}</td>
-                                            <td className="gt-item-name">
-                                                {s.item}
-                                                {s.returned && (
-                                                    <Badge bg="warning" text="dark" className="ms-2 gt-ret-badge">RET</Badge>
-                                                )}
-                                            </td>
-                                            <td className="gt-wt">{s.grossWeight}g</td>
-                                            <td className="gt-wt">{s.sampleWeight}g</td>
-                                            <td className="gt-wt gt-net-wt">{s.netWeight}g</td>
-                                            <td className="text-center">
-                                                <Form.Check
-                                                    type="switch"
-                                                    checked={s.returned}
-                                                    onChange={() => toggleReturned(s.id)}
-                                                    className="gt-row-switch"
-                                                />
-                                            </td>
-                                            <td className="text-center">
-                                                <button
-                                                    className="gt-remove-btn"
-                                                    onClick={() => removeSample(s.id)}
-                                                    title="Remove item"
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-
+                <DraftStateFooter isDirty={hasDraftEntries} />
             </Modal.Body>
-
-            {/* ── Footer ──────────────────────────────────────────────────── */}
-            <Modal.Footer className="gt-footer">
-                <div className="gt-footer-meta">
-                    {sampleItems.length > 0
-                        ? <span className="gt-save-hint">Ready to save — {sampleItems.length} item(s)</span>
-                        : <span className="gt-save-hint gt-save-hint-warn">Add at least one item to save</span>
-                    }
-                    <span className="gt-date-display">{currentDate}</span>
-                </div>
-                <div className="gt-footer-actions">
-                    <Button
-                        className="gt-save-btn"
-                        onClick={handleSave}
-                        disabled={loading || sampleItems.length === 0}
-                    >
-                        {loading ? 'Saving…' : `Save Test (${sampleItems.length} item${sampleItems.length !== 1 ? 's' : ''})`}
-                    </Button>
-                    <Button variant="outline-secondary" className="gt-cancel-btn" onClick={onHide} disabled={loading}>
-                        Cancel
-                    </Button>
-                </div>
-            </Modal.Footer>
-
-            {/* ── Scoped styles ────────────────────────────────────────────── */}
-            <style>{`
-                .gt-modal .modal-content {
-                    border-radius: 16px;
-                    overflow: hidden;
-                    border: none;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-                }
-                .gt-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 1.25rem 1.5rem;
-                    border: none;
-                }
-                .gt-header .btn-close { filter: brightness(0) invert(1); opacity: .8; }
-                .gt-subtitle {
-                    font-size: .75rem;
-                    opacity: .8;
-                    margin-top: .2rem;
-                    letter-spacing: .02em;
-                }
-
-                /* Sections */
-                .gt-section {
-                    padding: 1.25rem 1.5rem;
-                    border-bottom: 1px solid #f0f0f0;
-                    position: relative;
-                }
-                .gt-item-section { background: #fafbff; }
-                .gt-section-label {
-                    font-size: .75rem;
-                    font-weight: 800;
-                    text-transform: uppercase;
-                    letter-spacing: .08em;
-                    color: #6b7280;
-                    margin-bottom: .6rem;
-                    display: flex;
-                    align-items: center;
-                }
-                .gt-hint {
-                    font-size: .7rem;
-                    font-weight: 600;
-                    background: #e0e7ff;
-                    color: #4f46e5;
-                    border-radius: 4px;
-                    padding: 2px 6px;
-                    text-transform: none;
-                    letter-spacing: 0;
-                }
-
-                /* Inputs */
-                .gt-input {
-                    border: 1.5px solid #e5e7eb;
-                    border-radius: 8px;
-                    padding: .5rem .75rem;
-                    font-size: .9rem;
-                    transition: border-color .15s;
-                }
-                .gt-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
-                .gt-input.is-invalid { border-color: #ef4444; }
-                .gt-input-icon { background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px 0 0 8px; }
-                .gt-selected-badge {
-                    background: #d1fae5;
-                    color: #065f46;
-                    font-size: .75rem;
-                    font-weight: 700;
-                    border: 1.5px solid #a7f3d0;
-                    border-radius: 0 8px 8px 0;
-                    padding: .5rem .75rem;
-                }
-                .gt-weight { font-variant-numeric: tabular-nums; }
-                .gt-net { background: #f0fdf4; color: #166534; font-weight: 700; }
-                .gt-field-label {
-                    font-size: .78rem;
-                    font-weight: 700;
-                    color: #374151;
-                    margin-bottom: .3rem;
-                }
-                .gt-required { color: #ef4444; }
-                .gt-error-text { font-size: .72rem; color: #ef4444; margin-top: .2rem; }
-
-                /* Customer dropdown */
-                .gt-suggestion-list {
-                    position: absolute;
-                    left: 1.5rem; right: 1.5rem;
-                    z-index: 1050;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    box-shadow: 0 8px 24px rgba(0,0,0,.12);
-                    border: 1.5px solid #667eea;
-                    max-height: 260px;
-                    overflow-y: auto;
-                }
-
-                /* Item entry card */
-                .gt-entry-card {
-                    background: white;
-                    border: 1.5px solid #e0e7ff;
-                    border-radius: 12px;
-                    padding: 1rem;
-                }
-
-                /* Count badge */
-                .gt-count-badge {
-                    font-size: .75rem;
-                    font-weight: 700;
-                    background: #e0e7ff;
-                    color: #3730a3;
-                    border-radius: 20px;
-                    padding: 3px 10px;
-                }
-                .gt-count-full {
-                    background: #fee2e2;
-                    color: #991b1b;
-                }
-
-                /* Duplicate button */
-                .gt-dup-btn {
-                    font-size: .75rem;
-                    padding: .25rem .65rem;
-                    border-radius: 6px;
-                    font-weight: 600;
-                }
-
-                /* Returned switch */
-                .gt-returned-switch { font-size: .85rem; font-weight: 600; color: #374151; }
-
-                /* Add button */
-                .gt-add-btn {
-                    background: linear-gradient(90deg, #667eea, #764ba2);
-                    border: none;
-                    border-radius: 8px;
-                    font-weight: 700;
-                    font-size: .85rem;
-                    padding: .5rem 1.1rem;
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    transition: opacity .15s, transform .1s;
-                }
-                .gt-add-btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
-                .gt-add-btn:disabled { opacity: .45; }
-                .gt-add-count {
-                    background: rgba(255,255,255,.25);
-                    border-radius: 20px;
-                    padding: 1px 7px;
-                    font-size: .72rem;
-                }
-
-                /* Items list */
-                .gt-list-section { border-bottom: 1px solid #f0f0f0; }
-                .gt-list-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: .75rem 1.5rem;
-                    background: #1f2937;
-                    color: white;
-                    font-weight: 700;
-                    font-size: .85rem;
-                }
-                .gt-list-count {
-                    font-size: .75rem;
-                    background: rgba(255,255,255,.15);
-                    border-radius: 20px;
-                    padding: 2px 10px;
-                }
-                .gt-empty-state {
-                    padding: 2rem 1.5rem;
-                    text-align: center;
-                    background: white;
-                }
-                .gt-empty-icon { font-size: 1.8rem; margin-bottom: .5rem; opacity: .4; }
-                .gt-empty-text { font-weight: 600; color: #374151; font-size: .9rem; }
-                .gt-empty-sub { color: #9ca3af; font-size: .8rem; margin-top: .25rem; }
-
-                .gt-table-wrap {
-                    max-height: 240px;
-                    overflow-y: auto;
-                    background: white;
-                }
-                .gt-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: .83rem;
-                }
-                .gt-table thead th {
-                    background: #f3f4f6;
-                    padding: .45rem .75rem;
-                    font-size: .72rem;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: .04em;
-                    color: #6b7280;
-                    border-bottom: 1px solid #e5e7eb;
-                    position: sticky;
-                    top: 0;
-                    z-index: 1;
-                }
-                .gt-table tbody td {
-                    padding: .5rem .75rem;
-                    border-bottom: 1px solid #f3f4f6;
-                    vertical-align: middle;
-                }
-                .gt-table tbody tr:hover { background: #f9fafb; }
-                .gt-row-returned { opacity: .7; }
-                .gt-seq { color: #9ca3af; font-size: .75rem; }
-                .gt-item-name { font-weight: 700; color: #111827; }
-                .gt-ret-badge { font-size: .6rem; padding: 1px 5px; }
-                .gt-wt { font-variant-numeric: tabular-nums; color: #374151; }
-                .gt-net-wt { color: #059669; font-weight: 700; }
-                .gt-row-switch .form-check-input { cursor: pointer; }
-                .gt-remove-btn {
-                    background: none;
-                    border: none;
-                    color: #ef4444;
-                    cursor: pointer;
-                    padding: .2rem .35rem;
-                    border-radius: 4px;
-                    opacity: .6;
-                    transition: opacity .15s;
-                }
-                .gt-remove-btn:hover { opacity: 1; background: #fee2e2; }
-
-                /* Footer */
-                .gt-footer {
-                    padding: 1rem 1.5rem;
-                    background: #f9fafb;
-                    border-top: 1px solid #e5e7eb;
-                    display: flex;
-                    flex-direction: column;
-                    gap: .75rem;
-                }
-                .gt-footer-meta {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: .78rem;
-                }
-                .gt-save-hint { font-weight: 600; color: #059669; }
-                .gt-save-hint-warn { color: #9ca3af; }
-                .gt-date-display { color: #9ca3af; }
-                .gt-footer-actions {
-                    display: grid;
-                    grid-template-columns: 1fr auto;
-                    gap: .75rem;
-                }
-                .gt-save-btn {
-                    background: #10b981;
-                    border: none;
-                    border-radius: 8px;
-                    font-weight: 700;
-                    padding: .6rem 1.25rem;
-                    font-size: .9rem;
-                    color: white;
-                    transition: background .15s;
-                }
-                .gt-save-btn:hover:not(:disabled) { background: #059669; }
-                .gt-save-btn:disabled { opacity: .45; }
-                .gt-cancel-btn {
-                    border-radius: 8px;
-                    font-weight: 600;
-                    padding: .6rem 1rem;
-                    font-size: .9rem;
-                }
-            `}</style>
         </Modal>
+        {/* Style mounted outside the Modal portal so CSS rules outlive the
+            close-transition unmount — prevents stuck-backdrop / frozen-UI. */}
+        <style>{`
+            .modal-xxl { max-width: 90vw; }
+            @media (min-width: 1400px) { .modal-xxl { max-width: 1320px; } }
+            #sampleDetailsContainer .sampleDetails .form-control.is-invalid {
+                border-color: #dc3545;
+            }
+        `}</style>
+        </>
     );
 };
 

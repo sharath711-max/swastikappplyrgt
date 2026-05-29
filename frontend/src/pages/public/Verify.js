@@ -14,7 +14,7 @@ const Verify = () => {
         const fetchVerification = async () => {
             try {
                 // Determine API URL (using relative if deployed, or localhost for dev)
-                const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:6001/api';
                 const response = await axios.get(`${apiUrl}/public/verify/${autoNumber}`);
 
                 if (response.data.success) {

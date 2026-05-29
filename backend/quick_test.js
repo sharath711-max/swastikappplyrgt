@@ -1,5 +1,5 @@
 const axios = require('axios');
-const API = 'http://localhost:5000/api';
+const API = 'http://localhost:6001/api';
 
 (async () => {
   try {

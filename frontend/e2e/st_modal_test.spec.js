@@ -1,7 +1,7 @@
 // st_modal_test.spec.js — Silver Test full modal flow
 const { test, expect } = require('@playwright/test');
 
-const API = 'http://127.0.0.1:5000/api';
+const API = 'http://127.0.0.1:6001/api';
 
 async function login(page) {
     await page.goto('/login');
@@ -15,16 +15,17 @@ async function login(page) {
 async function goToSTTab(page) {
     await page.goto('/workflow?tab=silver');
     await page.waitForTimeout(1200);
-    const stTab = page.locator('.tab-pill', { hasText: 'Silver Test' });
-    await stTab.waitFor({ timeout: 8000 });
-    if (!(await stTab.getAttribute('class')).includes('active')) {
-        await stTab.click();
+    const stRow = page.locator('.workflow-rail-row', { hasText: 'Silver Testing' });
+    await stRow.waitFor({ timeout: 8000 });
+    const railItem = page.locator('.workflow-rail-item', { has: stRow });
+    if (!(await railItem.getAttribute('class') || '').includes('is-active')) {
+        await stRow.click();
         await page.waitForTimeout(600);
     }
 }
 
 async function createSTViaUI(page) {
-    const newBtn = page.locator('.btn-action', { hasText: '+ New Silver Test' });
+    const newBtn = page.getByRole('button', { name: 'New Silver Testing' });
     await newBtn.waitFor({ timeout: 6000 });
     await newBtn.click();
     await page.waitForTimeout(500);

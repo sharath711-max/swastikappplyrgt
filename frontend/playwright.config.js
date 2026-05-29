@@ -6,7 +6,7 @@ module.exports = defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 1 : 0,
     workers: process.env.CI ? 1 : 2,
-    timeout: 60000,
+    timeout: 60010,
     expect: {
         timeout: 10000,
     },
@@ -22,12 +22,12 @@ module.exports = defineConfig({
     webServer: [
         {
             command: 'npm --prefix ../backend start',
-            url: 'http://127.0.0.1:5000/health',
+            url: 'http://127.0.0.1:6001/health',
             timeout: 120000,
             reuseExistingServer: true,
             env: {
                 ...process.env,
-                PORT: '5000',
+                PORT: '6001',
                 NODE_ENV: 'test',
             },
         },
@@ -41,7 +41,7 @@ module.exports = defineConfig({
                 BROWSER: 'none',
                 CI: 'true',
                 PORT: '3000',
-                REACT_APP_API_URL: 'http://127.0.0.1:5000/api',
+                REACT_APP_API_URL: 'http://127.0.0.1:6001/api',
             },
         },
     ],

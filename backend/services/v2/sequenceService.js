@@ -183,11 +183,15 @@ function generateGlobalSequence(_type) {
 
 /**
  * Certificate item label.  Pure — no DB.
- * itemSeq 1 → "A001", 999 → "A999", 1000 → "B001".
  *
- * @param {number} itemSeq – 1-based
- * @returns {string}
- * @throws {BusinessError}
+ * SPEC (myprompt.txt — UPDATED):
+ *   Format:  <LETTER><3-DIGIT NUMBER>
+ *   n=1 → A001, n=999 → A999, n=1000 → B001, n=25974 → Z999
+ *   n=25975 → A001 (cycle repeats)
+ *
+ * @param {number} itemSeq – 1-based global counter
+ * @returns {string}  e.g. "A001", "B001", "Z999"
+ * @throws {BusinessError} if itemSeq is not a positive integer
  */
 function generateCertificateLabel(itemSeq) {
     if (!Number.isInteger(itemSeq) || itemSeq < 1) {
@@ -196,15 +200,85 @@ function generateCertificateLabel(itemSeq) {
             ERR.VALIDATION, 422
         );
     }
-    const letterIdx = Math.floor((itemSeq - 1) / 999);
+    // Cycle rollover: after Z999 (n=25974), n=25975 wraps to A001
+    const letterIdx = Math.floor((itemSeq - 1) / 999) % ALPHA.length;
     const numPart   = ((itemSeq - 1) % 999) + 1;
-    if (letterIdx >= ALPHA.length) {
-        throw new BusinessError(
-            `generateCertificateLabel: sequence ${itemSeq} exceeds max (${ALPHA.length * 999})`,
-            ERR.VALIDATION, 422
+    return `${ALPHA[letterIdx]}${String(numPart).padStart(3, '0')}`;
+}
+
+/**
+ * Global certificate item number — BARE-DB, must run inside a transaction.
+ * Atomically increments a per-type global counter and returns the A001-Z999 label.
+ *
+ * Python parity: Globals.increment_by_key('gold_certificate') → to_certificate_number(n)
+ *
+ * Keys: GOLD_CERT_ITEM_SEQ, SILVER_CERT_ITEM_SEQ, PHOTO_CERT_ITEM_SEQ
+ *
+ * @param {'gold'|'silver'|'photo'} certType
+ * @returns {string} e.g. "A001", "A002", ..., "B001"
+ */
+function getNextCertificateItemNumber(certType) {
+    const SEQ_KEY = `${certType.toUpperCase()}_CERT_ITEM_SEQ`;
+
+    // Ensure row exists
+    _ensureGlobal(SEQ_KEY, '0');
+
+    // Self-heal: seed from max existing certificate_number if counter is behind
+    const tableMap = {
+        gold  : 'gold_certificate_item',
+        silver: 'silver_certificate_item',
+        photo : 'photo_certificate_item',
+    };
+    const itemTable = tableMap[certType];
+    if (itemTable) {
+        const curRow = db.prepare('SELECT CAST(value AS INTEGER) AS v FROM globals WHERE key = ?').get(SEQ_KEY);
+        const cur = curRow?.v || 0;
+        // Count all existing items to find the true max
+        const maxRow = db.prepare(
+            `SELECT COUNT(*) AS cnt FROM ${itemTable} WHERE certificate_number IS NOT NULL AND certificate_number != ''`
+        ).get();
+        const maxExisting = maxRow?.cnt || 0;
+        if (maxExisting > cur) {
+            db.prepare('UPDATE globals SET value = ?, lastmodified = CURRENT_TIMESTAMP WHERE key = ?')
+                .run(String(maxExisting), SEQ_KEY);
+        }
+    }
+
+    // Atomic increment
+    const row = db.prepare(`
+        UPDATE globals
+        SET    value        = CAST(CAST(value AS INTEGER) + 1 AS TEXT),
+               lastmodified = CURRENT_TIMESTAMP
+        WHERE  key = ?
+        RETURNING CAST(value AS INTEGER) AS new_seq
+    `).get(SEQ_KEY);
+
+    if (!row || row.new_seq == null) {
+        throw new SystemError(
+            `getNextCertificateItemNumber: RETURNING returned no row for key ${SEQ_KEY}`,
+            null, { SEQ_KEY, certType }
         );
     }
-    return `${ALPHA[letterIdx]}${String(numPart).padStart(2, '0')}`;
+
+    return generateCertificateLabel(row.new_seq);
+}
+
+/**
+ * Peek the next certificate-item label for `certType` WITHOUT incrementing.
+ * Pure read — safe to call outside any transaction. Used by UI surfaces that
+ * display "next certificate number" so the operator can see what will be
+ * assigned to the next item created.
+ *
+ * @param {'gold'|'silver'|'photo'} certType
+ * @returns {string} e.g. "A001", "A002", ..., "B001"
+ */
+function peekNextCertificateItemNumber(certType) {
+    const SEQ_KEY = `${certType.toUpperCase()}_CERT_ITEM_SEQ`;
+    const row = db.prepare(
+        'SELECT CAST(value AS INTEGER) AS v FROM globals WHERE key = ?'
+    ).get(SEQ_KEY);
+    const current = row?.v ?? 0;
+    return generateCertificateLabel(current + 1);
 }
 
 /**
@@ -292,6 +366,8 @@ module.exports = {
     generateTestItemNumber,
     peekGlobalSequence,
     getNextBillNumber,
+    getNextCertificateItemNumber,
+    peekNextCertificateItemNumber,
     // Composable bare-DB exports for outer transactions
     _generateGlobalSequenceWork,
 };

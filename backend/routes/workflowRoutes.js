@@ -28,6 +28,18 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/workflow/summary
+// Lightweight per-workflow counts + oldest open-item age.
+// Used by the sidebar aging dots so it does not have to load the full kanban.
+router.get('/summary', async (req, res) => {
+    try {
+        const summary = await workflowService.getSummary();
+        res.json({ success: true, data: summary });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // GET /api/workflow/kanban
 router.get('/kanban', async (req, res) => {
     try {

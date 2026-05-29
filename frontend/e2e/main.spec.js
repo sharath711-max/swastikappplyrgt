@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const API_BASE = process.env.E2E_API_URL || 'http://127.0.0.1:5000/api';
+const API_BASE = process.env.E2E_API_URL || 'http://127.0.0.1:6001/api';
 const DEFAULT_ADMIN = {
     username: 'admin',
     password: 'admin123',
@@ -185,7 +185,7 @@ test.describe('Swastik Gold & Silver Lab - Full E2E', () => {
         await page.goto('/workflow');
         await expect(page.getByRole('heading', { name: 'Laboratory Workflow' })).toBeVisible();
 
-        await page.locator('.tab-pill', { hasText: 'Silver Test' }).click();
+        await page.locator('.workflow-rail-row', { hasText: 'Silver Testing' }).click();
         await expect(page).toHaveURL(/tab=silver/);
 
         const query = uniqueText('E2E-NO-MATCH');

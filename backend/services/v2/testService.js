@@ -21,9 +21,11 @@ const socket     = require('../../socket');
 const { assertTransitionAllowed } = require('../workflowStateMachine');
 const seqSvc     = require('./sequenceService');
 const ledgerSvc  = require('./ledgerService');
+const sharedValidationGate = require('./sharedValidationGate');
 const GoldTestCalc   = require('../goldTestCalculationService');
 const SilverTestCalc = require('../silverTestCalculationService');
 const customerRepo   = require('../../repositories/customerRepository');
+const wlhRepo        = require('../../repositories/weightLossHistoryRepository');
 
 // Lazy-load to break circular dependency (certSvc ↔ testSvc)
 let _certSvc = null;
@@ -76,6 +78,7 @@ function _assertStatusMove(currentStatus, nextStatus) {
     }
 }
 
+// IMMUTABLE-on-DONE feature restored per Historical Truth Policy.
 function _assertFoundAndMutable(type, id) {
     const c   = _cfg(type);
     const row = db.prepare(
@@ -86,8 +89,8 @@ function _assertFoundAndMutable(type, id) {
     }
     if (row.status === 'DONE') {
         throw new BusinessError(
-            `${type} test ${id} is DONE and immutable`,
-            ERR.IMMUTABLE, 409
+            `Test ${id} is finalized (DONE) and cannot be modified`,
+            ERR.STATUS_INVALID, 409
         );
     }
     return row;
@@ -381,16 +384,29 @@ function _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts) {
                 null, { testId, type }
             );
         }
+        // WLH is customer-centric only — the source test id is referenced in
+        // the `reason` text for audit, NOT a workflow back-pointer column.
         db.prepare(
-            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, created) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, ts);
     }
 }
 
 // ─── CREATE ───────────────────────────────────────────────────────────────────
+//
+// Temporal policy: `created` is always server-side now(). Any `created` field
+// in the request body is intentionally IGNORED. Backdating is not supported on
+// this API surface — it would weaken DONE-state immutability, signed snapshot
+// timestamps, balance roll-up ordering, and audit interpretability. If
+// historical imports are ever needed, build a separate import tool with
+// explicit semantics — do not overload this path.
 
 function createTest(type, data) {
     // ── Validate BEFORE transaction ─────────────────────────────────────────
+    // Shared domain validation runs first — authoritative source of truth for
+    // item-level rules. Throws 422 VALIDATION_FAILED on rule failure, or
+    // 422 VALIDATION_MISMATCH if FE-computed normalized differs from BE.
+    sharedValidationGate.gateCreate(type, data);
     _validateCreateTest(type, data);
     audit.validate('testService.createTest', { type, customer_id: data.customer_id, item_count: data.items.length });
 
@@ -401,6 +417,7 @@ function createTest(type, data) {
     audit.start('testService.createTest', { type, customer_id });
 
     const _txn = transaction(() => {
+        // Server-side timestamp ONLY — see temporal policy comment above.
         const ts         = now();
         const testId     = genId(c.parentPrefix);
         // Sequence inside transaction — race-safe
@@ -623,6 +640,13 @@ function completeTest(type, testId, data) {
         throw new BusinessError(`${type} test not found: ${testId}`, ERR.TEST_NOT_FOUND, 404);
     }
 
+    if (testRow.status === 'DONE') {
+        throw new BusinessError(
+            `Cannot complete test ${testId} because it is already in DONE status`,
+            ERR.STATUS_INVALID, 409
+        );
+    }
+
     audit.validate('testService.completeTest', { type, testId, customer_id: testRow.customer_id });
 
     // ── GATE 3: Purity pre-flight (before transaction, no partial-write risk) ──
@@ -651,12 +675,8 @@ function completeTest(type, testId, data) {
     const certSvc = _getCertSvc();
 
     const _txn = transaction(() => {
-        // Check status inside transaction
-        const current = db.prepare(`SELECT status FROM ${c.parentTable} WHERE id = ?`).get(testId);
-        if (current.status === 'DONE') {
-            throw new BusinessError(`Test ${testId} is already DONE`, ERR.IMMUTABLE, 409);
-        }
-
+        // IMMUTABLE-on-DONE feature restored per Historical Truth Policy.
+        // A DONE test cannot be re-completed.
         const tx = db; // architecture requirement
         const ts              = now();
         const { customer_id } = testRow;
@@ -730,9 +750,12 @@ function completeTest(type, testId, data) {
             if (weight_loss > 0) {
                 const row = db.prepare(`SELECT customer_id FROM ${c.parentTable} WHERE id = ?`).get(testId);
                 if (!row) throw new SystemError(`completeTest: test ${testId} disappeared mid-transaction`, null, { testId, type });
-                db.prepare(
-                    'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+                wlhRepo.insertWithinTransaction(db, {
+                    customer_id    : row.customer_id,
+                    amount         : weight_loss,
+                    reason         : `${type} test finalization: ${testId}`,
+                    mode_of_payment: mode_of_payment || null,
+                });
             }
             db.prepare(`DELETE FROM ${c.itemTable} WHERE ${c.fkColumn} = ?`).run(testId);
             db.prepare(`DELETE FROM ${c.parentTable} WHERE id = ?`).run(testId);
@@ -746,9 +769,12 @@ function completeTest(type, testId, data) {
             if (weight_loss > 0) {
                 const row = db.prepare(`SELECT customer_id FROM ${c.parentTable} WHERE id = ?`).get(testId);
                 if (!row) throw new SystemError(`completeTest: test ${testId} disappeared mid-transaction`, null, { testId, type });
-                db.prepare(
-                    'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+                wlhRepo.insertWithinTransaction(db, {
+                    customer_id    : row.customer_id,
+                    amount         : weight_loss,
+                    reason         : `${type} test finalization: ${testId}`,
+                    mode_of_payment: mode_of_payment || null,
+                });
             }
         }
 
@@ -781,6 +807,9 @@ function completeTest(type, testId, data) {
         let certLedgerEntry = null;
 
         if (post_ledger) {
+            // Test charge — recordRevenue is fine here because the test row
+            // does not have a per-row idempotency gate; the surrounding
+            // transaction + completion_request_id guards prevent double calls.
             if (testFeeTotal > 0 && !isFullConvert) {
                 const cap = type.charAt(0).toUpperCase() + type.slice(1);
                 ledgerEntry = ledgerSvc.recordRevenue(type, {
@@ -790,25 +819,22 @@ function completeTest(type, testId, data) {
                     description       : `${cap} Lab Test ${testRow.auto_number} — charges`,
                     mode_of_payment,
                     post_cash_register: false,
-                    reference_type    : c.parentTable,
-                    reference_id      : testId,
-                    skip_status_check : true,
                 }, tx);
             }
 
+            // Certificate charge — uses chargeCertificate's atomic gate.
             if (certificate && certFeeTotal > 0) {
                 const cap = type.charAt(0).toUpperCase() + type.slice(1);
-                certLedgerEntry = ledgerSvc.recordRevenue(type, {
+                const result = ledgerSvc.chargeCertificate(type, {
+                    cert_id        : certificate.id,
                     customer_id,
-                    amount            : certFeeTotal,
-                    entry_type        : 'DEBIT',
-                    description       : `${cap} Certificate ${certificate.auto_number} — issuance fee`,
+                    amount         : certFeeTotal,
+                    entry_type     : 'DEBIT',
+                    description    : `${cap} Certificate ${certificate.auto_number} — issuance fee`,
                     mode_of_payment,
                     post_cash_register: false,
-                    reference_type    : type === 'gold' ? 'gold_certificate' : 'silver_certificate',
-                    reference_id      : certificate.id,
-                    skip_status_check : true,
                 }, tx);
+                certLedgerEntry = result.debit ? result : null;
             }
         }
 
@@ -923,6 +949,9 @@ function deleteTest(type, id) {
     try {
         const result = _txn();
         audit.commit('testService.deleteTest', { id, type });
+        // GAP 4 fix: emit deleted event for real-time sync
+        socket.emit(`${type}_test`, 'item:deleted', { id, type });
+        socket.emit('workflow',     'item:deleted', { id, type });
         return result;
     } catch (err) {
         audit.rollback('testService.deleteTest', err, { type, id });

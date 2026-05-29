@@ -198,9 +198,10 @@ class ListService {
                 break;
 
             case 'credit-history':
-                // credit_history uses 'created' not 'createdon', and has no 'deletedon'
-                query = `SELECT t.*, t.created, c.name as customer_name FROM credit_history t ${joinCustomer} WHERE 1=1`;
-                countQuery = `SELECT COUNT(*) as total FROM credit_history t ${joinCustomer} WHERE 1=1`;
+                // credit_history now follows the standard lifecycle contract
+                // (created/lastmodified/deletedon). Soft-deleted rows excluded.
+                query = `SELECT t.*, t.created, c.name as customer_name FROM credit_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
+                countQuery = `SELECT COUNT(*) as total FROM credit_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
                 if (search) {
                     query += " AND (c.name LIKE ? OR c.phone LIKE ?)";
                     countQuery += " AND (c.name LIKE ? OR c.phone LIKE ?)";
@@ -211,9 +212,9 @@ class ListService {
                 break;
 
             case 'weight-loss-history':
-                // weight_loss_history uses 'created' not 'createdon', and has no 'deletedon'
-                query = `SELECT t.*, t.created, c.name as customer_name FROM weight_loss_history t ${joinCustomer} WHERE 1=1`;
-                countQuery = `SELECT COUNT(*) as total FROM weight_loss_history t ${joinCustomer} WHERE 1=1`;
+                // weight_loss_history now follows the standard lifecycle contract.
+                query = `SELECT t.*, t.created, c.name as customer_name FROM weight_loss_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
+                countQuery = `SELECT COUNT(*) as total FROM weight_loss_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
                 if (search) {
                     query += " AND (c.name LIKE ? OR c.phone LIKE ?)";
                     countQuery += " AND (c.name LIKE ? OR c.phone LIKE ?)";

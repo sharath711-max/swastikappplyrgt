@@ -4,7 +4,42 @@ import { FaPlus, FaTrash, FaSearch } from 'react-icons/fa';
 import api from '../services/api';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
+import { useItemList } from '../hooks/useItemList';
 import { calculateGoldItem } from '../utils/calculations';
+import {
+    validateItem,
+    normalizeWeight,
+    subtractWeights,
+    OPERATIONS,
+    ACTORS,
+} from '../shared/domain/validation';
+
+const TYPE_TO_WORKFLOW = { gold: 'GC', silver: 'SC', photo: 'PC' };
+
+// TODO(PHASE-UI-SPLIT): CertificateForm uses a single "Description / Tag" input
+// (sampleDraft.item_name) that serves as BOTH item_type and description.
+// A future UI-split phase should add a dedicated Item Type field.
+// TODO(PHASE-FIELD-NAMING): UI still uses `test_weight` as the state key for
+// what the domain calls `sample_weight`. Label has been migrated to "Sample Wt";
+// state key rename is a follow-up phase to avoid churn elsewhere.
+// TODO(PHASE-4-ATTACHMENTS): PC inline photo upload removed from this form;
+// per-item photo attachment will arrive via the PCI attachment subsystem.
+const buildValidationData = (draft) => ({
+    item_type:     draft.item_name,
+    description:   draft.item_name,
+    gross_weight:  draft.gross_weight,
+    sample_weight: draft.test_weight,
+    returned:      draft.returned,
+});
+
+const computeDisplayNet = (draft) => {
+    const gross = normalizeWeight(draft.gross_weight);
+    if (gross === null) return 0;
+    const sample = normalizeWeight(draft.test_weight);
+    if (sample === null) return gross;
+    const net = subtractWeights(gross, sample);
+    return net === null || net < 0 ? 0 : net;
+};
 
 const emptyDraft = {
     item_name: '',
@@ -45,7 +80,12 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
 
     const [sampleDraft, setSampleDraft] = useState(emptyDraft);
     const [defaultRate, setDefaultRate] = useState('');
-    const [items, setItems] = useState([]);
+    const {
+        items,
+        addItem,
+        removeItem,
+        resetItems,
+    } = useItemList();
     const [photo, setPhoto] = useState(null);
     const currentDate = new Date().toLocaleDateString('en-US');
 
@@ -78,7 +118,7 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                 setSampleDraft(d => ({ ...d, rate: String(rate) }));
             }
         }).catch(() => {}); // silent — staff can type manually
-        setItems([]);
+        resetItems();
         setPhoto(null);
         setShowSuggestions(false);
 
@@ -151,36 +191,37 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
     };
 
     const addSampleToList = () => {
-        let valid = true;
-        if (type === 'gold') {
-            if (!sampleDraft.item_name || !sampleDraft.gross_weight) valid = false;
-        } else if (type === 'silver') {
-            if (!sampleDraft.item_name || !(sampleDraft.gross_weight || sampleDraft.weight)) valid = false;
-        } else {
-            if (!sampleDraft.weight) valid = false;
-        }
-
-        if (!valid) {
-            alert('Please fill mandatory fields for draft (Item Description and Weight).');
+        const workflowType = TYPE_TO_WORKFLOW[type];
+        if (!workflowType) {
+            addToast(`Unsupported certificate type: ${type}`, 'error');
             return;
         }
 
-        setItems(prev => [...prev, { ...sampleDraft, id: `${Date.now()}-${Math.random()}`, seq: prev.length + 1 }]);
+        const result = validateItem({
+            workflow_type: workflowType,
+            context: { operation: OPERATIONS.CREATE, actor: ACTORS.USER },
+            data: buildValidationData(sampleDraft),
+        });
+
+        if (!result.valid) {
+            addToast(result.errors[0].message, 'error');
+            return;
+        }
+
+        addItem({ ...sampleDraft });
         setSampleDraft({ ...emptyDraft });
     };
 
-    const removeSample = (id) => {
-        setItems(prev => prev.filter(s => s.id !== id).map((s, idx) => ({ ...s, seq: idx + 1 })));
-    };
+    const removeSample = (id) => removeItem(id);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
         if (!selectedCustomer) {
-            alert('Please select a customer.');
+            addToast('Please select a customer', 'error');
             return;
         }
         if (items.length === 0) {
-            alert('Add at least one item to list.');
+            addToast('Add at least one item to list', 'error');
             return;
         }
 
@@ -204,7 +245,11 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                     mappedItem.purity = parseFloat(item.purity || 0);
                     mappedItem.item_total = parseFloat(item.amount || 0);
                 } else if (type === 'photo') {
-                    mappedItem.gross_weight = parseFloat(item.weight || 0);
+                    // PC now uses gross_weight + test_weight (unified with GC/SC).
+                    // Legacy `weight` field retained as fallback for any external
+                    // callers still posting the old shape.
+                    mappedItem.gross_weight = parseFloat(item.gross_weight || item.weight || 0);
+                    mappedItem.test_weight  = parseFloat(item.test_weight || 0);
                 } else {
                     mappedItem.gross_weight = parseFloat(item.gross_weight || 0);
                     mappedItem.test_weight = parseFloat(item.test_weight || 0);
@@ -234,17 +279,22 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
     };
 
     return (
-        <Form onSubmit={handleSubmit} className="new-sample-modal" style={{ textAlign: 'left' }}>
-            <Form.Group className="mb-3">
-                <Form.Label className="field-label">Date <span className="required">*</span></Form.Label>
-                <Form.Control value={currentDate} readOnly />
-            </Form.Group>
-
-            <Form.Group className="mb-3" ref={dropdownRef}>
-                <Form.Label className="field-label">Customer Search <span className="required">*</span></Form.Label>
+        <Form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'file') {
+                    e.preventDefault();
+                }
+            }}
+            className="new-sample-modal"
+            style={{ textAlign: 'left' }}
+        >
+            <Form.Group className="mb-2" ref={dropdownRef}>
+                <div className="fw-bold text-dark fs-6 mb-2">Customer</div>
                 <InputGroup>
-                    <InputGroup.Text><FaSearch /></InputGroup.Text>
+                    <InputGroup.Text className="bg-light border-end-0"><FaSearch /></InputGroup.Text>
                     <Form.Control
+                        className="border-start-0"
                         placeholder="Search by name or phone"
                         value={searchTerm}
                         onChange={(e) => {
@@ -254,6 +304,11 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                         }}
                         onFocus={() => setShowSuggestions(true)}
                     />
+                    {selectedCustomer && (
+                        <InputGroup.Text className="bg-success text-white fw-bold">
+                            ✓ Selected
+                        </InputGroup.Text>
+                    )}
                 </InputGroup>
 
                 {showSuggestions && searchTerm && (
@@ -281,13 +336,16 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                 )}
             </Form.Group>
 
-            <Form.Group className="mb-3">
-                <Form.Label className="field-label">Customer Name <span className="required">*</span></Form.Label>
-                <Form.Control value={customerDisplay(selectedCustomer)} readOnly />
-            </Form.Group>
-
-            <Form.Label className="field-label mb-2">Certificate Draft Entry</Form.Label>
-            <div className="item-entry-card p-3 mb-3 border rounded shadow-sm bg-light">
+            <div className="fw-bold text-dark fs-6 mb-2 mt-3">Item Entry</div>
+            <div
+                className="item-entry-card mb-3"
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'file') {
+                        e.preventDefault();
+                        addSampleToList();
+                    }
+                }}
+            >
                 <Row className="g-2 mb-2">
                     <Col md={12}>
                         <Form.Label className="small fw-bold">Description / Tag</Form.Label>
@@ -308,74 +366,52 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                     </Col>
                 </Row>
 
-                {type === 'gold' && (
-                    <Row className="g-2">
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Gross Wt</Form.Label>
-                            <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.gross_weight} onChange={(e) => handleDraftChange('gross_weight', e.target.value)} />
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Test Wt</Form.Label>
-                            <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.test_weight} onChange={(e) => handleDraftChange('test_weight', e.target.value)} />
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Rate/g (₹)</Form.Label>
-                            <Form.Control
-                                type="number"
-                                step="0.01"
-                                placeholder={defaultRate || '0.00'}
-                                value={sampleDraft.rate}
-                                onChange={(e) => handleDraftChange('rate', e.target.value)}
-                            />
-                        </Col>
-                    </Row>
-                )}
+                <Row className="g-2">
+                    <Col md={4}>
+                        <Form.Label className="small fw-bold">Gross Wt (g)</Form.Label>
+                        <Form.Control
+                            type="number" step="0.001" min="0" placeholder="0.000"
+                            value={sampleDraft.gross_weight}
+                            onChange={(e) => handleDraftChange('gross_weight', e.target.value)}
+                        />
+                    </Col>
+                    <Col md={4}>
+                        <Form.Label className="small fw-bold">Sample Wt (g)</Form.Label>
+                        <Form.Control
+                            type="number" step="0.001" min="0" placeholder="0.000"
+                            value={sampleDraft.test_weight}
+                            onChange={(e) => handleDraftChange('test_weight', e.target.value)}
+                        />
+                    </Col>
+                    <Col md={4}>
+                        <Form.Label className="small fw-bold">Net Wt (g)</Form.Label>
+                        <Form.Control
+                            className="bg-light"
+                            value={computeDisplayNet(sampleDraft)}
+                            readOnly
+                            tabIndex={-1}
+                        />
+                    </Col>
+                </Row>
 
-                {type === 'silver' && (
-                    <Row className="g-2">
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Gross Wt</Form.Label>
-                            <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.gross_weight || sampleDraft.weight} onChange={(e) => handleDraftChange('gross_weight', e.target.value)} />
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Test Wt</Form.Label>
-                            <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.test_weight} onChange={(e) => handleDraftChange('test_weight', e.target.value)} />
-                        </Col>
-                    </Row>
-                )}
-
-                {type === 'photo' && (
-                    <Row className="g-2">
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Weight (g)</Form.Label>
-                            <Form.Control type="number" step="0.001" placeholder="0.000" value={sampleDraft.weight} onChange={(e) => handleDraftChange('weight', e.target.value)} />
-                        </Col>
-                        <Col md={8}>
-                            <Form.Label className="small fw-bold">Upload Item Photo (Optional)</Form.Label>
-                            <Form.Control type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0])} />
-                        </Col>
-                    </Row>
-                )}
-
-                <Button className="add-sample-btn mt-3" onClick={addSampleToList}>
-                    <FaPlus className="me-1" /> Add to List
-                </Button>
+                <div className="d-flex justify-content-end mt-2">
+                    <Button size="sm" className="add-sample-btn px-4" onClick={addSampleToList}>
+                        <FaPlus className="me-1" /> Add
+                    </Button>
+                </div>
             </div>
 
-            <div className="sample-list-panel mt-3 mb-4">
-                <div className="sample-list-head">
-                    <span>Certificate Entries List</span>
-                    <span className="count-pill">{items.length} items</span>
-                </div>
-                <div className="table-responsive">
-                    <table className="table table-bordered table-hover mb-0" style={{ fontSize: '0.85rem' }}>
-                        <thead className="table-dark">
+            <div className="sample-list-panel mb-2">
+                <div className="table-responsive" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    <table className="table table-bordered table-sm mb-0" style={{ fontSize: '0.85rem' }}>
+                        <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                             <tr>
                                 <th>#</th>
                                 <th>Cert No.</th>
                                 <th>Item</th>
                                 <th>Gross Wt</th>
-                                {type !== 'photo' && <th>Test Wt</th>}
+                                <th>Sample Wt</th>
+                                <th>Net Wt</th>
                                 <th>Returned</th>
                                 <th className="text-center"></th>
                             </tr>
@@ -383,65 +419,59 @@ const CertificateForm = ({ onSubmit, onCancel, initialData = null, forcedType = 
                         <tbody>
                             {items.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center py-4 text-muted italic">No items added yet</td>
+                                    <td colSpan="8" className="text-center py-4 text-muted italic">No items added yet</td>
                                 </tr>
                             ) : (
-                                items.map((s) => (
-                                    <tr key={s.id}>
-                                        <td>{s.seq}</td>
-                                        <td>{s.sub_certificate_number || 'Auto'}</td>
-                                        <td className="fw-bold">{s.item_name}</td>
-                                        <td>{s.gross_weight || s.weight}g</td>
-                                        {type !== 'photo' && <td>{s.test_weight}g</td>}
-                                        <td>{s.returned ? 'Yes' : 'No'}</td>
-                                        <td className="text-center">
-                                            <Button variant="link" className="p-0 text-danger" onClick={() => removeSample(s.id)}>
-                                                <FaTrash />
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))
+                                items.map((s) => {
+                                    const gross  = parseFloat(s.gross_weight || s.weight || 0) || 0;
+                                    const sample = parseFloat(s.test_weight || 0) || 0;
+                                    const net    = Math.max(0, Number((gross - sample).toFixed(3)));
+                                    return (
+                                        <tr key={s.id}>
+                                            <td>{s.seq}</td>
+                                            <td>{s.sub_certificate_number || 'Auto'}</td>
+                                            <td className="fw-bold">{s.item_name}</td>
+                                            <td>{gross}g</td>
+                                            <td>{sample}g</td>
+                                            <td>{net}g</td>
+                                            <td>{s.returned ? 'Yes' : 'No'}</td>
+                                            <td className="text-center">
+                                                <Button variant="link" className="p-0 text-danger" onClick={() => removeSample(s.id)}>
+                                                    <FaTrash />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <Row className="new-sample-footer mt-4 mx-0 pb-0 pt-3 border-top justify-content-end">
+            <Row className="new-sample-footer mt-2 mx-0 pb-0 pt-2 border-top justify-content-between align-items-center">
                 <Col xs="auto">
-                    <Button variant="outline-secondary" className="cancel-btn me-2" onClick={onCancel} disabled={loading}>
-                        Cancel
+                    <span className="fw-bold text-dark">{currentDate}</span>
+                </Col>
+                <Col xs="auto" className="d-flex gap-2">
+                    <Button variant="success" size="sm" type="button" onClick={handleSubmit} className="save-btn" disabled={loading}>
+                        {loading ? 'Issuing...' : `Issue Certificate (${items.length})`}
                     </Button>
-                    <Button variant="primary" type="submit" className="save-btn px-5" disabled={loading}>
-                        {loading ? 'Issuing...' : 'Issue Certificate'}
+                    <Button variant="outline-secondary" size="sm" className="cancel-btn" onClick={onCancel} disabled={loading}>
+                        Cancel
                     </Button>
                 </Col>
             </Row>
 
             <style>{`
-                .new-sample-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 1.5rem 2rem;
-                    border: none;
-                }
-                .new-sample-header .btn-close {
-                    filter: brightness(0) invert(1);
-                    opacity: 0.8;
-                }
-                .field-label { font-size: 0.9rem; font-weight: 700; color: #374151; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.025em; }
-                .required { color: #ef4444; }
-                .form-control, .input-group-text, .form-select { border-radius: 10px; padding: 0.75rem 1rem; border: 2px solid #e5e7eb; font-weight: 500; }
-                .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1); }
-                .suggestion-list { position: absolute; left: 0; right: 0; z-index: 1000; margin-top: 5px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); border: 2px solid #667eea; }
-                .add-sample-btn { width: 100%; padding: 1rem; border: none; background: linear-gradient(90deg, #667eea, #764ba2); font-weight: 800; border-radius: 12px; margin-top: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.3s ease; color: white;}
-                .add-sample-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3); color: white; }
-                .sample-list-panel { border: 2px solid #f3f4f6; border-radius: 16px; overflow: hidden; }
-                .sample-list-head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; color: #ffffff; font-weight: 800; background: #1f2937; font-size: 1rem; }
-                .count-pill { font-size: 0.8rem; background: rgba(255, 255, 255, 0.15); border-radius: 30px; padding: 4px 12px; letter-spacing: 0.05em; }
-                .save-btn { padding: 0.9rem; border: none; background: #10b981; font-weight: 800; border-radius: 12px; color: white; }
-                .save-btn:hover { background: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-                .cancel-btn { padding: 0.9rem; font-weight: 700; border-radius: 12px; border: 2px solid #e5e7eb; color: #374151; }
+                .form-control, .form-select, .input-group-text { border-radius: 6px; padding: 0.4rem 0.75rem; font-size: 0.85rem; border: 1px solid #ced4da; }
+                .form-control:focus, .form-select:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+                .suggestion-list { position: absolute; left: 0; right: 0; z-index: 1000; margin-top: 2px; border-radius: 6px; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border: 1px solid #dee2e6; }
+                .add-sample-btn { font-weight: 700; border-radius: 6px; }
+                .sample-list-panel { border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; }
+                .save-btn { font-weight: 700; border-radius: 6px; }
+                .cancel-btn { font-weight: 600; border-radius: 6px; }
+                .item-entry-card { padding: 0; border: none; background: transparent; }
             `}</style>
         </Form>
     );

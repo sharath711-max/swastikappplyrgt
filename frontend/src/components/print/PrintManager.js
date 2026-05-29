@@ -4,12 +4,30 @@ import SilverCert from './SilverCert';
 import PhotoCert from './PhotoCert';
 import MemoCert from './MemoCert';
 import PaymentCert from './PaymentCert';
+import SmallCert from './SmallCert';
 
 /**
  * Unified Print Manager for the SwastikCore print architecture.
  * Determines and renders the designated certificate template based on record type.
+ * Supports layout variants: 'full' (default), 'small' (compact sticker cert).
  */
-const PrintManager = ({ type, data, item, photos = [] }) => {
+const PrintManager = ({ type, data, item, photos = [], layout = 'full' }) => {
+    // Small certificate layout — Python parity. ONLY exposed for GT/ST tests.
+    // GC/SC/PC must never reach this branch (UI gating + this backstop).
+    if (layout === 'small') {
+        const isTest = type === 'gold-test' || type === 'silver-test' || type === 'GT' || type === 'ST';
+        if (!isTest) {
+            return (
+                <div style={{ padding: '40px', color: '#64748b', textAlign: 'center' }}>
+                    <h3 className="fw-bold">Small Certificate Not Available</h3>
+                    <p>Small certificate printing is restricted to Gold/Silver Testing workflows.</p>
+                </div>
+            );
+        }
+        const recordType = type === 'silver-test' || type === 'ST' ? 'silver' : 'gold';
+        return <SmallCert test={data} item={item} recordType={recordType} />;
+    }
+
     switch (type) {
         case 'GT':
         case 'gold':

@@ -9,7 +9,8 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
-        notes: ''
+        notes: '',
+        balance: '0'
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
@@ -18,12 +19,14 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
 
     const isEdit = !!customer;
     const resetForm = React.useCallback(() => {
-        setFormData({ name: '', phone: '', notes: '' });
+        setFormData({ name: '', phone: '', notes: '', balance: '0' });
         setErrors({});
         setTouched({});
     }, []);
 
-    // Reset or Populate form when modal opens
+    // Reset or Populate form when modal opens. Note: balance is intentionally
+    // not populated from `customer` on edit — balance moves through credit_history,
+    // not through this form (matches backend customerRepository.update behavior).
     React.useEffect(() => {
         if (!show) {
             resetForm();
@@ -31,7 +34,8 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
             setFormData({
                 name: customer.name || '',
                 phone: customer.phone || '',
-                notes: customer.notes || ''
+                notes: customer.notes || '',
+                balance: '0'
             });
         }
     }, [show, customer, resetForm]);
@@ -48,6 +52,12 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
             else if (!/^\d{10}$/.test(value)) error = 'Must be exactly 10 digits';
         } else if (name === 'notes') {
             if (value && value.length > 255) error = 'Max 255 characters allowed';
+        } else if (name === 'balance') {
+            if (value !== '' && value != null) {
+                const n = Number(value);
+                if (!Number.isFinite(n)) error = 'Must be a number';
+                else if (n < 0) error = 'Cannot be negative';
+            }
         }
         return error;
     };
@@ -77,7 +87,8 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
         const nameError = validateField('name', formData.name);
         const phoneError = validateField('phone', formData.phone);
         const notesError = validateField('notes', formData.notes);
-        return !nameError && !phoneError && !notesError && formData.name && formData.phone;
+        const balanceError = isEdit ? '' : validateField('balance', formData.balance);
+        return !nameError && !phoneError && !notesError && !balanceError && formData.name && formData.phone;
     };
 
     const handleSubmit = async (e) => {
@@ -87,10 +98,11 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
         const nameError = validateField('name', formData.name);
         const phoneError = validateField('phone', formData.phone);
         const notesError = validateField('notes', formData.notes);
+        const balanceError = isEdit ? '' : validateField('balance', formData.balance);
 
-        if (nameError || phoneError || notesError) {
-            setErrors({ name: nameError, phone: phoneError, notes: notesError });
-            setTouched({ name: true, phone: true, notes: true });
+        if (nameError || phoneError || notesError || balanceError) {
+            setErrors({ name: nameError, phone: phoneError, notes: notesError, balance: balanceError });
+            setTouched({ name: true, phone: true, notes: true, balance: true });
             return;
         }
 
@@ -98,10 +110,21 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
         try {
             await runModalSubmit({
                 action: async () => {
-                    const payload = {
-                        ...formData,
-                        name: formData.name.trim()
-                    };
+                    // Balance is create-only. On edit, omit it — backend ignores it
+                    // anyway (see customerRepository.update), but explicit beats
+                    // implicit and keeps the request payload honest.
+                    const payload = isEdit
+                        ? {
+                            name: formData.name.trim(),
+                            phone: formData.phone,
+                            notes: formData.notes,
+                        }
+                        : {
+                            name: formData.name.trim(),
+                            phone: formData.phone,
+                            notes: formData.notes,
+                            balance: parseFloat(formData.balance) || 0,
+                        };
 
                     const res = isEdit
                         ? await api.put(`/customers/${customer.id}`, payload)
@@ -170,6 +193,27 @@ const NewCustomerModal = ({ show, onClose, onHide, onSuccess, customer = null })
                         />
                         <Form.Control.Feedback type="invalid">{errors.phone}</Form.Control.Feedback>
                     </Form.Group>
+                    {!isEdit && (
+                        <Form.Group className="mb-3">
+                            <Form.Label>Initial Balance (₹)</Form.Label>
+                            <Form.Control
+                                name="balance"
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                step="0.01"
+                                value={formData.balance}
+                                onChange={handleChange}
+                                onBlur={handleBlur}
+                                placeholder="0"
+                                isInvalid={!!errors.balance && touched.balance}
+                            />
+                            <Form.Control.Feedback type="invalid">{errors.balance}</Form.Control.Feedback>
+                            <Form.Text className="text-muted">
+                                Opening DR balance (customer owes). Leave 0 if new account. Use Credit History for advance/CR entries.
+                            </Form.Text>
+                        </Form.Group>
+                    )}
                     <Form.Group className="mb-3">
                         <Form.Label>Notes</Form.Label>
                         <Form.Control

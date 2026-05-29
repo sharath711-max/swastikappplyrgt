@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useCustomerSearch } from '../hooks/useCustomerSearch';
-import { Modal, Button, Form, Row, Col, InputGroup, ListGroup } from 'react-bootstrap';
+import { Modal, Button, Form, Row, Col, InputGroup } from 'react-bootstrap';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
@@ -9,6 +8,7 @@ import runModalSubmit from '../utils/handleSubmit';
 import { validateItem, OPERATIONS, ACTORS } from '../shared/domain/validation';
 import useSafeModalClose from '../hooks/useSafeModalClose';
 import PrerequisiteBanner from './core/PrerequisiteBanner';
+import CustomerCombobox from './customer/CustomerCombobox';
 
 const MAX_ITEMS = 20;
 const WORKFLOW_TYPE = 'GC';
@@ -40,20 +40,11 @@ const toValidationData = (row) => ({
     returned:      row.returned,
 });
 
-const customerDisplay = (c) =>
-    c ? `${c.name}${c.phone ? ` (+91 ${c.phone})` : ''}` : '';
-
 const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
     const { addToast } = useToast();
 
-    // Customer state
-    const [searchTerm,       setSearchTerm]       = useState('');
-    const [showSuggestions,  setShowSuggestions]  = useState(false);
+    // Customer state — combobox manages its own search input + result list.
     const [selectedCustomer, setSelectedCustomer] = useState(null);
-
-    const { filteredCustomers, reload: reloadCustomers } = useCustomerSearch({
-        show, searchTerm, addToast, limit: 100,
-    });
 
     // Inline new-customer form (default visible — matches Python initial state)
     const [showNewCust, setShowNewCust] = useState(true);
@@ -65,7 +56,6 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
     const [gst,        setGst]        = useState(true);
     const [loading,    setLoading]    = useState(false);
 
-    const dropdownRef  = useRef(null);
     const submitReqRef = useRef(null);
 
     const dateDisplay = formatDate(new Date());
@@ -77,8 +67,6 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
     // Reset on open
     useEffect(() => {
         if (show) {
-            setSearchTerm('');
-            setShowSuggestions(false);
             setSelectedCustomer(null);
             setShowNewCust(true);
             setNewCustData(emptyNewCustomer);
@@ -88,21 +76,8 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
         }
     }, [show]);
 
-    // Close suggestion dropdown on outside click
-    useEffect(() => {
-        const handler = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-                setShowSuggestions(false);
-            }
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
-
     const handleCustomerSelect = (c) => {
         setSelectedCustomer(c);
-        setSearchTerm(customerDisplay(c));
-        setShowSuggestions(false);
         setShowNewCust(false);
     };
 
@@ -110,8 +85,6 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
         e.preventDefault();
         setShowNewCust(true);
         setSelectedCustomer(null);
-        setSearchTerm('');
-        setShowSuggestions(false);
     };
 
     const saveNewCustomer = async (e) => {
@@ -141,7 +114,6 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
                     setNewCustData(emptyNewCustomer);
                 },
                 reload: async (created) => {
-                    await reloadCustomers();
                     if (created) handleCustomerSelect(created);
                 },
             });
@@ -323,51 +295,13 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
                     Skipped numbers can occur after cancellations, retries, or protected audit flows.
                 </div>
 
-                {/* Customer + Balance row */}
-                <div ref={dropdownRef} className="position-relative">
-                    <InputGroup size="lg" className="mb-3 w-100">
-                        <InputGroup.Text className="fw-bold">Customer</InputGroup.Text>
-                        <Form.Control
-                            type="text"
-                            placeholder="Search by name or phone..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setShowSuggestions(true);
-                                if (!e.target.value.trim()) setSelectedCustomer(null);
-                            }}
-                            onFocus={() => setShowSuggestions(true)}
-                            autoComplete="off"
-                        />
-                        <InputGroup.Text className="fw-bold">Balance</InputGroup.Text>
-                        <Form.Control
-                            value={selectedCustomer?.balance ?? 0}
-                            style={{ flex: '0 0 20%' }}
-                            disabled
-                            readOnly
-                        />
-                    </InputGroup>
-
-                    {showSuggestions && searchTerm && (
-                        <ListGroup
-                            className="position-absolute w-100 shadow"
-                            style={{ zIndex: 1050, maxHeight: 260, overflowY: 'auto', top: '100%' }}
-                        >
-                            {filteredCustomers.length > 0 ? filteredCustomers.map(c => (
-                                <ListGroup.Item
-                                    key={c.id}
-                                    action
-                                    onClick={() => handleCustomerSelect(c)}
-                                >
-                                    {c.name}{c.phone && ` (+91 ${c.phone})`}
-                                </ListGroup.Item>
-                            )) : (
-                                <ListGroup.Item className="text-muted text-center">
-                                    No match found
-                                </ListGroup.Item>
-                            )}
-                        </ListGroup>
-                    )}
+                {/* Customer search — server-side combobox (Wave A2) */}
+                <div className="mb-3">
+                    <CustomerCombobox
+                        value={selectedCustomer?.id}
+                        onChange={(_id, c) => c ? handleCustomerSelect(c) : setSelectedCustomer(null)}
+                        autoFocus
+                    />
                 </div>
 
                 {/* "Add New Customer?" link + previousCertificate placeholder (Python parity) */}

@@ -3,7 +3,7 @@ import { Modal, Form, Button, Spinner } from 'react-bootstrap';
 import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import useSafeModalClose from '../../hooks/useSafeModalClose';
-import CustomerCombobox from './CustomerCombobox';
+import CustomerCombobox from '../customer/CustomerCombobox';
 
 // Operator-supplied audit-type taxonomy. Per spec, dashboard captures
 // the operator's intent rather than hardcoding 'CREDIT'. Backend schema

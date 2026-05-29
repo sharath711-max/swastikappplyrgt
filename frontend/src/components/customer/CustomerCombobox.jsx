@@ -4,6 +4,7 @@ import api from '../../services/api';
 import './CustomerCombobox.css';
 
 const DEBOUNCE_MS = 250;
+const PAGE_SIZE = 10;
 
 const fmtINR = (n) =>
     Number(n || 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
@@ -56,9 +57,16 @@ export default function CustomerCombobox({
         }
         setLoading(true);
         try {
-            const res = await api.get(`/analytics/search?q=${encodeURIComponent(q.trim())}`);
+            const qs = new URLSearchParams({
+                search: q.trim(),
+                pageSize: String(PAGE_SIZE),
+                sortBy: 'name',
+            });
+            const res = await api.get(`/customers?${qs.toString()}`);
             if (seq !== seqRef.current) return;
-            setResults(res.data?.data?.customers || []);
+            // Paged shape: { data: [...], pagination: {...} }
+            const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+            setResults(rows);
             setHighlighted(0);
         } catch {
             if (seq === seqRef.current) setResults([]);

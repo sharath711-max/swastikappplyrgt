@@ -1,7 +1,6 @@
-/* Searchable customer combobox. Replaces native <select> on Credit /
-   Weight Loss modals — Python had select2; this is the SERN equivalent
-   using only react-bootstrap primitives + the existing /analytics/search
-   endpoint for server-side filtering. */
+/* Searchable customer combobox. Used by dashboard customer-action modals
+   and the 5 workflow intake modals (GT / ST / GC / SC / PC).
+   Backend: GET /customers?search=&pageSize=10. */
 
 .customer-combobox {
     position: relative;

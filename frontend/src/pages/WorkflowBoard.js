@@ -7,7 +7,7 @@ import NewGoldTestModal from '../components/NewGoldTestModal';
 import NewSilverTestModal from '../components/NewSilverTestModal';
 import NewCertificateModal from '../components/NewCertificateModal';
 import Phase2Modal from '../components/Phase2Modal';
-import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaCertificate, FaLock } from 'react-icons/fa';
+import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaCertificate, FaLock, FaPlus } from 'react-icons/fa';
 import { useSocket } from '../hooks/useSocket';
 import { usePrint } from '../contexts/PrintContext';
 import { useWorkflow, WORKFLOW_KEYS, WORKFLOW_BY_KEY } from '../contexts/WorkflowContext';
@@ -57,6 +57,7 @@ const WorkflowBoard = () => {
     const {
         selectedWorkflow,
         setSelectedWorkflow,
+        requestNewWorkflow,
         newRequest,
         consumeNewRequest,
         setOpenModalKey,
@@ -691,6 +692,16 @@ const WorkflowBoard = () => {
                                         )}
                                     </div>
                                 </div>
+                            </div>
+                            <div className="slds-page-header__control">
+                                <Button
+                                    className="slds-button slds-button_brand"
+                                    onClick={() => requestNewWorkflow(selectedWorkflow)}
+                                    aria-label={`New ${WORKFLOW_BY_KEY[selectedWorkflow]?.label || 'Record'}`}
+                                >
+                                    <FaPlus aria-hidden="true" className="me-1" />
+                                    New {WORKFLOW_BY_KEY[selectedWorkflow]?.label || 'Record'}
+                                </Button>
                             </div>
                             <div className="slds-page-header__control">
                                 <Button className="slds-button slds-button_neutral" onClick={fetchData}>

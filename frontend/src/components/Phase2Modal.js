@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Button, Form, Alert, Badge, Spinner, InputGroup } from 'react-bootstrap';
 import { FaCamera, FaCopy, FaFileAlt, FaExclamationTriangle, FaFileInvoice, FaLock } from 'react-icons/fa';
 import { useModal } from '../contexts/ModalContext';
@@ -7,6 +7,7 @@ import PriceCalculationTable from './core/PriceCalculationTable';
 import api from '../services/api';
 import { usePrint } from '../contexts/PrintContext';
 import useSafeModalClose from '../hooks/useSafeModalClose';
+import useFocusWhen from '../hooks/useFocusWhen';
 
 const CURRENT_SYSTEM = 'LAB';
 
@@ -108,6 +109,16 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
     const currentStatus = test?.status || '';
     const isTodoStage = currentStatus === 'TODO';
     const isDoneStage = currentStatus === 'DONE';
+
+    // Land the cursor on the operator's next field when the modal opens:
+    // purity on a TODO test, amount on the Payment & Delivery step.
+    const firstPurityRef = useRef(null);
+    const amountRef = useRef(null);
+    // Gate on items.length so we focus only after the rows (and the purity
+    // input) have actually rendered — items populate in an effect on `show`,
+    // a frame after the modal mounts.
+    useFocusWhen(firstPurityRef, show && isTodoStage && !isModalReadOnly && items.length > 0);
+    useFocusWhen(amountRef, show && !isTodoStage && !isDoneStage && !isModalReadOnly && items.length > 0);
     const nextStatus = currentStatus === 'TODO'
         ? 'IN_PROGRESS'
         : currentStatus === 'IN_PROGRESS' ? 'DONE' : null;
@@ -736,6 +747,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                         <td style={{ minWidth: 110 }}>
                                             <div className="input-group w-100">
                                                 <Form.Control
+                                                    ref={idx === 0 ? firstPurityRef : undefined}
                                                     size="sm"
                                                     type="number"
                                                     name="purity"
@@ -856,6 +868,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                             <span className="input-group-text">Amount</span>
                             <span className="input-group-text">₹</span>
                             <Form.Control
+                                ref={amountRef}
                                 type="number"
                                 min="0" step="0.01"
                                 placeholder="0.00"

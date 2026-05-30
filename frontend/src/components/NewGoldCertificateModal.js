@@ -8,6 +8,7 @@ import runModalSubmit from '../utils/handleSubmit';
 import { validateItem, OPERATIONS, ACTORS } from '../shared/domain/validation';
 import useSafeModalClose from '../hooks/useSafeModalClose';
 import useEnterAdvance from '../hooks/useEnterAdvance';
+import useFocusWhen from '../hooks/useFocusWhen';
 import PrerequisiteBanner from './core/PrerequisiteBanner';
 import CustomerCombobox from './customer/CustomerCombobox';
 
@@ -270,7 +271,9 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
         }
     };
 
+    const firstItemRef = useRef(null);
     const sampleBlockVisible = selectedCustomer && !showNewCust;
+    useFocusWhen(firstItemRef, sampleBlockVisible);
 
     return (
         <>
@@ -420,6 +423,7 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
                                     <div className="input-group input-group-lg mb-1">
                                         <span className="input-group-text fw-bold">Name</span>
                                         <Form.Control
+                                            ref={idx === 0 ? firstItemRef : undefined}
                                             type="text"
                                             name="name"
                                             placeholder="Name"

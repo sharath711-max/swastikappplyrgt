@@ -4,6 +4,7 @@ import { FaSave, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import runModalSubmit from '../utils/handleSubmit';
+import useSafeModalClose from '../hooks/useSafeModalClose';
 
 const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
     const { addToast } = useToast();
@@ -24,6 +25,11 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
         });
         setErrors({});
     };
+
+    // Route every close through the safe-close chokepoint so React-Bootstrap's
+    // backdrop can never be orphaned and block page clicks.
+    const { safeClose } = useSafeModalClose({ show, onHide });
+    const closeSafely = () => safeClose({ reset: resetForm });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -59,10 +65,7 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
                     addToast('Transaction recorded successfully', 'success');
                 },
                 reload: onSuccess,
-                close: () => {
-                    resetForm();
-                    onHide();
-                }
+                close: closeSafely
             });
         } catch (error) {
             console.error('Error recording transaction:', error);
@@ -73,7 +76,7 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
     };
 
     return (
-        <Modal show={show} onHide={onHide} centered backdrop="static" size="lg">
+        <Modal show={show} onHide={closeSafely} centered backdrop="static" size="lg">
             <Modal.Header closeButton className="bg-light">
                 <Modal.Title className="fw-bold text-primary">
                     <FaMoneyBillWave className="me-2" /> New Financial Transaction
@@ -114,6 +117,7 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
                             <Form.Group controlId="amount">
                                 <Form.Label className="fw-semibold small text-muted text-uppercase">Amount (₹)</Form.Label>
                                 <Form.Control
+                                    autoFocus
                                     type="number"
                                     name="amount"
                                     value={formData.amount}
@@ -174,7 +178,7 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
                     </div>
                 </Modal.Body>
                 <Modal.Footer className="bg-light border-top-0">
-                    <Button variant="link" className="text-muted text-decoration-none" onClick={onHide} disabled={loading}>
+                    <Button variant="link" className="text-muted text-decoration-none" onClick={closeSafely} disabled={loading}>
                         <FaTimes className="me-1" /> Cancel
                     </Button>
                     <Button variant="primary" type="submit" className="px-4 fw-bold shadow-sm" disabled={loading}>

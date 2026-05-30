@@ -7,6 +7,7 @@ import { preventDuplicateCreate } from '../utils/certificateGuard';
 import runModalSubmit from '../utils/handleSubmit';
 import { validateItem, OPERATIONS, ACTORS } from '../shared/domain/validation';
 import useSafeModalClose from '../hooks/useSafeModalClose';
+import useEnterAdvance from '../hooks/useEnterAdvance';
 import PrerequisiteBanner from './core/PrerequisiteBanner';
 import CustomerCombobox from './customer/CustomerCombobox';
 
@@ -67,6 +68,7 @@ const NewPhotoCertificateModal = ({ show, onHide, onSuccess }) => {
 
     const resetTransientState = () => { setLoading(false); };
     const { safeClose, mountedRef } = useSafeModalClose({ show, onHide });
+    const onEnterAdvance = useEnterAdvance();
     const closeSafely = () => safeClose({ reset: resetTransientState });
 
     useEffect(() => {
@@ -262,7 +264,7 @@ const NewPhotoCertificateModal = ({ show, onHide, onSuccess }) => {
                 <Modal.Title as="h3" id="newCertModalTitle">New Photo Certificate</Modal.Title>
             </Modal.Header>
 
-            <Modal.Body className="m-3 mb-0">
+            <Modal.Body className="m-3 mb-0" onKeyDown={onEnterAdvance}>
 
                 <PrerequisiteBanner>
                     Photo Certificate is created independently from the customer's existing items.

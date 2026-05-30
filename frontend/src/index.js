@@ -8,7 +8,6 @@ import '@salesforce-ux/design-system/assets/styles/salesforce-lightning-design-s
 import './styles/ModalContainer.css';
 import App from './App';
 
-console.log("REACT APP EXPERIMENT START");
 const root = ReactDOM.createRoot(document.getElementById('root'));
 // StrictMode double-invokes mount/unmount in DEV only, which trips a known
 // React-Bootstrap modal `removeChild` crash on the workflow board. Production

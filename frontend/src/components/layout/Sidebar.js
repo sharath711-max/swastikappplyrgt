@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaTachometerAlt, FaUsers, FaFileInvoiceDollar, FaChartBar,
-    FaUserShield, FaChevronDown,
+    FaTachometerAlt, FaUsers, FaFileInvoiceDollar,
     FaCoins, FaBalanceScale, FaCertificate, FaFileAlt, FaImage,
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
@@ -30,7 +29,6 @@ const Sidebar = ({ sidebarCollapsed }) => {
         tryWorkflowSwitch,
     } = useWorkflow();
 
-    const [adminOpen, setAdminOpen] = useState(() => location.pathname.startsWith('/admin/users'));
 
     const isActive = (path, exact = false) => {
         if (!path) return false;
@@ -85,7 +83,7 @@ const Sidebar = ({ sidebarCollapsed }) => {
                     })}
                 </ProtectedComponent>
 
-                {/* Customers / Bills / Reports */}
+                {/* Customers / Bills */}
                 <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
                     <Link
                         to="/customers"
@@ -103,49 +101,6 @@ const Sidebar = ({ sidebarCollapsed }) => {
                         <span className="nav-icon"><FaFileInvoiceDollar /></span>
                         {!sidebarCollapsed && <span className="nav-label">Bills</span>}
                     </Link>
-                </ProtectedComponent>
-                <ProtectedComponent roles={['admin', 'manager']}>
-                    <Link
-                        to="/list-views"
-                        className={`nav-item ${isActive('/list-views') ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon"><FaChartBar /></span>
-                        {!sidebarCollapsed && <span className="nav-label">Reports</span>}
-                    </Link>
-                </ProtectedComponent>
-
-                {/* Admin group */}
-                <ProtectedComponent roles={['admin']}>
-                    <div className={`nav-group ${isActive('/admin/users') ? 'active' : ''}`}>
-                        <div
-                            className="nav-group-header"
-                            onClick={() => !sidebarCollapsed && setAdminOpen((v) => !v)}
-                            style={{ cursor: !sidebarCollapsed ? 'pointer' : 'default' }}
-                        >
-                            <span className="nav-icon"><FaUserShield /></span>
-                            {!sidebarCollapsed && (
-                                <>
-                                    <span className="nav-label">Admin</span>
-                                    <FaChevronDown
-                                        className="nav-group-toggle"
-                                        style={{
-                                            transform: adminOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                                        }}
-                                    />
-                                </>
-                            )}
-                        </div>
-                        {!sidebarCollapsed && adminOpen && (
-                            <div className="nav-subitems">
-                                <Link
-                                    to="/admin/users"
-                                    className={`nav-subitem ${isActive('/admin/users') ? 'active' : ''}`}
-                                >
-                                    <span>Users</span>
-                                </Link>
-                            </div>
-                        )}
-                    </div>
                 </ProtectedComponent>
             </nav>
 

@@ -42,6 +42,9 @@ module.exports = defineConfig({
                 CI: 'true',
                 PORT: '3000',
                 REACT_APP_API_URL: 'http://127.0.0.1:6001/api',
+                // Render without StrictMode for e2e so the dev server matches
+                // production (no double-invoke → no RB modal removeChild crash).
+                REACT_APP_E2E: 'true',
             },
         },
     ],

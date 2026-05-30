@@ -10,10 +10,16 @@ import App from './App';
 
 console.log("REACT APP EXPERIMENT START");
 const root = ReactDOM.createRoot(document.getElementById('root'));
+// StrictMode double-invokes mount/unmount in DEV only, which trips a known
+// React-Bootstrap modal `removeChild` crash on the workflow board. Production
+// never double-invokes, so this is dev-only. We disable StrictMode ONLY for the
+// e2e dev-server (REACT_APP_E2E) so tests match production behavior; normal
+// `npm start` and the production build keep StrictMode fully active.
+const appTree = <App />;
 root.render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>
+    process.env.REACT_APP_E2E === 'true'
+        ? appTree
+        : <React.StrictMode>{appTree}</React.StrictMode>
 );
 
 

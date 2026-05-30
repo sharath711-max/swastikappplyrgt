@@ -102,7 +102,7 @@
     flex: 1;
     min-width: 300px;
     background: #f8fafc;
-    border-radius: 4px;
+    border-radius: 12px;
     min-height: calc(100vh - 220px);
     border: 1px solid #d1d5db;
     display: flex;
@@ -188,7 +188,7 @@
 /* Kanban Cards — flat, compact, low-radius */
 .kanban-card {
     background: #ffffff;
-    border-radius: 3px;
+    border-radius: 10px;
     padding: 10px 12px;
     box-shadow: none;
     border: 1px solid #d1d5db;
@@ -359,8 +359,9 @@
 
 .card-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
+    gap: 8px;
     margin-top: 4px;
     padding-top: 4px;
     border-top: 1px solid #e5e7eb;
@@ -383,6 +384,7 @@
     font-weight: 700;
     font-size: 12px;
     font-family: 'Consolas', 'Courier New', monospace;
+    margin-left: auto; /* always pin the amount to the far right, regardless of how many tags precede it */
 }
 
 /* Aging badge — surfaces queue-time pressure inline on each card. Three
@@ -553,5 +555,29 @@
 
 .kanban-card__receipt-btn:focus-visible {
     outline: 2px solid #6366f1;
+    outline-offset: 1px;
+}
+
+/* WhatsApp share — DONE cards only. Mirrors the receipt button but tinted
+   WhatsApp green so the share affordance reads at a glance. */
+.kanban-card__whatsapp-btn {
+    background: transparent;
+    border: none;
+    color: #25d366;
+    padding: 2px 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.kanban-card__whatsapp-btn:hover {
+    background: #dcfce7;
+    color: #128c3a;
+}
+.kanban-card__whatsapp-btn:focus-visible {
+    outline: 2px solid #25d366;
     outline-offset: 1px;
 }

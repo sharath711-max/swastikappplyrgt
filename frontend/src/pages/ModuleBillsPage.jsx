@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
     Container, Row, Col, Card, Table, Badge, Spinner, Alert,
-    Form, Button, Nav, Tab,
+    Form, Button,
 } from 'react-bootstrap';
 import api from '../services/api';
 import { useFetch } from '../hooks/useFetch';
@@ -15,7 +15,7 @@ const MODULES = [
     { key: 'silver_test', label: 'Silver Tests', hasGst: false },
 ];
 
-const fmt     = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`;
+const fmt     = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN') : '—';
 
 function ModuleBills({ mod }) {
@@ -61,7 +61,8 @@ function ModuleBills({ mod }) {
 
     return (
         <div>
-            <Row className="g-2 mb-3 align-items-end">
+            <div className="mb-3" style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}>
+            <Row className="g-2 align-items-end">
                 <Col xs="auto">
                     <Form.Label className="small fw-semibold mb-1">From</Form.Label>
                     <Form.Control size="sm" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -78,18 +79,31 @@ function ModuleBills({ mod }) {
                     }}>Reset</Button>
                     <Button size="sm" variant="outline-success" onClick={exportCsv} disabled={!rows.length}>Export CSV</Button>
                 </Col>
-                <Col xs="auto" className="ms-auto d-flex align-items-end">
-                    <strong className="text-success small">Total: {fmt(grandTotal)}</strong>
+                <Col xs="auto" className="ms-auto d-flex align-items-center">
+                    <span
+                        className="fw-bold text-success px-3 py-2"
+                        style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '0.95rem', whiteSpace: 'nowrap' }}
+                    >
+                        Total: {fmt(grandTotal)}
+                    </span>
                 </Col>
             </Row>
+            </div>
 
             {mod.hasGst && (
-                <Nav variant="tabs" className="mb-3 small" activeKey={gstTab}
-                    onSelect={k => { setGstTab(k); apply(k); }}>
-                    <Nav.Item><Nav.Link eventKey="all">All</Nav.Link></Nav.Item>
-                    <Nav.Item><Nav.Link eventKey="gst">GST</Nav.Link></Nav.Item>
-                    <Nav.Item><Nav.Link eventKey="non-gst">Non-GST</Nav.Link></Nav.Item>
-                </Nav>
+                <div className="d-flex gap-2 mb-3">
+                    {[['all', 'All'], ['gst', 'GST'], ['non-gst', 'Non-GST']].map(([k, label]) => (
+                        <Button
+                            key={k}
+                            size="sm"
+                            variant={gstTab === k ? 'primary' : 'outline-secondary'}
+                            className="px-3"
+                            onClick={() => { setGstTab(k); apply(k); }}
+                        >
+                            {label}
+                        </Button>
+                    ))}
+                </div>
             )}
 
             {error   && <Alert variant="danger" className="small">{error}</Alert>}
@@ -97,7 +111,7 @@ function ModuleBills({ mod }) {
 
             {!loading && (
                 <>
-                    <Table hover responsive size="sm" className="bg-white shadow-sm mb-1">
+                    <Table hover striped responsive size="sm" className="bg-white shadow-sm mb-1 small align-middle">
                         <thead className="table-light">
                             <tr>
                                 <th>#</th>
@@ -154,28 +168,28 @@ function ModuleBills({ mod }) {
 
 export default function ModuleBillsPage() {
     const [active, setActive] = useState('gold_cert');
+    const activeMod = MODULES.find(m => m.key === active) || MODULES[0];
 
     return (
         <Container fluid className="py-4">
             <h2 className="fw-bold mb-4">Module Bills</h2>
             <Card className="shadow-sm border-0">
                 <Card.Body>
-                    <Tab.Container activeKey={active} onSelect={setActive}>
-                        <Nav variant="tabs" className="mb-4">
-                            {MODULES.map(m => (
-                                <Nav.Item key={m.key}>
-                                    <Nav.Link eventKey={m.key} style={{ fontSize: '0.85rem' }}>{m.label}</Nav.Link>
-                                </Nav.Item>
-                            ))}
-                        </Nav>
-                        <Tab.Content>
-                            {MODULES.map(m => (
-                                <Tab.Pane key={m.key} eventKey={m.key}>
-                                    {active === m.key && <ModuleBills mod={m} />}
-                                </Tab.Pane>
-                            ))}
-                        </Tab.Content>
-                    </Tab.Container>
+                    <div className="d-flex flex-wrap gap-2 mb-4">
+                        {MODULES.map(m => (
+                            <Button
+                                key={m.key}
+                                size="sm"
+                                variant={active === m.key ? 'primary' : 'outline-secondary'}
+                                className="fw-semibold px-3"
+                                onClick={() => setActive(m.key)}
+                            >
+                                {m.label}
+                            </Button>
+                        ))}
+                    </div>
+                    {/* key forces a fresh mount per module so filters reset on switch */}
+                    <ModuleBills key={active} mod={activeMod} />
                 </Card.Body>
             </Card>
         </Container>

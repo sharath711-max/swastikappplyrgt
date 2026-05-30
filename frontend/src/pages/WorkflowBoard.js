@@ -7,7 +7,7 @@ import NewGoldTestModal from '../components/NewGoldTestModal';
 import NewSilverTestModal from '../components/NewSilverTestModal';
 import NewCertificateModal from '../components/NewCertificateModal';
 import Phase2Modal from '../components/Phase2Modal';
-import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaCertificate, FaLock, FaPlus } from 'react-icons/fa';
+import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaCertificate, FaLock, FaPlus, FaWhatsapp } from 'react-icons/fa';
 import { useSocket } from '../hooks/useSocket';
 import { usePrint } from '../contexts/PrintContext';
 import { useWorkflow, WORKFLOW_KEYS, WORKFLOW_BY_KEY } from '../contexts/WorkflowContext';
@@ -861,6 +861,23 @@ const WorkflowBoard = () => {
                                             <div className="card-top d-flex justify-content-between">
                                                 <div className="card-customer">{item.customer_name || 'Anonymous'}</div>
                                                 <div className="d-flex align-items-center gap-1">
+                                                    {isSealed && (
+                                                        <button
+                                                            type="button"
+                                                            className="kanban-card__whatsapp-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const label = WORKFLOW_BY_KEY[item.type]?.label || 'record';
+                                                                const msg = `Hello ${item.customer_name || ''}, your ${label} ${item.auto_number} is ready.\nVerify: ${window.location.origin}/verify/${item.auto_number}`;
+                                                                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+                                                            }}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            aria-label="Share on WhatsApp"
+                                                            title="Share on WhatsApp"
+                                                        >
+                                                            <FaWhatsapp aria-hidden="true" />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         type="button"
                                                         className="kanban-card__receipt-btn"

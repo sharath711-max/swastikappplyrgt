@@ -34,9 +34,29 @@ architecture canonicalized.
   collapsed-section headers show count + total + GST count. Backend list queries
   also expose first-item gross/test weight and purity. Shipped in `52a6780`.
 
+- **G2 — BillsPage customer left-rail scalability** — CLOSED. Replaced the
+  fetch-all + client-side filter with the A1 paged `/customers` endpoint
+  (250ms debounced server search, seqRef race-guard, page-1 browse, Prev/Next
+  rail, selected-customer pinned when off-page). Operator-verified live on the
+  3,420-customer dataset. Shipped in `0f1fa8e`.
+
+- **G3-P1 — modal keyboard rhythm + safe-close** — CLOSED. (a) WeightLoss +
+  CreditHistory close paths migrated to `useSafeModalClose` (orphan-backdrop
+  risk gone); (b) `useEnterAdvance` wired into GC/SC/PC; (c) `autoFocus` on the
+  amount field in WeightLoss/CreditHistory. Shipped in `816575a`.
+
+- **G3-P2 — autofocus batch** — CLOSED. New shared `useFocusWhen(ref, active)`
+  hook lands the cursor on the operator's next field: first item Name field
+  after a customer is picked (GT/ST/GC/SC/PC), purity on a TODO card, amount in
+  Payment & Delivery (Phase2Modal). All three verified live. Shipped in
+  `9e48b20`.
+
+- **P0 — create-entry regression** — CLOSED. See dedicated section below;
+  "+ New {workflow}" board-header button restored, shipped in `ac7f674`.
+
 ---
 
-## 🔴 P0 — create-entry regression (FIXED, pending push-verify done)
+## 🔴 P0 — create-entry regression (FIXED — shipped `ac7f674`, verified live)
 
 - **Symptom:** no UI path to start a New Gold/Silver Test or any Gold/Silver/
   Photo Certificate. This blocked `intake → test → bill → print` at step one —
@@ -64,20 +84,6 @@ architecture canonicalized.
 
 All remaining gaps are **operator throughput only**. No correctness blockers.
 
-### G2 — Billing: BillsPage customer left-rail scalability
-
-- **Lifecycle stage:** Billing
-- **Legacy operator advantage:** fast customer switching while keeping a
-  persistent, visible browse rail.
-- **Current SERN behavior:** fetch-all customer list with client-side
-  filtering; degrades as record count grows; not a paged rail.
-- **Gap statement:** server-backed search + paginated customer rail that
-  preserves active-customer context and keeps the left-rail browse UX. **Not** a
-  `CustomerCombobox` replacement — a mini A1-style pagination port for the
-  sidebar.
-- **Severity:** P1
-- **P-D Rhythm Phase:** YES
-
 ### G3 — Test entry: modal keyboard rhythm
 
 - **Lifecycle stage:** Test entry (and all workflow modals)
@@ -102,25 +108,28 @@ All remaining gaps are **operator throughput only**. No correctness blockers.
   - [x] (b) Wire `useEnterAdvance` into GC / SC / PC (import + hook +
     `onKeyDown` on `<Modal.Body>`).
   - [x] (c) Add `autoFocus` to the amount field on WeightLoss + CreditHistory.
+- **G3-P2 autofocus batch — LANDED (`9e48b20`, verified live):**
+  - [x] Intake: focus the first item field after a customer is picked
+    (was dropping to `<body>`) — GT/ST/GC/SC/PC via shared `useFocusWhen`.
+  - [x] Test: autofocus the purity input on TODO-card open (gated on
+    `items.length` so it fires after the rows render).
+  - [x] Bill: autofocus the amount field in "Payment & Delivery".
 - **P2 — settled by the stopwatch run (full GC lifecycle, live):**
   - **"Save & Add Another" → SKIP.** Reopen cost measured at **~290ms**; the
     mechanical saving is negligible and certs are usually per-customer. Not
     worth the clutter unless same-customer batch entry emerges.
-  - [ ] **Esc unsaved-entry guard → DO (dirty-only).** Confirmed live: Esc
-    closed a modal with typed data, no confirm, silent loss. Add a
-    confirm-on-dirty guard (reuse `hasDraftEntries`, currently display-only).
-- **G3-P2 autofocus batch (new, from stopwatch — same pattern as P1c):**
-  - [ ] Intake: after picking a customer the focus drops to `<body>` — focus
-    the first item field so the operator types straight into item entry.
-  - [ ] Test: TODO-card purity modal does not autofocus the purity input.
-  - [ ] Bill: "Payment & Delivery" modal does not autofocus the amount field.
+  - [ ] **Esc unsaved-entry guard → DO (dirty-only) — ONLY OPEN G3 ITEM.**
+    Confirmed live: Esc closed a modal with typed data, no confirm, silent
+    loss. Add a confirm-on-dirty guard (reuse `hasDraftEntries`, currently
+    display-only). Non-mechanical / interaction-policy — design carefully:
+    warn only when dirty, never on a clean close, no extra clicks normally.
 - **Stopwatch positives / notes:** modal-open latency is excellent (200–320ms,
   reopen ~290ms — no slow-transition gap); Bill is genuinely one-click
   ("Payment & Delivery" pre-computes amount/GST/total → "Delivered"); the test
   button was renamed "Submit to Tested" → "Submit" (so `gc_modal_test.spec.js`
   is stale). Print stage (card receipt button) produced no observable popup in
   automation — needs a manual/G7 check (likely a print-window/OS dialog).
-- **Severity:** P1 (a–c landed) · P2 (Esc-guard + autofocus batch open)
+- **Severity:** G3-P1 + G3-P2 CLOSED · only the Esc-guard (P2) remains open.
 - **P-D Rhythm Phase:** YES
 
 ### G4 — Cross-screen: context persistence / return-to-context
@@ -181,37 +190,43 @@ All remaining gaps are **operator throughput only**. No correctness blockers.
 
 ## P-D Rhythm backlog (throughput-only)
 
-All current remaining gaps are throughput-related, in execution order:
+Execution order for what's left (the stopwatch session already ran, so the
+P1/P2 audit items are now concrete):
 
-1. **G2** — BillsPage left-rail pagination/search _(P1, highest cutover impact)_
-2. **G3** — Test-entry / modal keyboard rhythm audit _(P1)_
-3. **G4** — Cross-screen context persistence audit _(P1)_
-4. **G5** — Visual scan density _(P2)_
-5. **G6** — Reconciliation speed pass _(P2)_
-6. **G7** — Print dispatch trigger/recovery workflow _(P2)_
+```text
+NEXT
+  G7  — manual print verification (dispatch/recovery; output already closed)
 
-> Recommendation: ship **G2**, then run one real operator stopwatch session
-> end-to-end (intake → test → bill → print) before opening another large UI
-> wave. The stopwatch session is what reclassifies the P1/P2 audit items into
-> concrete fixes — or surfaces a P0 that isn't visible from code review.
+THEN
+  Esc dirty-state guard (G3 P2 — only non-mechanical item; design carefully)
+
+THEN
+  G4  — queue persistence (?tab / localStorage) + remaining context audit  P1
+  G5  — visual scan density                                                P2
+  G6  — reconciliation speed pass                                          P2
+
+CLEANUP (low-risk tail)
+  - Sidebar.js stale WorkflowDispatchCards comments (L12, L67)
+  - gc_modal_test.spec.js label update ("Submit to Tested" → "Submit")
+```
 
 ---
 
 ## Short version
 
-Remaining open:
-
 ```text
-G2 BillsPage scalability        P1
-G3 Modal keyboard rhythm        P1
-G4 Context persistence          P1
-G5 Visual density               P2
-G6 Reconciliation speed         P2
-G7 Print dispatch workflow      P2
-```
+Closed:
+  A1 · A2 · A3 · CertificateForm deletion · G1 · G2 · G3-P1 · G3-P2
+  · P0 create-entry regression · print/receipt/tester-slip parity
 
-Closed: A1 · A2 · A3 · CertificateForm deletion · G1 · print parity · receipt
-parity · tester-slip parity.
+Open:
+  G7   manual print verification        (next)
+  Esc  dirty-state guard                (G3 P2, non-mechanical)
+  G4   context persistence              P1
+  G5   visual scan density              P2
+  G6   reconciliation speed             P2
+  cleanup: Sidebar comments · gc_modal_test label
+```
 
 ---
 
@@ -220,10 +235,10 @@ parity · tester-slip parity.
 **P0 — none currently identified.**
 
 No remaining item is known to *prevent* an operator completing
-intake → test → bill → print at production speed. The risk is cumulative
-operator-friction drag from the P1 items (G2–G4), not a hard correctness block.
-The end-to-end stopwatch session is the gate that confirms this — if it does,
-Flask can retire when:
+intake → test → bill → print at production speed (the P0 that *did* block it —
+the missing create entry point — is fixed). The remaining risk is cumulative
+operator-friction drag from G4, not a hard correctness block. The end-to-end
+stopwatch session has run once (full GC lifecycle); Flask can retire when:
 
 > one operator can complete **intake → test → bill → print** on SERN only, at
 > legacy-equivalent production speed, for a real workload, with no fallback to

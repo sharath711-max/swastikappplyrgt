@@ -95,11 +95,20 @@ class PhotoCertificateRepository {
 
     findAll(filters = {}) {
         let query = `
-            SELECT 
-                pc.*, 
+            SELECT
+                pc.*,
                 pc.created as created_at,
                 c.name as customer_name,
-                (SELECT COUNT(*) FROM photo_certificate_item WHERE photo_certificate_id = pc.id AND deletedon IS NULL) as item_count
+                (SELECT COUNT(*) FROM photo_certificate_item WHERE photo_certificate_id = pc.id AND deletedon IS NULL) as item_count,
+                (SELECT gross_weight FROM photo_certificate_item
+                 WHERE photo_certificate_id = pc.id AND deletedon IS NULL
+                 ORDER BY item_number LIMIT 1) AS first_gross_weight,
+                (SELECT test_weight  FROM photo_certificate_item
+                 WHERE photo_certificate_id = pc.id AND deletedon IS NULL
+                 ORDER BY item_number LIMIT 1) AS first_test_weight,
+                (SELECT purity       FROM photo_certificate_item
+                 WHERE photo_certificate_id = pc.id AND deletedon IS NULL
+                 ORDER BY item_number LIMIT 1) AS first_purity
             FROM photo_certificate pc
             JOIN customer c ON pc.customer_id = c.id
             WHERE pc.deletedon IS NULL

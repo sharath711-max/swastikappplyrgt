@@ -991,7 +991,16 @@ function listTests(type, filters = {}) {
     let listQ  = `
         SELECT ${alias}.*, ${alias}.created AS created_at, cu.name AS customer_name,
             (SELECT COUNT(*) FROM ${c.itemTable}
-             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL) AS item_count
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL) AS item_count,
+            (SELECT gross_weight FROM ${c.itemTable}
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL
+             ORDER BY item_number LIMIT 1) AS first_gross_weight,
+            (SELECT test_weight  FROM ${c.itemTable}
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL
+             ORDER BY item_number LIMIT 1) AS first_test_weight,
+            (SELECT purity       FROM ${c.itemTable}
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL
+             ORDER BY item_number LIMIT 1) AS first_purity
         FROM ${c.parentTable} ${alias}
         JOIN customer cu ON ${alias}.customer_id = cu.id
         WHERE ${alias}.deletedon IS NULL

@@ -102,14 +102,25 @@ All remaining gaps are **operator throughput only**. No correctness blockers.
   - [x] (b) Wire `useEnterAdvance` into GC / SC / PC (import + hook +
     `onKeyDown` on `<Modal.Body>`).
   - [x] (c) Add `autoFocus` to the amount field on WeightLoss + CreditHistory.
-- **P2 — deferred to the stopwatch session (need real operator timing):**
-  - [ ] "Save & Add Another" — every modal closes on success; repeat intake
-    requires reopen. Could speed high-volume entry, could clutter the UI.
-  - [ ] Esc unsaved-entry guard — `DraftStateFooter`/`hasDraftEntries` is
-    display-only; Esc/X discards a half-entered test/cert with no confirm.
-  - [ ] Live tab-order pass — confirm no traps / early button focus / first-Enter
-    swallowed by the combobox (cannot be verified statically).
-- **Severity:** P1 (a–c landed) · P2 (judgment calls pending stopwatch)
+- **P2 — settled by the stopwatch run (full GC lifecycle, live):**
+  - **"Save & Add Another" → SKIP.** Reopen cost measured at **~290ms**; the
+    mechanical saving is negligible and certs are usually per-customer. Not
+    worth the clutter unless same-customer batch entry emerges.
+  - [ ] **Esc unsaved-entry guard → DO (dirty-only).** Confirmed live: Esc
+    closed a modal with typed data, no confirm, silent loss. Add a
+    confirm-on-dirty guard (reuse `hasDraftEntries`, currently display-only).
+- **G3-P2 autofocus batch (new, from stopwatch — same pattern as P1c):**
+  - [ ] Intake: after picking a customer the focus drops to `<body>` — focus
+    the first item field so the operator types straight into item entry.
+  - [ ] Test: TODO-card purity modal does not autofocus the purity input.
+  - [ ] Bill: "Payment & Delivery" modal does not autofocus the amount field.
+- **Stopwatch positives / notes:** modal-open latency is excellent (200–320ms,
+  reopen ~290ms — no slow-transition gap); Bill is genuinely one-click
+  ("Payment & Delivery" pre-computes amount/GST/total → "Delivered"); the test
+  button was renamed "Submit to Tested" → "Submit" (so `gc_modal_test.spec.js`
+  is stale). Print stage (card receipt button) produced no observable popup in
+  automation — needs a manual/G7 check (likely a print-window/OS dialog).
+- **Severity:** P1 (a–c landed) · P2 (Esc-guard + autofocus batch open)
 - **P-D Rhythm Phase:** YES
 
 ### G4 — Cross-screen: context persistence / return-to-context
@@ -118,6 +129,10 @@ All remaining gaps are **operator throughput only**. No correctness blockers.
 - **Legacy operator advantage:** returning to the same place after an action
   with no re-filtering or re-scrolling.
 - **Current SERN behavior:** improved in Customers; unverified elsewhere.
+- **Stopwatch finding (workflow queue):** `selectedWorkflow` is in-memory
+  context — it *survives* in-app sidebar nav but resets to the default queue
+  (Gold Test) on a hard reload / deep-link. Narrow fix: persist the selected
+  queue to URL (`?tab=`) or localStorage so reload/deep-link restores it.
 - **Gap statement:** audit and preserve filter state, search state, modal reopen
   state, browser back behavior, and scroll restoration across remaining surfaces
   so operators don't rebuild context after each save.

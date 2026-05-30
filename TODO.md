@@ -36,6 +36,30 @@ architecture canonicalized.
 
 ---
 
+## 🔴 P0 — create-entry regression (FIXED, pending push-verify done)
+
+- **Symptom:** no UI path to start a New Gold/Silver Test or any Gold/Silver/
+  Photo Certificate. This blocked `intake → test → bill → print` at step one —
+  overrides every throughput gap below.
+- **Root cause (two-commit chain):** `c1c0fa7` (Python-style dashboard rebuild)
+  moved creation off the sidebar onto the dashboard's `WorkflowDispatchCards`;
+  `4fbab0a` ("remove orphaned frontend files") then deleted
+  `WorkflowDispatchCards.jsx` as "unused" — but it was the **sole caller of
+  `requestNewWorkflow`**. The new dashboard never got a replacement trigger, so
+  the three create modals (WorkflowBoard L470/472/474) became unreachable.
+- **Fix:** added a primary **"+ New {workflow}"** button to the WorkflowBoard
+  header, wired to `requestNewWorkflow(selectedWorkflow)` (the existing,
+  unchanged open mechanism). Placed at the active queue — restores creation
+  where the operator is already looking, preserving the Python-style intent.
+- **Verified (Playwright, live):** all 5 workflows open the correct modal;
+  Enter-advance now confirmed reachable in the GC modal; full E2E create lands a
+  card in ONGOING ("Gold Certificate created — 1 item(s)", 0 → 1 card).
+- **Follow-up (not blocking):** stale Sidebar comments (L12, L67) still reference
+  the deleted `WorkflowDispatchCards`; `e2e/gc_modal_test.spec.js` predates the
+  removal. Clean up opportunistically.
+
+---
+
 ## Remaining gaps (prioritized)
 
 All remaining gaps are **operator throughput only**. No correctness blockers.

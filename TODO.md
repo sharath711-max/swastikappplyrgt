@@ -59,11 +59,33 @@ All remaining gaps are **operator throughput only**. No correctness blockers.
 - **Lifecycle stage:** Test entry (and all workflow modals)
 - **Legacy operator advantage:** keyboard-first muscle memory —
   type → Enter → save → next, almost no mouse.
-- **Current SERN behavior:** unverified tab order / Enter-save / Escape-close /
-  post-save focus reset / modal reopen focus; likely mouse-dependent steps.
-- **Gap statement:** stopwatch + keyboard audit on modal open speed, tab order,
-  Enter-to-save, Escape-to-close, and focus placement after save/reset.
-- **Severity:** P1
+- **Audit (code-derived, six surfaces):** two paradigms in play; the
+  inconsistency *is* the gap.
+  - **GT / ST (reference standard):** `autoFocus` on customer combobox;
+    `useEnterAdvance` on `<Modal.Body>` → Enter advances + selects next field;
+    Esc closes via `useSafeModalClose`; reset on `[show]`. This is the target.
+  - **GC / SC / PC:** identical layout but did **not** consume
+    `useEnterAdvance` — Enter was dead in item entry (and submitted the inline
+    new-customer sub-form). Else same as GT/ST.
+  - **WeightLoss / CreditHistory:** **no `autoFocus`** (cursor landed nowhere);
+    whole body is `<Form onSubmit>` so Enter submits; and they closed via a
+    **direct `onHide`**, bypassing `useSafeModalClose` → orphan-`.modal-backdrop`
+    risk that can invisibly block all page clicks (see locked modal rule).
+- **P1 fixes — LANDED:**
+  - [x] (a) Migrate WeightLoss + CreditHistory close paths to
+    `useSafeModalClose` (kills the orphan-backdrop risk). *(highest priority —
+    a stability bug, not just rhythm)*
+  - [x] (b) Wire `useEnterAdvance` into GC / SC / PC (import + hook +
+    `onKeyDown` on `<Modal.Body>`).
+  - [x] (c) Add `autoFocus` to the amount field on WeightLoss + CreditHistory.
+- **P2 — deferred to the stopwatch session (need real operator timing):**
+  - [ ] "Save & Add Another" — every modal closes on success; repeat intake
+    requires reopen. Could speed high-volume entry, could clutter the UI.
+  - [ ] Esc unsaved-entry guard — `DraftStateFooter`/`hasDraftEntries` is
+    display-only; Esc/X discards a half-entered test/cert with no confirm.
+  - [ ] Live tab-order pass — confirm no traps / early button focus / first-Enter
+    swallowed by the combobox (cannot be verified statically).
+- **Severity:** P1 (a–c landed) · P2 (judgment calls pending stopwatch)
 - **P-D Rhythm Phase:** YES
 
 ### G4 — Cross-screen: context persistence / return-to-context

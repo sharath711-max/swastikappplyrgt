@@ -3,17 +3,33 @@ import { Spinner } from 'react-bootstrap';
 import { FaSearch, FaInbox, FaFilter, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import api from '../../services/api';
 
+const EMPTY_FILTERS = { status: '', start_date: '', end_date: '', mode: '', gst: '', txn_type: '' };
+const SEL_STYLE = { padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem', minWidth: '130px' };
+
+const FilterField = ({ label, children }) => (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '3px' }}>{label}</span>
+        {children}
+    </div>
+);
+
 const GenericListView = ({ type, endpoint, columns, title, emptyMessage }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState(EMPTY_FILTERS);   // live form
+    const [applied, setApplied] = useState(EMPTY_FILTERS);   // committed on Apply
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.get(`${endpoint}?page=${page}&limit=12&search=${search}`);
+            const qs = new URLSearchParams({ page, limit: 12 });
+            if (search) qs.set('search', search);
+            Object.entries(applied).forEach(([k, v]) => { if (v) qs.set(k, v); });
+            const response = await api.get(`${endpoint}?${qs.toString()}`);
             setData(response.data.data);
             setPagination(response.data.pagination);
         } catch (err) {
@@ -21,7 +37,7 @@ const GenericListView = ({ type, endpoint, columns, title, emptyMessage }) => {
         } finally {
             setLoading(false);
         }
-    }, [endpoint, page, search]);
+    }, [endpoint, page, search, applied]);
 
     useEffect(() => {
         fetchData();
@@ -32,6 +48,16 @@ const GenericListView = ({ type, endpoint, columns, title, emptyMessage }) => {
         setPage(1);
         fetchData();
     };
+
+    // Which filters are relevant for this list type.
+    const isItem   = type.endsWith('-items');
+    const isLedger = type === 'credit-history' || type === 'weight-loss-history';
+    const isCert   = type.includes('certificate') && !isItem;
+    const isParentRecord = !isItem && !isLedger;
+
+    const applyFilters = () => { setApplied(filters); setPage(1); };
+    const resetFilters = () => { setFilters(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); setPage(1); };
+    const activeFilterCount = Object.values(applied).filter(Boolean).length;
 
     const formatCell = (row, col) => {
         if (col.render) return col.render(row);
@@ -82,12 +108,72 @@ const GenericListView = ({ type, endpoint, columns, title, emptyMessage }) => {
                         <span>Total Records:</span>
                         <strong>{pagination.total}</strong>
                     </div>
-                    <button className="btn-sf-view" style={{ padding: '10px' }} title="Filter Results">
-                        <FaFilter />
+                    <button
+                        className={`btn-sf-view${showFilters || activeFilterCount ? ' active' : ''}`}
+                        style={{ padding: '10px' }}
+                        title="Filter Results"
+                        onClick={() => setShowFilters(v => !v)}
+                    >
+                        <FaFilter />{activeFilterCount ? ` (${activeFilterCount})` : ''}
                     </button>
                     <button className="btn-sf-view" onClick={() => fetchData()}>Refresh</button>
                 </div>
             </div>
+
+            {showFilters && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', padding: '14px 16px', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+                    {(isParentRecord || isItem) && (
+                        <FilterField label="Status">
+                            <select style={SEL_STYLE} value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
+                                <option value="">All</option>
+                                <option value="TODO">To-Do</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="DONE">Done</option>
+                            </select>
+                        </FilterField>
+                    )}
+                    {isLedger && (
+                        <FilterField label="Type">
+                            <select style={SEL_STYLE} value={filters.txn_type} onChange={e => setFilters(f => ({ ...f, txn_type: e.target.value }))}>
+                                <option value="">All</option>
+                                <option value="CREDIT">Credit</option>
+                                <option value="DEBIT">Debit</option>
+                            </select>
+                        </FilterField>
+                    )}
+                    <FilterField label="From">
+                        <input type="date" style={SEL_STYLE} value={filters.start_date} onChange={e => setFilters(f => ({ ...f, start_date: e.target.value }))} />
+                    </FilterField>
+                    <FilterField label="To">
+                        <input type="date" style={SEL_STYLE} value={filters.end_date} onChange={e => setFilters(f => ({ ...f, end_date: e.target.value }))} />
+                    </FilterField>
+                    {(isParentRecord || isLedger) && (
+                        <FilterField label="Payment Mode">
+                            <select style={SEL_STYLE} value={filters.mode} onChange={e => setFilters(f => ({ ...f, mode: e.target.value }))}>
+                                <option value="">All</option>
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Balance">Balance</option>
+                            </select>
+                        </FilterField>
+                    )}
+                    {isCert && (
+                        <FilterField label="GST">
+                            <select style={SEL_STYLE} value={filters.gst} onChange={e => setFilters(f => ({ ...f, gst: e.target.value }))}>
+                                <option value="">All</option>
+                                <option value="1">GST</option>
+                                <option value="0">Non-GST</option>
+                            </select>
+                        </FilterField>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="btn-sf-view" onClick={applyFilters}>Apply</button>
+                        <button className="btn-sf-view" onClick={resetFilters}>Reset</button>
+                    </div>
+                </div>
+            )}
 
             {loading ? (
                 <div className="text-center py-5">
@@ -151,4 +237,3 @@ const GenericListView = ({ type, endpoint, columns, title, emptyMessage }) => {
 };
 
 export default GenericListView;
-

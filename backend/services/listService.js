@@ -14,6 +14,34 @@ function normalizePositiveInteger(value, fallback, max = Number.MAX_SAFE_INTEGER
     return Math.min(parsed, max);
 }
 
+// Server-side list filters. Applies only clauses valid for the type's shape:
+// parent records (status / mode / gst), items (status via parent `p`), and
+// ledgers (txn type / mode). Date range applies to t.created everywhere.
+// Returns a clause fragment appended before ORDER BY, plus its bound params.
+function buildFilters(type, p = {}) {
+    const isItem   = type.endsWith('-items');
+    const isLedger = type === 'credit-history' || type === 'weight-loss-history';
+    const clauses = [];
+    const params  = [];
+
+    if (p.start_date) { clauses.push('DATE(t.created) >= DATE(?)'); params.push(p.start_date); }
+    if (p.end_date)   { clauses.push('DATE(t.created) <= DATE(?)'); params.push(p.end_date); }
+
+    if (isItem) {
+        if (p.status) { clauses.push('p.status = ?'); params.push(p.status); }
+    } else if (isLedger) {
+        if (p.txn_type) { clauses.push('t.type = ?'); params.push(p.txn_type); }
+        if (p.mode)     { clauses.push('t.mode_of_payment = ?'); params.push(p.mode); }
+    } else {
+        if (p.status) { clauses.push('t.status = ?'); params.push(p.status); }
+        if (p.mode)   { clauses.push('t.mode_of_payment = ?'); params.push(p.mode); }
+        if (type.includes('certificate') && (p.gst === '1' || p.gst === '0')) {
+            clauses.push('t.gst = ?'); params.push(Number(p.gst));
+        }
+    }
+    return { clause: clauses.length ? ' AND ' + clauses.join(' AND ') : '', params };
+}
+
 class ListService {
     async getList(type, params) {
         const page = normalizePositiveInteger(params.page, DEFAULT_PAGE);
@@ -226,6 +254,16 @@ class ListService {
 
             default:
                 throw new Error('Invalid list type');
+        }
+
+        // Apply optional filters (status / date / mode / gst / txn type) after
+        // search but before ORDER BY, so their params bind ahead of LIMIT/OFFSET.
+        const { clause: filterClause, params: filterParams } = buildFilters(type, params);
+        if (filterClause) {
+            query = query.replace(' ORDER BY', ` ${filterClause} ORDER BY`);
+            countQuery += filterClause;
+            queryParams.push(...filterParams);
+            countParams.push(...filterParams);
         }
 
         return execute();

@@ -6,6 +6,7 @@ import api from '../services/api';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import { usePrint } from '../contexts/PrintContext';
+import { useRecordModal } from '../contexts/RecordModalContext';
 import NewCreditHistoryModal from '../components/NewCreditHistoryModal';
 import NewWeightLossHistoryModal from '../components/NewWeightLossHistoryModal';
 
@@ -131,6 +132,7 @@ const CustomerProfile = () => {
     const { openModal } = useModal();
     const { id } = useParams();
     const navigate = useNavigate();
+    const { openRecord } = useRecordModal();
     const { triggerPrint } = usePrint();
 
     const [activeTab, setActiveTab] = useState('details');
@@ -393,7 +395,7 @@ const CustomerProfile = () => {
                                                         { header: 'Record No', field: 'auto_number' },
                                                         { header: 'Status', render: r => <Badge bg={r.status === 'DONE' ? 'success' : 'warning'}>{r.status}</Badge> },
                                                         { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => navigate(`/record/gold-tests/${r.id}`)}>View</Button> }
+                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => openRecord('gold-tests', r.id)}>View</Button> }
                                                     ]}
                                                 />
                                             </Accordion.Body>
@@ -408,7 +410,7 @@ const CustomerProfile = () => {
                                                         { header: 'Record No', field: 'auto_number' },
                                                         { header: 'Status', render: r => <Badge bg={r.status === 'DONE' ? 'success' : 'warning'}>{r.status}</Badge> },
                                                         { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => navigate(`/record/silver-tests/${r.id}`)}>View</Button> }
+                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => openRecord('silver-tests', r.id)}>View</Button> }
                                                     ]}
                                                 />
                                             </Accordion.Body>

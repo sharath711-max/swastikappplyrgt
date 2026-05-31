@@ -1,7 +1,7 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Badge } from 'react-bootstrap';
 import { getAgingBucket, agingTitle } from '../../utils/aging';
+import { useRecordModal } from '../../contexts/RecordModalContext';
 
 const fmtINR = (v) =>
     Number(v || 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
@@ -10,13 +10,13 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN') : '—');
 
 const STATUS_VARIANT = { DONE: 'success', IN_PROGRESS: 'info', TODO: 'secondary' };
 
-// Both row types deep-link to the universal record page. RecordPage
-// expects pluralised dashed types: gold-tests / silver-tests /
-// gold-certificates / silver-certificates / photo-certificates.
-const testHref = (row) =>
-    `/record/${row.metal_type === 'silver' ? 'silver-tests' : 'gold-tests'}/${row.id}`;
-const certHref = (row) =>
-    `/record/${row.metal_type === 'silver' ? 'silver-certificates' : 'gold-certificates'}/${row.id}`;
+// Both row types open the Record Detail modal in-context. Pluralised dashed
+// types: gold-tests / silver-tests / gold-certificates / silver-certificates.
+const testType = (row) => (row.metal_type === 'silver' ? 'silver-tests' : 'gold-tests');
+const certType = (row) => (row.metal_type === 'silver' ? 'silver-certificates' : 'gold-certificates');
+
+// Neutralise <button> chrome so the existing .rat__link flex layout is preserved.
+const linkBtn = { border: 'none', background: 'none', font: 'inherit', padding: 0, width: '100%', textAlign: 'left', cursor: 'pointer' };
 
 function AgingMarker({ createdAt, status }) {
     const aging = getAgingBucket(createdAt, status);
@@ -33,6 +33,7 @@ function AgingMarker({ createdAt, status }) {
 }
 
 export function RecentTestsTable({ rows = [] }) {
+    const { openRecord } = useRecordModal();
     return (
         <div className="rat">
             <div className="rat__head">
@@ -45,7 +46,7 @@ export function RecentTestsTable({ rows = [] }) {
                 <ul className="rat__list">
                     {rows.map((r) => (
                         <li key={`test-${r.id}`} className="rat__row">
-                            <Link to={testHref(r)} className="rat__link" aria-label={`Open ${r.auto_number}`}>
+                            <button type="button" className="rat__link" style={linkBtn} onClick={() => openRecord(testType(r), r.id)} aria-label={`Open ${r.auto_number}`}>
                                 <span className="rat__date">{fmtDate(r.created_at)}</span>
                                 <span className={`rat__metal rat__metal--${r.metal_type}`}>
                                     {r.metal_type === 'silver' ? 'ST' : 'GT'}
@@ -59,7 +60,7 @@ export function RecentTestsTable({ rows = [] }) {
                                     <AgingMarker createdAt={r.created_at} status={r.status} />
                                 </span>
                                 <span className="rat__amount">{fmtINR(r.total)}</span>
-                            </Link>
+                            </button>
                         </li>
                     ))}
                 </ul>
@@ -69,6 +70,7 @@ export function RecentTestsTable({ rows = [] }) {
 }
 
 export function RecentCertificatesTable({ rows = [] }) {
+    const { openRecord } = useRecordModal();
     return (
         <div className="rat">
             <div className="rat__head">
@@ -81,7 +83,7 @@ export function RecentCertificatesTable({ rows = [] }) {
                 <ul className="rat__list">
                     {rows.map((r) => (
                         <li key={`cert-${r.id}`} className="rat__row">
-                            <Link to={certHref(r)} className="rat__link" aria-label={`Open ${r.certificate_no}`}>
+                            <button type="button" className="rat__link" style={linkBtn} onClick={() => openRecord(certType(r), r.id)} aria-label={`Open ${r.certificate_no}`}>
                                 <span className="rat__date">{fmtDate(r.issue_date)}</span>
                                 <span className={`rat__metal rat__metal--${r.metal_type}`}>
                                     {r.metal_type === 'silver' ? 'SC' : 'GC'}
@@ -92,7 +94,7 @@ export function RecentCertificatesTable({ rows = [] }) {
                                     <Badge bg="success" className="rat__badge">ISSUED</Badge>
                                 </span>
                                 <span className="rat__amount">{fmtINR(r.total_amount)}</span>
-                            </Link>
+                            </button>
                         </li>
                     ))}
                 </ul>

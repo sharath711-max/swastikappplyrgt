@@ -13,6 +13,7 @@ import AppShell from './components/layout/AppShell';
 
 import { PrintProvider } from './contexts/PrintContext';
 import { WorkflowProvider } from './contexts/WorkflowContext';
+import { RecordModalProvider } from './contexts/RecordModalContext';
 import PrintPortal from './components/print/PrintPortal';
 import Dashboard from './pages/Dashboard';
 import Verify from './pages/public/Verify';
@@ -41,6 +42,7 @@ export default function App() {
         <ModalProvider>
           <ToastContainer />
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <RecordModalProvider>
             <WorkflowProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
@@ -125,6 +127,7 @@ export default function App() {
             <ModalManager />
             <PrintPortal />
             </WorkflowProvider>
+            </RecordModalProvider>
           </Router>
         </ModalProvider>
         </PrintProvider>

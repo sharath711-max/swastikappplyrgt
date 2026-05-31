@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useRecordModal } from '../contexts/RecordModalContext';
 import GenericListView from '../components/ListViews/GenericListView';
 import { FaEye, FaFlask, FaCertificate, FaGem, FaBook } from 'react-icons/fa';
 import './ListViewsPage.css';
@@ -7,6 +8,7 @@ import './ListViewsPage.css';
 const ListViewsPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { openRecord } = useRecordModal();
 
     // Mapping configuration
     const CONFIG = {
@@ -80,7 +82,7 @@ const ListViewsPage = () => {
         const id = row.id || row.parent_id;
         if (!id) return null;
         return (
-            <button className="btn-sf-view" onClick={() => navigate(`/record/${activeTab}/${id}`)}>
+            <button className="btn-sf-view" onClick={() => openRecord(activeTab, id)}>
                 <FaEye className="me-2" /> View
             </button>
         );

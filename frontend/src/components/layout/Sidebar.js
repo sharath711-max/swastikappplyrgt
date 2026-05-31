@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaTachometerAlt, FaUsers, FaFileInvoiceDollar,
+    FaTachometerAlt, FaUsers, FaFileInvoiceDollar, FaTable,
     FaCoins, FaBalanceScale, FaCertificate, FaFileAlt, FaImage,
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
@@ -100,6 +100,15 @@ const Sidebar = ({ sidebarCollapsed }) => {
                     >
                         <span className="nav-icon"><FaFileInvoiceDollar /></span>
                         {!sidebarCollapsed && <span className="nav-label">Bills</span>}
+                    </Link>
+                </ProtectedComponent>
+                <ProtectedComponent roles={['admin', 'manager']}>
+                    <Link
+                        to="/list-views"
+                        className={`nav-item ${isActive('/list-views') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaTable /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Records</span>}
                     </Link>
                 </ProtectedComponent>
             </nav>

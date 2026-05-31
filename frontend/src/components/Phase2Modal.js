@@ -644,9 +644,9 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                 {/* Python-style 3-col header strip */}
                 <div className="row mb-0">
                     <div className="col-4">
-                        <h4 className="fw-light text-center">Invoice Number</h4>
+                        <h4 className="fw-light text-center">Bill No</h4>
                         <p id="purityModalInvoiceNumber" className="fw-bold fs-3 text-center">
-                            {test?.auto_number || test?.bill_number || '-'}
+                            {test?.bill_no || test?.auto_number || '-'}
                         </p>
                     </div>
                     <div className="col-4">

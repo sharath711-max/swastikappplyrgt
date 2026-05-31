@@ -12,20 +12,23 @@ import SmallCert from './SmallCert';
  * Supports layout variants: 'full' (default), 'small' (compact sticker cert).
  */
 const PrintManager = ({ type, data, item, photos = [], layout = 'full' }) => {
-    // Small certificate layout — Python parity. ONLY exposed for GT/ST tests.
-    // GC/SC/PC must never reach this branch (UI gating + this backstop).
+    // Small certificate layout — Python parity (gold & silver only). Python shipped the
+    // same test-slip layout under both gold_test/ and gold_certificate/ (small_certificate.html),
+    // so the tests and the gold/silver certs share the SmallCert component.
+    // PC is intentionally excluded: Python's photo small slip dropped the photo and the
+    // cert#, leaving a bill-only stub with no operator value over the full PCI.
     if (layout === 'small') {
-        const isTest = type === 'gold-test' || type === 'silver-test' || type === 'GT' || type === 'ST';
-        if (!isTest) {
+        const isSilver = type === 'silver-test' || type === 'ST' || type === 'silver' || type === 'SC';
+        const isGold   = type === 'gold-test'   || type === 'GT' || type === 'certificate' || type === 'gold' || type === 'GC';
+        if (!isSilver && !isGold) {
             return (
                 <div style={{ padding: '40px', color: '#64748b', textAlign: 'center' }}>
                     <h3 className="fw-bold">Small Certificate Not Available</h3>
-                    <p>Small certificate printing is restricted to Gold/Silver Testing workflows.</p>
+                    <p>Small certificate printing is restricted to Gold/Silver tests and Gold/Silver certificates.</p>
                 </div>
             );
         }
-        const recordType = type === 'silver-test' || type === 'ST' ? 'silver' : 'gold';
-        return <SmallCert test={data} item={item} recordType={recordType} />;
+        return <SmallCert test={data} item={item} recordType={isSilver ? 'silver' : 'gold'} />;
     }
 
     switch (type) {

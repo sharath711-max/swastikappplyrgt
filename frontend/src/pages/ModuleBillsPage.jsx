@@ -333,7 +333,7 @@ export default function ModuleBillsPage() {
 
     return (
         <Container fluid className="py-4">
-            <h2 className="fw-bold mb-4">Module Bills</h2>
+            <h2 className="fw-bold mb-4">Reports</h2>
             <Card className="shadow-sm border-0">
                 <Card.Body>
                     <div className="d-flex flex-wrap gap-2 mb-4">

@@ -77,11 +77,13 @@ export default function App() {
                   <AppShell><BillsReportPage /></AppShell>
                 </ProtectedRoute>
               } />
-              <Route path="/module-bills" element={
+              <Route path="/reports" element={
                 <ProtectedRoute roles={['admin', 'manager', 'front_desk']}>
                   <AppShell><ModuleBillsPage /></AppShell>
                 </ProtectedRoute>
               } />
+              {/* Legacy path — Bills page is now Reports */}
+              <Route path="/module-bills" element={<Navigate to="/reports" replace />} />
               <Route path="/items" element={
                 <ProtectedRoute roles={['admin', 'manager', 'technician']}>
                   <AppShell><ItemMasterPage /></AppShell>

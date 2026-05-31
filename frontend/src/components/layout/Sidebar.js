@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaTachometerAlt, FaUsers, FaFileInvoiceDollar, FaTable,
+    FaTachometerAlt, FaUsers, FaTable, FaChartBar,
     FaCoins, FaBalanceScale, FaCertificate, FaFileAlt, FaImage,
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
@@ -93,15 +93,6 @@ const Sidebar = ({ sidebarCollapsed }) => {
                         {!sidebarCollapsed && <span className="nav-label">Customers</span>}
                     </Link>
                 </ProtectedComponent>
-                <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
-                    <Link
-                        to="/module-bills"
-                        className={`nav-item ${isActive('/module-bills') ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon"><FaFileInvoiceDollar /></span>
-                        {!sidebarCollapsed && <span className="nav-label">Bills</span>}
-                    </Link>
-                </ProtectedComponent>
                 <ProtectedComponent roles={['admin', 'manager']}>
                     <Link
                         to="/list-views"
@@ -109,6 +100,15 @@ const Sidebar = ({ sidebarCollapsed }) => {
                     >
                         <span className="nav-icon"><FaTable /></span>
                         {!sidebarCollapsed && <span className="nav-label">Records</span>}
+                    </Link>
+                </ProtectedComponent>
+                <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
+                    <Link
+                        to="/reports"
+                        className={`nav-item ${isActive('/reports') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaChartBar /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Reports</span>}
                     </Link>
                 </ProtectedComponent>
             </nav>

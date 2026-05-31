@@ -641,7 +641,6 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                 <th>Item Type</th>
                                 <th>Total Weight (g)</th>
                                 <th>Sample Weight (g)</th>
-                                <th>Returned Wt (g)</th>
                                 <th>Purity (%)</th>
                                 {isPhotoCert && <th>Photo</th>}
                                 {isPhotoCert && <th className="text-center">KT</th>}
@@ -725,25 +724,8 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                                 />
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="input-group w-100">
-                                                <Form.Control
-                                                    size="sm"
-                                                    type="number"
-                                                    name="net_weight"
-                                                    step="0.001"
-                                                    data-testid="item-net-weight"
-                                                    inputMode="decimal"
-                                                    placeholder={String(w.net || '0.000')}
-                                                    value={item.net_weight ?? ''}
-                                                    onChange={(e) => handleItemChange(idx, 'net_weight', e.target.value)}
-                                                    onBlur={(e) => handleItemChange(idx, 'net_weight', clampDecimals(e.target.value, 3))}
-                                                    onKeyDown={blockInvalidNumericKeys}
-                                                    onPaste={(e) => { e.preventDefault(); handleItemChange(idx, 'net_weight', sanitizeNumericString(e.clipboardData.getData('text'), 3)); }}
-                                                    disabled={isModalReadOnly}
-                                                />
-                                            </div>
-                                        </td>
+                                        {/* Returned Wt (net_weight) is computed in the backend
+                                            (gross − test) and stored there; not shown/edited here. */}
                                         <td style={{ minWidth: 110 }}>
                                             <div className="input-group w-100">
                                                 <Form.Control

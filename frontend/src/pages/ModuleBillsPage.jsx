@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     Container, Row, Col, Card, Table, Badge, Spinner, Alert,
     Form, Button,
@@ -327,6 +327,95 @@ function LedgerView({ mod }) {
     );
 }
 
+// ── KPI summary cards ────────────────────────────────────────────────────────
+// Salesforce-style headline metrics across the top of Reports. Frontend-only:
+// every value is read from endpoints the app already exposes (no new backend).
+//   /analytics/summary          → cashInHand, customerBalance, todayRevenue
+//   /analytics/revenue-breakdown → allTime revenue / weight-loss / P&L
+//   /list/<type> pagination.total → absolute record counts (limit=1, cheap)
+const KPI_CARD = {
+    background: '#fff',
+    border: '1px solid #e5e7eb',
+    borderRadius: '12px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.06)',
+    height: '100%',
+};
+const KPI_VALUE = { fontSize: '28px', fontWeight: 700, lineHeight: 1.15, color: '#0f172a' };
+const KPI_LABEL = {
+    fontSize: '12px', fontWeight: 600, textTransform: 'uppercase',
+    letterSpacing: '0.04em', color: '#64748b', marginTop: '6px',
+};
+const fmtCount = (v) => Number(v || 0).toLocaleString('en-IN');
+
+function KpiCard({ label, value, accent, loading }) {
+    return (
+        <Col xs={6} lg={3}>
+            <div style={KPI_CARD}>
+                <div style={{ ...KPI_VALUE, color: accent || KPI_VALUE.color }}>
+                    {loading ? <span className="text-muted">—</span> : value}
+                </div>
+                <div style={KPI_LABEL}>{label}</div>
+            </div>
+        </Col>
+    );
+}
+
+function KpiSummary() {
+    const [kpi, setKpi] = useState(null);
+
+    useEffect(() => {
+        let alive = true;
+        const unwrap = (p) => (p.status === 'fulfilled' ? (p.value?.data?.data ?? p.value?.data ?? {}) : {});
+        const totalOf = (p) => (p.status === 'fulfilled' ? (p.value?.data?.pagination?.total ?? 0) : 0);
+        (async () => {
+            const [summary, revenue, gt, st, gc, sc, pc] = await Promise.allSettled([
+                api.get('/analytics/summary'),
+                api.get('/analytics/revenue-breakdown'),
+                api.get('/list/gold-tests?limit=1'),
+                api.get('/list/silver-tests?limit=1'),
+                api.get('/list/gold-certificates?limit=1'),
+                api.get('/list/silver-certificates?limit=1'),
+                api.get('/list/photo-certificates?limit=1'),
+            ]);
+            if (!alive) return;
+            const s = unwrap(summary);
+            const allTime = unwrap(revenue).allTime || {};
+            setKpi({
+                totalRevenue:      allTime?.revenue?.total ?? 0,
+                totalTests:        totalOf(gt) + totalOf(st),
+                certificates:      totalOf(gc) + totalOf(sc) + totalOf(pc),
+                cashInHand:        s.cashInHand ?? allTime?.cashInHand ?? 0,
+                creditOutstanding: s.customerBalance ?? 0,
+                todayRevenue:      s.todayRevenue ?? 0,
+                netPnl:            allTime?.pnl ?? 0,
+                weightLoss:        allTime?.expense?.weight_loss ?? 0,
+            });
+        })();
+        return () => { alive = false; };
+    }, []);
+
+    const loading = kpi === null;
+    const k = kpi || {};
+
+    return (
+        <>
+            <Row className="g-3 mb-3">
+                <KpiCard loading={loading} label="Total Revenue"  value={fmt(k.totalRevenue)}      accent="#15803d" />
+                <KpiCard loading={loading} label="Total Tests"    value={fmtCount(k.totalTests)} />
+                <KpiCard loading={loading} label="Certificates"   value={fmtCount(k.certificates)} />
+                <KpiCard loading={loading} label="Cash In Hand"   value={fmt(k.cashInHand)}        accent={k.cashInHand < 0 ? '#b91c1c' : '#0f172a'} />
+            </Row>
+            <Row className="g-3 mb-4">
+                <KpiCard loading={loading} label="Credit Outstanding" value={fmt(k.creditOutstanding)} accent={k.creditOutstanding > 0 ? '#b45309' : '#0f172a'} />
+                <KpiCard loading={loading} label="Today's Revenue"    value={fmt(k.todayRevenue)} />
+                <KpiCard loading={loading} label="Net P&L"            value={fmt(k.netPnl)}            accent={k.netPnl < 0 ? '#b91c1c' : '#15803d'} />
+                <KpiCard loading={loading} label="Weight Loss"        value={fmt(k.weightLoss)} />
+            </Row>
+        </>
+    );
+}
+
 export default function ModuleBillsPage() {
     const [active, setActive] = useState('gold_cert');
     const activeMod = MODULES.find(m => m.key === active) || MODULES[0];
@@ -334,6 +423,7 @@ export default function ModuleBillsPage() {
     return (
         <Container fluid className="py-4">
             <h2 className="fw-bold mb-4">Reports</h2>
+            <KpiSummary />
             <Card className="shadow-sm border-0">
                 <Card.Body>
                     <div className="d-flex flex-wrap gap-2 mb-4">

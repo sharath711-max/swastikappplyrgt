@@ -114,6 +114,13 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
     // purity on a TODO test, amount on the Payment & Delivery step.
     const firstPurityRef = useRef(null);
     const amountRef = useRef(null);
+    // Spreadsheet-style Enter-to-advance: a ref per row's editable cell so
+    // pressing Enter jumps straight down the column (and the last purity hands
+    // off to the primary action button), keeping the operator on the keyboard
+    // instead of Tabbing past the Returned checkbox + Print button each row.
+    const purityRefs = useRef([]);
+    const testWeightRefs = useRef([]);
+    const submitBtnRef = useRef(null);
     // Gate on items.length so we focus only after the rows (and the purity
     // input) have actually rendered — items populate in an effect on `show`,
     // a frame after the modal mounts.
@@ -176,6 +183,32 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
             next[index] = { ...next[index], [field]: value };
             return next;
         });
+    };
+
+    // Move focus to the next non-disabled input in a column (skips returned /
+    // sealed rows). Selects existing text so the operator can overtype a draft.
+    const focusNextInColumn = (refs, startIdx) => {
+        for (let i = startIdx; i < refs.current.length; i++) {
+            const el = refs.current[i];
+            if (el && !el.disabled) { el.focus(); if (el.select) el.select(); return true; }
+        }
+        return false;
+    };
+
+    // Enter inside a weight/purity cell advances down that column (these inputs
+    // aren't inside a <form>, so Enter is otherwise inert). At the bottom of the
+    // purity column it hands off to the primary submit button, making the whole
+    // grid keyboard-only. test_weight falls back to the same row's purity.
+    const handleGridKeyDown = (e, idx, column) => {
+        blockInvalidNumericKeys(e);
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (column === 'purity') {
+            if (!focusNextInColumn(purityRefs, idx + 1)) submitBtnRef.current?.focus();
+        } else if (!focusNextInColumn(testWeightRefs, idx + 1)) {
+            const el = purityRefs.current[idx];
+            if (el) { el.focus(); if (el.select) el.select(); }
+        }
     };
 
     const handlePhotoSelect = (itemId, file) => {
@@ -707,6 +740,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                         <td>
                                             <div className="input-group w-100">
                                                 <Form.Control
+                                                    ref={(el) => { testWeightRefs.current[idx] = el; }}
                                                     size="sm"
                                                     type="number"
                                                     name="test_weight"
@@ -718,7 +752,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                                     value={item.test_weight ?? ''}
                                                     onChange={(e) => handleItemChange(idx, 'test_weight', e.target.value)}
                                                     onBlur={(e) => handleItemChange(idx, 'test_weight', clampDecimals(e.target.value, 3))}
-                                                    onKeyDown={blockInvalidNumericKeys}
+                                                    onKeyDown={(e) => handleGridKeyDown(e, idx, 'test_weight')}
                                                     onPaste={(e) => { e.preventDefault(); handleItemChange(idx, 'test_weight', sanitizeNumericString(e.clipboardData.getData('text'), 3)); }}
                                                     disabled={isModalReadOnly}
                                                 />
@@ -729,7 +763,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                         <td style={{ minWidth: 110 }}>
                                             <div className="input-group w-100">
                                                 <Form.Control
-                                                    ref={idx === 0 ? firstPurityRef : undefined}
+                                                    ref={(el) => { purityRefs.current[idx] = el; if (idx === 0) firstPurityRef.current = el; }}
                                                     size="sm"
                                                     type="number"
                                                     name="purity"
@@ -742,7 +776,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                                     value={item.purity}
                                                     onChange={(e) => handleItemChange(idx, 'purity', e.target.value)}
                                                     onBlur={(e) => handleItemChange(idx, 'purity', clampDecimals(e.target.value, 2))}
-                                                    onKeyDown={blockInvalidNumericKeys}
+                                                    onKeyDown={(e) => handleGridKeyDown(e, idx, 'purity')}
                                                     onPaste={(e) => { e.preventDefault(); handleItemChange(idx, 'purity', sanitizeNumericString(e.clipboardData.getData('text'), 2)); }}
                                                     disabled={isModalReadOnly}
                                                 />
@@ -858,7 +892,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 onBlur={(e) => setAmount(e.target.value !== '' ? clampDecimals(e.target.value, 2) : '')}
-                                onKeyDown={blockInvalidNumericKeys}
+                                onKeyDown={(e) => { blockInvalidNumericKeys(e); if (e.key === 'Enter') { e.preventDefault(); submitBtnRef.current?.focus(); } }}
                                 onPaste={(e) => { e.preventDefault(); setAmount(sanitizeNumericString(e.clipboardData.getData('text'), 2)); }}
                                 disabled={isModalReadOnly}
                                 style={{ maxWidth: 160 }}
@@ -956,6 +990,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                         )}
                         {nextStatus && (
                             <Button
+                                ref={submitBtnRef}
                                 id={nextStatus === 'DONE' ? 'paymentSubmitBtn' : 'puritySubmitBtn'}
                                 variant="danger"
                                 onClick={handleSubmitFlow}

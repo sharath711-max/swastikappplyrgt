@@ -21,9 +21,11 @@ const socket     = require('../../socket');
 const { assertTransitionAllowed } = require('../workflowStateMachine');
 const seqSvc     = require('./sequenceService');
 const ledgerSvc  = require('./ledgerService');
+const sharedValidationGate = require('./sharedValidationGate');
 const GoldTestCalc   = require('../goldTestCalculationService');
 const SilverTestCalc = require('../silverTestCalculationService');
 const customerRepo   = require('../../repositories/customerRepository');
+const wlhRepo        = require('../../repositories/weightLossHistoryRepository');
 
 // Lazy-load to break circular dependency (certSvc ↔ testSvc)
 let _certSvc = null;
@@ -76,6 +78,7 @@ function _assertStatusMove(currentStatus, nextStatus) {
     }
 }
 
+// IMMUTABLE-on-DONE feature restored per Historical Truth Policy.
 function _assertFoundAndMutable(type, id) {
     const c   = _cfg(type);
     const row = db.prepare(
@@ -86,8 +89,8 @@ function _assertFoundAndMutable(type, id) {
     }
     if (row.status === 'DONE') {
         throw new BusinessError(
-            `${type} test ${id} is DONE and immutable`,
-            ERR.IMMUTABLE, 409
+            `Test ${id} is finalized (DONE) and cannot be modified`,
+            ERR.STATUS_INVALID, 409
         );
     }
     return row;
@@ -309,6 +312,7 @@ function _validatePurityBeforeFinalize(type, testId, submittedItems = [], { trx 
 // ─── Item normaliser ──────────────────────────────────────────────────────────
 function _normaliseItem(raw, type, stripPurity = false) {
     return {
+        name         : raw.name || raw.description || '',
         item_type    : raw.item_type || raw.item_name || raw.name || (type === 'gold' ? 'Gold Sample' : 'Silver Sample'),
         gross_weight : parseFloat(raw.gross_weight || raw.total_weight || raw.weight || 0),
         sample_weight: parseFloat(raw.sample_weight || 0),
@@ -340,7 +344,7 @@ function _finalizeItemsWork(type, testId, items, ts) {
             test_weight : current.test_weight,
             purity      : parseFloat(raw.purity),
             returned    : raw.returned == 1 || raw.returned === true,
-            item_type   : current.item_type,
+            item_type   : raw.item_type !== undefined ? raw.item_type : current.item_type,
         });
 
         // Persist operator cert-eligibility override alongside purity
@@ -348,15 +352,18 @@ function _finalizeItemsWork(type, testId, items, ts) {
             ? (raw.certificate_required ? 1 : 0)
             : current.certificate_required ?? 0;
 
+        const nameVal = raw.name !== undefined ? raw.name : current.name;
+        const itemTypeVal = raw.item_type !== undefined ? raw.item_type : current.item_type;
+
         db.prepare(`
             UPDATE ${c.itemTable}
             SET purity = ?, returned = ?, fine_weight = ?, item_total = ?,
-                certificate_required = ?, lastmodified = ?
+                certificate_required = ?, name = ?, item_type = ?, lastmodified = ?
             WHERE id = ? AND ${c.fkColumn} = ? AND deletedon IS NULL
         `).run(
             calc.purity, calc.returned ? 1 : 0,
             calc.fine_weight, calc.item_total,
-            certRequired, ts, raw.id, testId
+            certRequired, nameVal, itemTypeVal, ts, raw.id, testId
         );
     }
 }
@@ -381,16 +388,29 @@ function _markTestDoneWork(type, testId, mode_of_payment, weight_loss, ts) {
                 null, { testId, type }
             );
         }
+        // WLH is customer-centric only — the source test id is referenced in
+        // the `reason` text for audit, NOT a workflow back-pointer column.
         db.prepare(
-            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+            'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, created) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, ts);
     }
 }
 
 // ─── CREATE ───────────────────────────────────────────────────────────────────
+//
+// Temporal policy: `created` is always server-side now(). Any `created` field
+// in the request body is intentionally IGNORED. Backdating is not supported on
+// this API surface — it would weaken DONE-state immutability, signed snapshot
+// timestamps, balance roll-up ordering, and audit interpretability. If
+// historical imports are ever needed, build a separate import tool with
+// explicit semantics — do not overload this path.
 
 function createTest(type, data) {
     // ── Validate BEFORE transaction ─────────────────────────────────────────
+    // Shared domain validation runs first — authoritative source of truth for
+    // item-level rules. Throws 422 VALIDATION_FAILED on rule failure, or
+    // 422 VALIDATION_MISMATCH if FE-computed normalized differs from BE.
+    sharedValidationGate.gateCreate(type, data);
     _validateCreateTest(type, data);
     audit.validate('testService.createTest', { type, customer_id: data.customer_id, item_count: data.items.length });
 
@@ -401,16 +421,18 @@ function createTest(type, data) {
     audit.start('testService.createTest', { type, customer_id });
 
     const _txn = transaction(() => {
+        // Server-side timestamp ONLY — see temporal policy comment above.
         const ts         = now();
         const testId     = genId(c.parentPrefix);
         // Sequence inside transaction — race-safe
-        const autoNumber = seqSvc._generateGlobalSequenceWork(type, { context: 'TEST' });
+        const billNo     = seqSvc._generateGlobalSequenceWork(type, { context: 'TEST' });
+        const autoNumber = seqSvc.generateTechnicalAutoNumber(c.parentPrefix.slice(0, 2));
 
         db.prepare(`
             INSERT INTO ${c.parentTable}
-              (id, auto_number, customer_id, status, mode_of_payment, total, created, lastmodified)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(testId, autoNumber, customer_id, status, mode_of_payment, 0, ts, ts);
+              (id, auto_number, bill_no, customer_id, status, mode_of_payment, total, created, lastmodified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(testId, autoNumber, billNo, customer_id, status, mode_of_payment, 0, ts, ts);
 
         const insertedItems = [];
         let   itemSeq = 1;
@@ -419,22 +441,31 @@ function createTest(type, data) {
             const norm = _normaliseItem(raw, type, stripPurity);
             const calc = c.calc.calculateItem(norm);
             const itemId     = genId(c.itemPrefix);
-            const itemNumber = seqSvc.generateTestItemNumber(autoNumber, itemSeq++);
+            const itemNumber = seqSvc.generateTestItemNumber(billNo, itemSeq++);
+            const itemAutoNumber = seqSvc.generateTechnicalAutoNumber(c.itemPrefix);
 
             db.prepare(`
                 INSERT INTO ${c.itemTable}
-                  (id, ${c.fkColumn}, item_number, item_type,
+                  (id, ${c.fkColumn}, auto_number, parent_auto_number, item_number, name, item_type,
                    gross_weight, sample_weight, test_weight, net_weight,
                    purity, fine_weight, item_total, returned, created)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-                itemId, testId, itemNumber, calc.item_type,
+                itemId, testId, itemAutoNumber, autoNumber, itemNumber, norm.name, calc.item_type,
                 calc.gross_weight, norm.sample_weight, calc.test_weight,
                 calc.net_weight, calc.purity, calc.fine_weight,
                 calc.item_total, calc.returned ? 1 : 0, ts
             );
 
-            insertedItems.push({ id: itemId, item_number: itemNumber, ...calc, created: ts });
+            insertedItems.push({
+                id: itemId,
+                auto_number: itemAutoNumber,
+                parent_auto_number: autoNumber,
+                item_number: itemNumber,
+                name: norm.name,
+                ...calc,
+                created: ts
+            });
         }
 
         const printSvc = require('./printService');
@@ -443,14 +474,14 @@ function createTest(type, data) {
         db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, testId);
 
         writeAuditLog({ action: 'CREATE_TEST', entityType: type, entityId: testId, newValue: autoNumber });
-        return { id: testId, auto_number: autoNumber, items: insertedItems, created: ts };
+        return { id: testId, auto_number: autoNumber, bill_no: billNo, items: insertedItems, created: ts };
     });
 
     try {
         const result = _txn();
-        audit.commit('testService.createTest', { id: result.id, auto_number: result.auto_number, type });
+        audit.commit('testService.createTest', { id: result.id, auto_number: result.auto_number, bill_no: result.bill_no, type });
         audit.sequence('testService.createTest', result.auto_number, type, result.id);
-        socket.emit(`${type}_test`, 'item:added', { id: result.id, auto_number: result.auto_number, type });
+        socket.emit(`${type}_test`, 'item:added', { id: result.id, auto_number: result.auto_number, bill_no: result.bill_no, type });
         socket.emit('workflow',     'item:added', { id: result.id, type });
         return result;
     } catch (err) {
@@ -485,7 +516,7 @@ function saveTestDraft(type, id, data) {
                 test_weight : raw.test_weight !== undefined ? parseFloat(raw.test_weight) : current.test_weight,
                 purity      : raw.purity      !== undefined ? parseFloat(raw.purity)      : current.purity,
                 returned    : raw.returned    !== undefined ? raw.returned                : current.returned,
-                item_type   : current.item_type,
+                item_type   : raw.item_type   !== undefined ? raw.item_type               : current.item_type,
                 net_weight  : raw.net_weight  !== undefined ? parseFloat(raw.net_weight)  : undefined,
             };
 
@@ -496,14 +527,17 @@ function saveTestDraft(type, id, data) {
                 ? (raw.certificate_required ? 1 : 0)
                 : current.certificate_required ?? 0;
 
+            const nameVal = raw.name !== undefined ? raw.name : current.name;
+            const itemTypeVal = raw.item_type !== undefined ? raw.item_type : current.item_type;
+
             db.prepare(`
                 UPDATE ${c.itemTable}
                 SET purity = ?, returned = ?, fine_weight = ?, item_total = ?,
-                    test_weight = ?, net_weight = ?, certificate_required = ?, lastmodified = ?
+                    test_weight = ?, net_weight = ?, certificate_required = ?, name = ?, item_type = ?, lastmodified = ?
                 WHERE id = ? AND ${c.fkColumn} = ? AND deletedon IS NULL
             `).run(
                 calc.purity, calc.returned ? 1 : 0, calc.fine_weight, calc.item_total,
-                calc.test_weight, calc.net_weight, certRequired, ts,
+                calc.test_weight, calc.net_weight, certRequired, nameVal, itemTypeVal, ts,
                 raw.id, id
             );
         }
@@ -623,6 +657,13 @@ function completeTest(type, testId, data) {
         throw new BusinessError(`${type} test not found: ${testId}`, ERR.TEST_NOT_FOUND, 404);
     }
 
+    if (testRow.status === 'DONE') {
+        throw new BusinessError(
+            `Cannot complete test ${testId} because it is already in DONE status`,
+            ERR.STATUS_INVALID, 409
+        );
+    }
+
     audit.validate('testService.completeTest', { type, testId, customer_id: testRow.customer_id });
 
     // ── GATE 3: Purity pre-flight (before transaction, no partial-write risk) ──
@@ -651,12 +692,8 @@ function completeTest(type, testId, data) {
     const certSvc = _getCertSvc();
 
     const _txn = transaction(() => {
-        // Check status inside transaction
-        const current = db.prepare(`SELECT status FROM ${c.parentTable} WHERE id = ?`).get(testId);
-        if (current.status === 'DONE') {
-            throw new BusinessError(`Test ${testId} is already DONE`, ERR.IMMUTABLE, 409);
-        }
-
+        // IMMUTABLE-on-DONE feature restored per Historical Truth Policy.
+        // A DONE test cannot be re-completed.
         const tx = db; // architecture requirement
         const ts              = now();
         const { customer_id } = testRow;
@@ -730,9 +767,12 @@ function completeTest(type, testId, data) {
             if (weight_loss > 0) {
                 const row = db.prepare(`SELECT customer_id FROM ${c.parentTable} WHERE id = ?`).get(testId);
                 if (!row) throw new SystemError(`completeTest: test ${testId} disappeared mid-transaction`, null, { testId, type });
-                db.prepare(
-                    'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+                wlhRepo.insertWithinTransaction(db, {
+                    customer_id    : row.customer_id,
+                    amount         : weight_loss,
+                    reason         : `${type} test finalization: ${testId}`,
+                    mode_of_payment: mode_of_payment || null,
+                });
             }
             db.prepare(`DELETE FROM ${c.itemTable} WHERE ${c.fkColumn} = ?`).run(testId);
             db.prepare(`DELETE FROM ${c.parentTable} WHERE id = ?`).run(testId);
@@ -746,9 +786,12 @@ function completeTest(type, testId, data) {
             if (weight_loss > 0) {
                 const row = db.prepare(`SELECT customer_id FROM ${c.parentTable} WHERE id = ?`).get(testId);
                 if (!row) throw new SystemError(`completeTest: test ${testId} disappeared mid-transaction`, null, { testId, type });
-                db.prepare(
-                    'INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, ref_id, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).run(genId('WLH'), row.customer_id, weight_loss, `${type} test finalization: ${testId}`, mode_of_payment || null, testId, ts);
+                wlhRepo.insertWithinTransaction(db, {
+                    customer_id    : row.customer_id,
+                    amount         : weight_loss,
+                    reason         : `${type} test finalization: ${testId}`,
+                    mode_of_payment: mode_of_payment || null,
+                });
             }
         }
 
@@ -781,6 +824,9 @@ function completeTest(type, testId, data) {
         let certLedgerEntry = null;
 
         if (post_ledger) {
+            // Test charge — recordRevenue is fine here because the test row
+            // does not have a per-row idempotency gate; the surrounding
+            // transaction + completion_request_id guards prevent double calls.
             if (testFeeTotal > 0 && !isFullConvert) {
                 const cap = type.charAt(0).toUpperCase() + type.slice(1);
                 ledgerEntry = ledgerSvc.recordRevenue(type, {
@@ -790,25 +836,22 @@ function completeTest(type, testId, data) {
                     description       : `${cap} Lab Test ${testRow.auto_number} — charges`,
                     mode_of_payment,
                     post_cash_register: false,
-                    reference_type    : c.parentTable,
-                    reference_id      : testId,
-                    skip_status_check : true,
                 }, tx);
             }
 
+            // Certificate charge — uses chargeCertificate's atomic gate.
             if (certificate && certFeeTotal > 0) {
                 const cap = type.charAt(0).toUpperCase() + type.slice(1);
-                certLedgerEntry = ledgerSvc.recordRevenue(type, {
+                const result = ledgerSvc.chargeCertificate(type, {
+                    cert_id        : certificate.id,
                     customer_id,
-                    amount            : certFeeTotal,
-                    entry_type        : 'DEBIT',
-                    description       : `${cap} Certificate ${certificate.auto_number} — issuance fee`,
+                    amount         : certFeeTotal,
+                    entry_type     : 'DEBIT',
+                    description    : `${cap} Certificate ${certificate.auto_number} — issuance fee`,
                     mode_of_payment,
                     post_cash_register: false,
-                    reference_type    : type === 'gold' ? 'gold_certificate' : 'silver_certificate',
-                    reference_id      : certificate.id,
-                    skip_status_check : true,
                 }, tx);
+                certLedgerEntry = result.debit ? result : null;
             }
         }
 
@@ -923,6 +966,9 @@ function deleteTest(type, id) {
     try {
         const result = _txn();
         audit.commit('testService.deleteTest', { id, type });
+        // GAP 4 fix: emit deleted event for real-time sync
+        socket.emit(`${type}_test`, 'item:deleted', { id, type });
+        socket.emit('workflow',     'item:deleted', { id, type });
         return result;
     } catch (err) {
         audit.rollback('testService.deleteTest', err, { type, id });
@@ -962,7 +1008,16 @@ function listTests(type, filters = {}) {
     let listQ  = `
         SELECT ${alias}.*, ${alias}.created AS created_at, cu.name AS customer_name,
             (SELECT COUNT(*) FROM ${c.itemTable}
-             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL) AS item_count
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL) AS item_count,
+            (SELECT gross_weight FROM ${c.itemTable}
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL
+             ORDER BY item_number LIMIT 1) AS first_gross_weight,
+            (SELECT test_weight  FROM ${c.itemTable}
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL
+             ORDER BY item_number LIMIT 1) AS first_test_weight,
+            (SELECT purity       FROM ${c.itemTable}
+             WHERE ${c.fkColumn} = ${alias}.id AND deletedon IS NULL
+             ORDER BY item_number LIMIT 1) AS first_purity
         FROM ${c.parentTable} ${alias}
         JOIN customer cu ON ${alias}.customer_id = cu.id
         WHERE ${alias}.deletedon IS NULL
@@ -979,10 +1034,11 @@ function listTests(type, filters = {}) {
     if (filters.customer_id) addF(` AND ${alias}.customer_id = ?`, filters.customer_id);
     if (filters.search) {
         const s = `%${filters.search}%`;
-        addF(` AND (cu.name LIKE ? OR cu.phone LIKE ? OR ${alias}.auto_number LIKE ?
+        addF(` AND (cu.name LIKE ? OR cu.phone LIKE ? OR ${alias}.auto_number LIKE ? OR ${alias}.bill_no LIKE ?
             OR EXISTS (SELECT 1 FROM ${c.itemTable} ${itemAlias}
-                       WHERE ${itemAlias}.${c.fkColumn} = ${alias}.id AND ${itemAlias}.item_number LIKE ?))`,
-            s, s, s, s);
+                       WHERE ${itemAlias}.${c.fkColumn} = ${alias}.id
+                         AND (${itemAlias}.item_number LIKE ? OR ${itemAlias}.item_type LIKE ? OR ${itemAlias}.name LIKE ?)))`,
+            s, s, s, s, s, s, s);
     }
 
     listQ += ` ORDER BY ${alias}.created DESC LIMIT ? OFFSET ?`;

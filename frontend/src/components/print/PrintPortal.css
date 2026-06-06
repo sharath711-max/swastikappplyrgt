@@ -4,17 +4,11 @@
 }
 
 @media print {
-  /* Total isolation: Hide everything */
-  body * {
-    visibility: hidden !important;
+  /* Hide everything at body level except the print portal — keeps the print
+     root's descendants on their natural display values (table, table-cell,
+     flex, etc.) instead of forcing every element to display:block. */
+  body > *:not(#in-page-print-root) {
     display: none !important;
-  }
-
-  /* Target specifically the print root and all its descendants */
-  #in-page-print-root,
-  #in-page-print-root * {
-    visibility: visible !important;
-    display: block !important; /* Reset to block for visibility, PrintManager handles its own layouts */
   }
 
   #in-page-print-root {

@@ -14,6 +14,7 @@
     right: 0;
     height: 64px;
     background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -351,15 +352,19 @@
     margin: 8px 0;
 }
 
-/* Sidebar Styles */
+/* Sidebar Styles — Python-style dark navy theme.
+   Operator chose this layout: dark surface, white text, simple icon + label
+   rows. No workflow chips, no aging dots, no count badges, no '+ New'
+   affordances. Queue-pressure signals moved to the dashboard + WorkflowBoard. */
 .app-sidebar {
     position: fixed;
     top: 64px;
     left: 0;
     width: 260px;
     height: calc(100vh - 64px);
-    background: #ffffff;
-    border-right: 1px solid #e5e7eb;
+    background: #1f2937;      /* slate-800 — dark navy */
+    color: #e2e8f0;            /* slate-200 — light text */
+    border-right: 1px solid #0f172a;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
     overflow-x: hidden;
@@ -373,7 +378,149 @@
 }
 
 .sidebar-nav {
-    padding: 20px 0;
+    padding: 12px 0;
+}
+
+/* Flat operational sidebar — tighter rhythm, no grouped labels */
+.app-sidebar--flat .nav-section {
+    margin-bottom: 2px;
+}
+
+.app-sidebar--flat .nav-item {
+    margin: 2px 8px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 13px;
+    color: #e2e8f0;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.12s, color 0.12s;
+}
+
+/* `<button>` element rendering as a nav row (workflow rows). Reset chrome. */
+.app-sidebar--flat .nav-item--button {
+    width: calc(100% - 16px);
+    border: none;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.app-sidebar--flat .nav-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    transform: none;
+}
+
+.app-sidebar--flat .nav-item.active {
+    background: rgba(1, 118, 211, 0.18);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 #0176d3;
+    border-radius: 4px;
+}
+
+.app-sidebar--flat .nav-group-header {
+    margin: 2px 8px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-sidebar--flat .nav-group.active .nav-group-header,
+.app-sidebar--flat .nav-group-header:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.app-sidebar--flat .nav-subitems {
+    padding-left: 36px;
+    padding-right: 8px;
+}
+
+.app-sidebar--flat .nav-subitem {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    color: #cbd5e1;
+    text-decoration: none;
+    display: block;
+}
+
+.app-sidebar--flat .nav-subitem:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+}
+
+.app-sidebar--flat .nav-subitem.active {
+    background: rgba(1, 118, 211, 0.18);
+    color: #ffffff;
+}
+
+/* Icon glyph in sidebar nav rows — light slate by default, white on active */
+.app-sidebar .nav-icon {
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.app-sidebar .nav-item:hover .nav-icon,
+.app-sidebar .nav-item.active .nav-icon,
+.app-sidebar .nav-group-header:hover .nav-icon,
+.app-sidebar .nav-group.active .nav-group-header .nav-icon {
+    color: #ffffff;
+}
+
+/* Workflow code badge — small monospace 2-letter identifier rendered on
+   the WorkflowBoard section title. Used alongside .workflow-code--lg and
+   the no-op per-key shells below.
+
+   Sidebar nav rows render as plain icon+label since the sidebar
+   simplification (no chips, no aging dots, no '+ New' buttons, no
+   per-workflow count badge); the .workflow-nav-group / .workflow-nav-item
+   / .workflow-nav-row / .workflow-count* / .workflow-new-btn /
+   .workflow-code__aging-dot* selectors that powered that layout were
+   removed in the Pass 3 sweep. */
+.workflow-code {
+    flex-shrink: 0;
+    position: relative; /* aging dot anchors here */
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    padding: 2px 6px;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+}
+
+/* All 5 workflows render as one nav category. Per-key colour overrides
+   removed by operator direction — the 2-letter code is the differentiator.
+   Selectors retained as no-ops so WorkflowBoard.js + Sidebar.js can keep
+   passing className={`workflow-code workflow-code--${key}`} without churn.
+   If per-workflow tinting is reinstated later, fill these rules; do NOT
+   reintroduce divergent palettes without operator sign-off. */
+.workflow-code--gold,
+.workflow-code--gold_cert,
+.workflow-code--silver,
+.workflow-code--silver_cert,
+.workflow-code--photo_cert {
+    /* intentional: inherit the base .workflow-code neutral palette */
 }
 
 .nav-section-label {
@@ -423,6 +570,31 @@
     color: var(--primary);
     font-weight: 700;
     box-shadow: inset 0 0 0 1px rgba(1, 118, 211, 0.2);
+}
+
+.nav-item-disabled {
+    color: #9ca3af !important;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.nav-item-disabled:hover {
+    background: transparent !important;
+    color: #9ca3af !important;
+    transform: none !important;
+}
+
+.nav-soon-badge {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    background: #f1f5f9;
+    border: 1px solid #e5e7eb;
+    border-radius: 2px;
+    padding: 1px 5px;
 }
 
 .active::before {
@@ -524,8 +696,8 @@
 .sidebar-footer {
     padding: 24px;
     margin-top: auto;
-    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.02));
-    border-top: 1px solid #f3f4f6;
+    background: transparent;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .app-info {
@@ -537,13 +709,13 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #9ca3af;
+    color: #94a3b8;
     margin-bottom: 2px;
 }
 
 .app-copyright {
     font-size: 10px;
-    color: #adb5bd;
+    color: #64748b;
 }
 
 /* Main Content */
@@ -661,3 +833,66 @@
         text-align: center;
     }
 }
+/* Parity-mode banner — persistent top-of-frame governance-risk indicator.
+   Muted amber, institutional warmth, not panic-red. 32px tall, sits above
+   the existing fixed Header. When active, the body class added by the
+   ParityModeBanner component drops Header / Sidebar / Main by the banner
+   height so nothing is covered. When inactive, no class, no layout shift,
+   banner doesn't render — zero cost in STRICT mode. */
+.parity-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    z-index: 1100; /* > .app-header (1001) and .user-menu-dropdown (1002) */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    color: #78350f;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 1px 0 rgba(180, 83, 9, 0.08);
+}
+.parity-banner__icon {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #b45309;
+}
+.parity-banner__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.parity-banner__title {
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #7c2d12;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+}
+.parity-banner__sep {
+    color: #92400e;
+    font-weight: 600;
+    margin: 0 6px;
+}
+.parity-banner__detail {
+    color: #78350f;
+    font-size: 12px;
+}
+
+/* Layout shifts when parity mode is active — the body class is toggled by
+   ParityModeBanner. Header was top:0, sidebar top:64px, main margin-top:64px.
+   Shift everything down by the banner's 32px height. */
+body.parity-mode-active .app-header   { top: 32px; }
+body.parity-mode-active .app-sidebar  { top: 96px; height: calc(100vh - 96px); }
+body.parity-mode-active .app-main     { margin-top: 96px; min-height: calc(100vh - 96px); }

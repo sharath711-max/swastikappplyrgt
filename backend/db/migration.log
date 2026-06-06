@@ -41,3 +41,142 @@
 [2026-04-19T16:10:25.145Z]   skipped: 5
 [2026-04-19T16:10:25.145Z]   warnings: 0
 [2026-04-19T16:10:25.145Z]   log written to: c:\Users\pc\OneDrive\Desktop\Utility\swastik-gold-silver-lab\backend\db\migration.log
+[2026-05-21T01:24:24.841Z] Migration start — source: c:\Users\pc\Desktop\swastik\app\site.db
+[2026-05-21T01:24:24.860Z] Target: backend/db/lab.db  DRY_RUN: true
+[2026-05-21T01:24:24.860Z] === DRY RUN — no data will be written ===
+[2026-05-21T01:24:24.861Z] Migrating customers...
+[2026-05-21T01:24:24.908Z]   → 3420 customers
+[2026-05-21T01:24:24.908Z] Migrating users...
+[WARN] All 1 user(s) migrated with temp password: Swastik@Reset1 — CHANGE IMMEDIATELY
+[2026-05-21T01:24:25.047Z]   → 1 users
+[2026-05-21T01:24:25.048Z] Migrating gold tests...
+[2026-05-21T01:24:25.488Z]   → 31899 gold tests, 38559 items
+[2026-05-21T01:24:25.488Z] Migrating silver tests...
+[2026-05-21T01:24:25.488Z]   → No silver_test table in source — skipped
+[2026-05-21T01:24:25.489Z]   → 0 silver tests, 0 items
+[2026-05-21T01:24:25.489Z] Migrating gold certificates...
+[2026-05-21T01:24:25.571Z]   → 6439 gold certificates, 7781 items
+[2026-05-21T01:24:25.571Z] Migrating silver certificates...
+[2026-05-21T01:24:25.577Z]   → 448 silver certificates, 583 items
+[2026-05-21T01:24:25.577Z] Migrating photo certificates...
+[2026-05-21T01:24:25.588Z]   → 794 photo certificates, 794 items
+[2026-05-21T01:24:25.588Z] Migrating credit history...
+[2026-05-21T01:24:25.591Z]   → 678 credit history records
+[2026-05-21T01:24:25.591Z] Migrating weight loss history...
+[2026-05-21T01:24:25.593Z]   → 519 weight loss records
+[2026-05-21T01:24:25.593Z] Seeding sequences...
+[2026-05-21T01:24:25.593Z] 
+[2026-05-21T01:24:25.593Z] === SUMMARY ===
+[2026-05-21T01:24:25.593Z]   customers: 3420
+[2026-05-21T01:24:25.593Z]   users: 1
+[2026-05-21T01:24:25.593Z]   gold_tests: 31899
+[2026-05-21T01:24:25.593Z]   gold_test_items: 38559
+[2026-05-21T01:24:25.593Z]   silver_tests: 0
+[2026-05-21T01:24:25.593Z]   silver_test_items: 0
+[2026-05-21T01:24:25.594Z]   gold_certs: 6439
+[2026-05-21T01:24:25.594Z]   gold_cert_items: 7781
+[2026-05-21T01:24:25.594Z]   silver_certs: 448
+[2026-05-21T01:24:25.594Z]   silver_cert_items: 583
+[2026-05-21T01:24:25.594Z]   photo_certs: 794
+[2026-05-21T01:24:25.594Z]   photo_cert_items: 794
+[2026-05-21T01:24:25.594Z]   credit_history: 678
+[2026-05-21T01:24:25.594Z]   weight_loss: 519
+[2026-05-21T01:24:25.594Z]   skipped: 5
+[2026-05-21T01:24:25.594Z]   warnings: 0
+[2026-05-21T01:24:25.594Z]   log written to: backend\db\migration.log
+[2026-05-21T01:38:37.845Z] Migration start — source: c:\Users\pc\Desktop\swastik\app\site.db
+[2026-05-21T01:38:37.850Z] Target: backend/db/lab.db  DRY_RUN: false
+[2026-05-21T01:38:37.851Z] Migrating customers...
+[2026-05-21T01:38:37.897Z]   → 3420 customers
+[2026-05-21T01:38:37.897Z] Migrating users...
+[WARN] All 1 user(s) migrated with temp password: Swastik@Reset1 — CHANGE IMMEDIATELY
+[2026-05-21T01:38:37.999Z]   → 1 users
+[2026-05-21T01:38:37.999Z] Migrating gold tests...
+[2026-05-21T01:38:39.302Z]   → 31899 gold tests, 38559 items
+[2026-05-21T01:38:39.302Z] Migrating silver tests...
+[2026-05-21T01:38:39.303Z]   → No silver_test table in source — skipped
+[2026-05-21T01:38:39.303Z]   → 0 silver tests, 0 items
+[2026-05-21T01:38:39.303Z] Migrating gold certificates...
+[2026-05-21T01:38:39.604Z]   → 6439 gold certificates, 7781 items
+[2026-05-21T01:38:39.604Z] Migrating silver certificates...
+[2026-05-21T01:38:39.627Z]   → 448 silver certificates, 583 items
+[2026-05-21T01:38:39.627Z] Migrating photo certificates...
+[2026-05-21T01:38:39.658Z]   → 794 photo certificates, 794 items
+[2026-05-21T01:38:39.659Z] Migrating credit history...
+[2026-05-21T01:38:39.669Z]   → 678 credit history records
+[2026-05-21T01:38:39.669Z] Migrating weight loss history...
+[2026-05-21T01:38:39.677Z]   → 519 weight loss records
+[2026-05-21T01:38:39.677Z] Seeding sequences...
+[2026-05-21T01:38:39.677Z]   → GST sequence seeded at 6953, NON-GST at 0
+[2026-05-21T01:38:40.076Z] === Migration committed successfully ===
+[2026-05-21T01:38:40.076Z] 
+[2026-05-21T01:38:40.076Z] === SUMMARY ===
+[2026-05-21T01:38:40.076Z]   customers: 3420
+[2026-05-21T01:38:40.076Z]   users: 1
+[2026-05-21T01:38:40.076Z]   gold_tests: 31899
+[2026-05-21T01:38:40.076Z]   gold_test_items: 38559
+[2026-05-21T01:38:40.076Z]   silver_tests: 0
+[2026-05-21T01:38:40.076Z]   silver_test_items: 0
+[2026-05-21T01:38:40.076Z]   gold_certs: 6439
+[2026-05-21T01:38:40.076Z]   gold_cert_items: 7781
+[2026-05-21T01:38:40.076Z]   silver_certs: 448
+[2026-05-21T01:38:40.076Z]   silver_cert_items: 583
+[2026-05-21T01:38:40.076Z]   photo_certs: 794
+[2026-05-21T01:38:40.077Z]   photo_cert_items: 794
+[2026-05-21T01:38:40.077Z]   credit_history: 678
+[2026-05-21T01:38:40.077Z]   weight_loss: 519
+[2026-05-21T01:38:40.077Z]   skipped: 5
+[2026-05-21T01:38:40.077Z]   warnings: 0
+[2026-05-21T01:38:40.077Z]   log written to: backend\db\migration.log
+[2026-05-21T01:38:40.077Z] 
+[2026-05-21T01:38:40.077Z] ⚠️  IMPORTANT: All migrated users have temp password: Swastik@Reset1
+[2026-05-21T01:38:40.077Z]    Staff MUST change passwords after first login.
+[2026-05-21T01:38:40.077Z]    Run: node backend/scripts/seed_admin.js to create a fresh admin if needed.
+[2026-05-21T01:43:10.124Z] Migration start — source: c:\Users\pc\Desktop\swastik\app\site.db
+[2026-05-21T01:43:10.129Z] Target: backend/db/lab.db  DRY_RUN: false
+[2026-05-21T01:43:10.130Z] Migrating customers...
+[2026-05-21T01:43:10.178Z]   → 3420 customers
+[2026-05-21T01:43:10.179Z] Migrating users...
+[WARN] All 1 user(s) migrated with temp password: Swastik@Reset1 — CHANGE IMMEDIATELY
+[2026-05-21T01:43:10.283Z]   → 1 users
+[2026-05-21T01:43:10.283Z] Migrating gold tests...
+[2026-05-21T01:43:11.609Z]   → 31899 gold tests, 38559 items
+[2026-05-21T01:43:11.609Z] Migrating silver tests...
+[2026-05-21T01:43:11.610Z]   → No silver_test table in source — skipped
+[2026-05-21T01:43:11.610Z]   → 0 silver tests, 0 items
+[2026-05-21T01:43:11.610Z] Migrating gold certificates...
+[2026-05-21T01:43:11.921Z]   → 6439 gold certificates, 7781 items
+[2026-05-21T01:43:11.921Z] Migrating silver certificates...
+[2026-05-21T01:43:11.942Z]   → 448 silver certificates, 583 items
+[2026-05-21T01:43:11.942Z] Migrating photo certificates...
+[2026-05-21T01:43:11.978Z]   → 794 photo certificates, 794 items
+[2026-05-21T01:43:11.979Z] Migrating credit history...
+[2026-05-21T01:43:11.990Z]   → 678 credit history records
+[2026-05-21T01:43:11.990Z] Migrating weight loss history...
+[2026-05-21T01:43:11.996Z]   → 519 weight loss records
+[2026-05-21T01:43:11.997Z] Seeding sequences...
+[2026-05-21T01:43:11.997Z]   → GST sequence seeded at 6953, NON-GST at 0
+[2026-05-21T01:43:12.363Z] === Migration committed successfully ===
+[2026-05-21T01:43:12.364Z] 
+[2026-05-21T01:43:12.364Z] === SUMMARY ===
+[2026-05-21T01:43:12.364Z]   customers: 3420
+[2026-05-21T01:43:12.364Z]   users: 1
+[2026-05-21T01:43:12.364Z]   gold_tests: 31899
+[2026-05-21T01:43:12.364Z]   gold_test_items: 38559
+[2026-05-21T01:43:12.364Z]   silver_tests: 0
+[2026-05-21T01:43:12.364Z]   silver_test_items: 0
+[2026-05-21T01:43:12.364Z]   gold_certs: 6439
+[2026-05-21T01:43:12.364Z]   gold_cert_items: 7781
+[2026-05-21T01:43:12.364Z]   silver_certs: 448
+[2026-05-21T01:43:12.364Z]   silver_cert_items: 583
+[2026-05-21T01:43:12.364Z]   photo_certs: 794
+[2026-05-21T01:43:12.365Z]   photo_cert_items: 794
+[2026-05-21T01:43:12.365Z]   credit_history: 678
+[2026-05-21T01:43:12.365Z]   weight_loss: 519
+[2026-05-21T01:43:12.365Z]   skipped: 5
+[2026-05-21T01:43:12.365Z]   warnings: 0
+[2026-05-21T01:43:12.365Z]   log written to: backend\db\migration.log
+[2026-05-21T01:43:12.365Z] 
+[2026-05-21T01:43:12.365Z] ⚠️  IMPORTANT: All migrated users have temp password: Swastik@Reset1
+[2026-05-21T01:43:12.365Z]    Staff MUST change passwords after first login.
+[2026-05-21T01:43:12.365Z]    Run: node backend/scripts/seed_admin.js to create a fresh admin if needed.

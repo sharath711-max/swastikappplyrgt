@@ -1,28 +1,18 @@
 'use strict';
 
+const {
+    PYTHON_TO_SERN_STATUS,
+    SERN_TO_PYTHON_STATUS,
+    toNodeStatus,
+    toPythonStatus,
+} = require('./statusSemantics');
+
 // ─── 1. Status vocabulary ─────────────────────────────────────────────────────
-// Python: pending / ongoing / completed
-// Node:   TODO   / IN_PROGRESS / DONE
+// Python: ongoing / pending     / completed
+// Node:   TODO    / IN_PROGRESS / DONE
 
-const STATUS_TO_PYTHON = Object.freeze({
-    TODO       : 'pending',
-    IN_PROGRESS: 'ongoing',
-    DONE       : 'completed',
-});
-
-const STATUS_TO_NODE = Object.freeze({
-    pending  : 'TODO',
-    ongoing  : 'IN_PROGRESS',
-    completed: 'DONE',
-});
-
-function toPythonStatus(nodeStatus) {
-    return STATUS_TO_PYTHON[nodeStatus] ?? nodeStatus;
-}
-
-function toNodeStatus(pythonStatus) {
-    return STATUS_TO_NODE[pythonStatus] ?? pythonStatus;
-}
+const STATUS_TO_PYTHON = SERN_TO_PYTHON_STATUS;
+const STATUS_TO_NODE = PYTHON_TO_SERN_STATUS;
 
 // ─── 2. Payment mode casing ───────────────────────────────────────────────────
 // Python: cash / upi / balance / bill  (lowercase)
@@ -102,7 +92,7 @@ function _sortByKey(arr, key) {
     });
 }
 
-// cert items:  certificate_number (A01, A02 — stable, unique per cert)
+// cert items:  certificate_number (A001-Z999 global counter — stable, unique per cert)
 // test items:  item_number        (GT-001-1, GT-001-2 — sequential insertion order)
 
 // ─── 6. Item shape adapters (Node normalized rows → Python JSON blob) ─────────

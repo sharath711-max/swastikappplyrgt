@@ -1,5 +1,6 @@
 const BaseRepository = require('./baseRepository');
 const { genId, now } = require('../db/db');
+const seqSvc = require('../services/v2/sequenceService');
 
 class CustomerRepository extends BaseRepository {
     constructor() {
@@ -7,19 +8,24 @@ class CustomerRepository extends BaseRepository {
     }
 
     create(customer) {
-        const { name, phone, notes } = customer;
+        const { name, phone, notes, balance = 0 } = customer;
         const id = genId('CUS');
         const timestamp = now();
+        const autoNumber = seqSvc.generateTechnicalAutoNumber('CUS');
 
         this.db.prepare(`
-            INSERT INTO customer (id, name, phone, notes, balance, created, lastmodified)
-            VALUES (?, ?, ?, ?, 0, ?, ?)
-        `).run(id, name, phone, notes, timestamp, timestamp);
+            INSERT INTO customer (id, customer_no, auto_number, name, phone, notes, balance, created, lastmodified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(id, id, autoNumber, name, phone, notes, balance, timestamp, timestamp);
 
-        return { id, name, phone, notes, balance: 0, created: timestamp };
+        return { id, customer_no: id, auto_number: autoNumber, name, phone, notes, balance, created: timestamp };
     }
 
     update(id, customer) {
+        // Note: `balance` is intentionally NOT updated through this path.
+        // Customer balance moves through credit_history (DR/CR ledger entries).
+        // Direct edits would bypass the audit trail and the running-balance
+        // invariants enforced by the statement endpoint.
         const { name, phone, notes } = customer;
         const timestamp = now();
 
@@ -34,12 +40,58 @@ class CustomerRepository extends BaseRepository {
 
     findAll() {
         return this.db.prepare(`
-            SELECT c.*, 
+            SELECT c.*,
             c.created as created_at -- alias for compatibility
             FROM customer c
             WHERE c.deletedon IS NULL
             ORDER BY c.lastmodified DESC
         `).all();
+    }
+
+    findPaged({ page = 1, pageSize = 25, search = '', balanceFilter = 'all', sortBy = 'name', sortOrder = 'asc' } = {}) {
+        const wheres = ['c.deletedon IS NULL'];
+        const params = [];
+
+        if (search) {
+            wheres.push('(c.name LIKE ? OR c.phone LIKE ? OR c.customer_no LIKE ? OR c.auto_number LIKE ?)');
+            const like = `%${search}%`;
+            params.push(like, like, like, like);
+        }
+
+        if (balanceFilter === 'due')      wheres.push('c.balance > 0');
+        else if (balanceFilter === 'advance') wheres.push('c.balance < 0');
+        else if (balanceFilter === 'settled') wheres.push('(c.balance = 0 OR c.balance IS NULL)');
+
+        const whereClause = `WHERE ${wheres.join(' AND ')}`;
+
+        // Sort whitelist — never interpolate user input directly into ORDER BY.
+        // 'balance' mirrors the frontend's Math.abs(balance) DESC behavior so the
+        // server-driven sort doesn't visibly re-order on cutover.
+        const order = (() => {
+            const dir = sortOrder === 'desc' ? 'DESC' : 'ASC';
+            if (sortBy === 'balance') return `ABS(COALESCE(c.balance, 0)) DESC`;
+            if (sortBy === 'lastmodified') return `c.lastmodified ${dir}`;
+            if (sortBy === 'created') return `c.created ${dir}`;
+            return `c.name COLLATE NOCASE ${dir}`;
+        })();
+
+        const safePage = Math.max(1, parseInt(page, 10) || 1);
+        const safePageSize = Math.min(200, Math.max(1, parseInt(pageSize, 10) || 25));
+        const offset = (safePage - 1) * safePageSize;
+
+        const total = this.db.prepare(
+            `SELECT COUNT(*) AS n FROM customer c ${whereClause}`
+        ).get(...params).n;
+
+        const rows = this.db.prepare(
+            `SELECT c.*, c.created AS created_at
+             FROM customer c
+             ${whereClause}
+             ORDER BY ${order}
+             LIMIT ? OFFSET ?`
+        ).all(...params, safePageSize, offset);
+
+        return { rows, total, page: safePage, pageSize: safePageSize };
     }
 
     findByPhone(phone) {
@@ -68,9 +120,9 @@ class CustomerRepository extends BaseRepository {
     search(query) {
         return this.db.prepare(`
             SELECT * FROM customer 
-            WHERE (name LIKE ? OR phone LIKE ?) AND deletedon IS NULL
+            WHERE (name LIKE ? OR phone LIKE ? OR customer_no LIKE ? OR auto_number LIKE ?) AND deletedon IS NULL
             LIMIT 10
-        `).all(`%${query}%`, `%${query}%`);
+        `).all(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`);
     }
 }
 

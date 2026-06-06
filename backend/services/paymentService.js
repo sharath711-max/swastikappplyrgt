@@ -158,8 +158,9 @@ async function applyPayment({ customerId, amount, paymentMode, requestId }) {
 }
 
 function getReceipt(id) {
+    // Soft-deleted receipts are hidden from customer-facing reads.
     const row = db.prepare(`
-        SELECT snapshot, snapshot_hash FROM receipts WHERE id = ?
+        SELECT snapshot, snapshot_hash FROM receipts WHERE id = ? AND deletedon IS NULL
     `).get(id);
 
     if (!row) throw new Error('Receipt not found');

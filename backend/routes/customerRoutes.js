@@ -8,10 +8,33 @@ const { db } = require('../db/db');
 router.use(authMiddleware);
 
 // GET /api/customers
+// Backwards-compatible: when no paging param is present, returns the legacy
+// bare array shape. When any paging param (page / pageSize / search /
+// balanceFilter / sortBy / sortOrder) is present, returns the paged shape
+// { data: [...], pagination: { page, pageSize, total, totalPages } }.
+//
+// Note: sortBy=balance currently sorts by ABS(balance) DESC regardless of
+// sortOrder, for parity with the legacy Customers.js Math.abs(balance) DESC
+// behavior. Revisit post-cutover.
 router.get('/', async (req, res) => {
     try {
-        const customers = await customerService.getAllCustomers();
-        res.json(customers);
+        const PAGING_PARAMS = ['page', 'pageSize', 'search', 'balanceFilter', 'sortBy', 'sortOrder'];
+        const isPaged = PAGING_PARAMS.some(k => req.query[k] !== undefined);
+
+        if (!isPaged) {
+            const customers = await customerService.getAllCustomers();
+            return res.json(customers);
+        }
+
+        const result = await customerService.getCustomersPaged({
+            page: req.query.page,
+            pageSize: req.query.pageSize,
+            search: req.query.search || '',
+            balanceFilter: req.query.balanceFilter || 'all',
+            sortBy: req.query.sortBy || 'name',
+            sortOrder: req.query.sortOrder || 'asc',
+        });
+        res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -48,7 +71,7 @@ router.get('/:id/statement', async (req, res) => {
                 description,
                 NULL            AS reason
             FROM credit_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
             UNION ALL
             SELECT
                 id, 'weight_loss' AS source,
@@ -59,7 +82,7 @@ router.get('/:id/statement', async (req, res) => {
                 NULL              AS description,
                 reason
             FROM weight_loss_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
             ORDER BY date DESC
         `).all(id, id);
 
@@ -99,7 +122,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'gold_test'     AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -113,7 +136,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'silver_test'   AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -127,7 +150,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'gold_cert'     AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -141,7 +164,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'silver_cert'   AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -155,7 +178,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'photo_cert'    AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -176,7 +199,7 @@ router.get('/:id/timeline', async (req, res) => {
                 description,
                 created         AS event_date
             FROM credit_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
 
             UNION ALL
 
@@ -190,7 +213,7 @@ router.get('/:id/timeline', async (req, res) => {
                 reason          AS description,
                 created         AS event_date
             FROM weight_loss_history
-            WHERE customer_id = ?
+            WHERE customer_id = ? AND deletedon IS NULL
 
             ORDER BY event_date DESC
         `).all(id, id, id, id, id, id, id);

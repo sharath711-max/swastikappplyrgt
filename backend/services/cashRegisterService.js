@@ -2,6 +2,7 @@
 
 const { db, now, transaction } = require('../db/db');
 const { writeAuditLog } = require('./auditLogService');
+const seqSvc = require('./v2/sequenceService');
 
 const VALID_TYPES = new Set(['IN', 'OUT']);
 
@@ -23,10 +24,11 @@ function createEntry({ type, amount, description, date }) {
     const ts = now();
 
     const _txn = transaction(() => {
+        const autoNumber = seqSvc.generateTechnicalAutoNumber('CR');
         const info = db.prepare(
-            `INSERT INTO cash_register (date, type, amount, description, created_at)
-             VALUES (?, ?, ?, ?, ?)`
-        ).run(entryDate, normalizedType, parsedAmount, description || '', ts);
+            `INSERT INTO cash_register (auto_number, date, type, amount, description, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`
+        ).run(autoNumber, entryDate, normalizedType, parsedAmount, description || '', ts);
 
         const entry = db.prepare('SELECT * FROM cash_register WHERE id = ?').get(info.lastInsertRowid);
         writeAuditLog({ action: 'CASH_ENTRY_CREATE', entityType: 'cash_register', entityId: String(info.lastInsertRowid), newValue: normalizedType });

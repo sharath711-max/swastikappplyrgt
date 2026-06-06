@@ -9,7 +9,9 @@ import {
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20;          // ledger entries per page
+const CUSTOMER_PAGE_SIZE = 20; // customer rail rows per page
+const DEBOUNCE_MS = 250;       // customer-search debounce
 
 const fmt = (n) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n || 0);
@@ -29,11 +31,26 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 const EMPTY_FILTERS = { type: '', start_date: thisMonthStart(), end_date: today(), min_amount: '', max_amount: '' };
 
+const CustomerRow = ({ c, active, onClick }) => (
+  <div
+    className={`p-2 rounded mb-1 ${active ? 'bg-primary text-white' : 'bg-light'}`}
+    style={{ cursor: 'pointer' }}
+    onClick={onClick}
+  >
+    <div className="fw-semibold small">{c.name}</div>
+    <div className="small opacity-75">{c.phone || '—'}</div>
+  </div>
+);
+
 export default function BillsPage() {
   const { addToast } = useToast();
 
   const [customers, setCustomers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [custPage, setCustPage] = useState(1);
+  const [custPages, setCustPages] = useState(1);
+  const [custLoading, setCustLoading] = useState(false);
+  const custSeqRef = useRef(0);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const [ledger, setLedger] = useState([]);
@@ -51,11 +68,41 @@ export default function BillsPage() {
   const [form, setForm] = useState({ type: 'DEBIT', amount: '', mode_of_payment: 'Cash', description: '' });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    api.get('/customers')
-      .then(res => setCustomers(Array.isArray(res.data) ? res.data : (res.data.data || [])))
-      .catch(() => addToast('Failed to load customers', 'error'));
+  // Server-paged customer rail (A1 endpoint). Empty query browses page 1;
+  // a query filters server-side. seqRef cancels out-of-order responses so a
+  // fast typer never sees a stale page land after a newer one.
+  const fetchCustomers = useCallback(async (search, pg) => {
+    const seq = ++custSeqRef.current;
+    setCustLoading(true);
+    try {
+      const params = { page: pg, pageSize: CUSTOMER_PAGE_SIZE, sortBy: 'name', sortOrder: 'asc' };
+      if (search.trim()) params.search = search.trim();
+      const res = await api.get('/customers', { params });
+      if (seq !== custSeqRef.current) return;
+      const rows = Array.isArray(res.data?.data) ? res.data.data
+        : (Array.isArray(res.data) ? res.data : []);
+      setCustomers(rows);
+      setCustPages(res.data?.pagination?.totalPages || 1);
+    } catch {
+      if (seq === custSeqRef.current) addToast('Failed to load customers', 'error');
+    } finally {
+      if (seq === custSeqRef.current) setCustLoading(false);
+    }
   }, [addToast]);
+
+  // Debounced reload whenever the search term changes; always resets to page 1.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setCustPage(1);
+      fetchCustomers(customerSearch, 1);
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [customerSearch, fetchCustomers]);
+
+  const handleCustPageChange = (pg) => {
+    setCustPage(pg);
+    fetchCustomers(customerSearch, pg);
+  };
 
   const fetchLedger = useCallback(async (customerId, pg, activeFilters) => {
     if (!customerId) return;
@@ -119,7 +166,7 @@ export default function BillsPage() {
       if (filters.max_amount !== '') params.set('max_amount', filters.max_amount);
 
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const base = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const base = process.env.REACT_APP_API_URL || 'http://localhost:6001/api';
       const res = await fetch(`${base}/credit-history/export?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -183,10 +230,9 @@ export default function BillsPage() {
     }
   };
 
-  const filteredCustomers = customers.filter(c => {
-    const q = customerSearch.toLowerCase();
-    return (c.name || '').toLowerCase().includes(q) || (c.phone || '').includes(q);
-  });
+  // Pin the active customer above the list when they're not on the current
+  // page/search, so switching pages never hides who's selected.
+  const selectedOnPage = selectedCustomer && customers.some(c => c.id === selectedCustomer.id);
 
   const balance = selectedCustomer?.balance ?? 0;
   const activeFilterCount = [filters.type, filters.min_amount, filters.max_amount].filter(Boolean).length;
@@ -209,21 +255,39 @@ export default function BillsPage() {
               />
             </InputGroup>
             <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
-              {filteredCustomers.length === 0 && (
-                <p className="text-muted text-center small mt-3">No customers</p>
+              {/* Pinned active customer when off the current page/search */}
+              {selectedCustomer && !selectedOnPage && (
+                <>
+                  <CustomerRow c={selectedCustomer} active onClick={() => handleSelectCustomer(selectedCustomer)} />
+                  <div className="border-bottom mb-2" />
+                </>
               )}
-              {filteredCustomers.map(c => (
-                <div
-                  key={c.id}
-                  className={`p-2 rounded mb-1 ${selectedCustomer?.id === c.id ? 'bg-primary text-white' : 'bg-light'}`}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSelectCustomer(c)}
-                >
-                  <div className="fw-semibold small">{c.name}</div>
-                  <div className="small opacity-75">{c.phone || '—'}</div>
+              {custLoading ? (
+                <div className="d-flex justify-content-center py-4">
+                  <Spinner animation="border" size="sm" />
                 </div>
-              ))}
+              ) : customers.length === 0 ? (
+                <p className="text-muted text-center small mt-3">No customers</p>
+              ) : (
+                customers.map(c => (
+                  <CustomerRow
+                    key={c.id}
+                    c={c}
+                    active={selectedCustomer?.id === c.id}
+                    onClick={() => handleSelectCustomer(c)}
+                  />
+                ))
+              )}
             </div>
+            {custPages > 1 && (
+              <div className="d-flex align-items-center justify-content-between mt-2 small">
+                <Button size="sm" variant="outline-secondary" disabled={custPage <= 1 || custLoading}
+                  onClick={() => handleCustPageChange(custPage - 1)}>Prev</Button>
+                <span className="text-muted">{custPage} / {custPages}</span>
+                <Button size="sm" variant="outline-secondary" disabled={custPage >= custPages || custLoading}
+                  onClick={() => handleCustPageChange(custPage + 1)}>Next</Button>
+              </div>
+            )}
           </Card.Body>
         </Card>
       </Col>

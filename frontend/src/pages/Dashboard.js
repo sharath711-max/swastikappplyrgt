@@ -1,297 +1,345 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Spinner, Badge, Alert, Modal, Form, Button } from 'react-bootstrap';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Alert, Spinner } from 'react-bootstrap';
+import {
+    FaCoins, FaBalanceScale, FaCertificate, FaFileAlt, FaImage,
+    FaWallet,
+} from 'react-icons/fa';
+
 import api from '../services/api';
 import { useFetch } from '../hooks/useFetch';
-import { useToast } from '../contexts/ToastContext';
+import { useSocket } from '../hooks/useSocket';
 
-const fmt   = (val) => Number(val || 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
-const fmtN  = (val) => Number(val || 0).toLocaleString('en-IN');
-const fmtD  = (d)   => d ? new Date(d).toLocaleDateString() : 'N/A';
-const getVariant = (s) => ({ DONE: 'success', IN_PROGRESS: 'info', TODO: 'secondary' }[s] || 'primary');
+import SystemAnomaliesWidget   from '../components/dashboard/SystemAnomaliesWidget';
+import NewGoldTestModal from '../components/NewGoldTestModal';
+import NewSilverTestModal from '../components/NewSilverTestModal';
+import NewCertificateModal from '../components/NewCertificateModal';
+import {
+    RevenueTodayModal,
+    RevenueAllTimeModal,
+    CashInHandModal,
+} from '../components/dashboard/FinancialBreakdownModals';
+import {
+    CustomerCreditModal,
+    WeightLossModal,
+} from '../components/dashboard/CustomerActionModals';
+import {
+    RecentTestsTable,
+    RecentCertificatesTable,
+} from '../components/dashboard/RecentActivityTables';
 
-// ── Clickable stat card ───────────────────────────────────────────────────────
-function StatCard({ title, value, color, onClick }) {
-    return (
-        <Card
-            className="shadow-sm border-0 mb-4"
-            style={{ borderLeft: `4px solid var(--bs-${color})`, cursor: onClick ? 'pointer' : 'default' }}
-            onClick={onClick}
-        >
-            <Card.Body>
-                <h6 className="text-muted text-uppercase mb-2 fw-bold" style={{ fontSize: '0.72rem' }}>{title}</h6>
-                <h3 className={`fw-bold text-${color} mb-0`} style={{ fontSize: '1.3rem' }}>{value}</h3>
-                {onClick && <small className="text-muted" style={{ fontSize: '0.68rem' }}>Click for breakdown</small>}
-            </Card.Body>
-        </Card>
+import './Dashboard.css';
+
+const POLL_FALLBACK_MS = 30 * 1000;
+
+const fmtN   = (v) => Number(v || 0).toLocaleString('en-IN');
+const fmtINR = (v) =>
+    Number(v || 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+// Workflow tile metadata — colours mirror the Python dashboard tiles.
+// GT amber, GC red, ST slate (no Python ancestor), SC blue, PC green.
+const WORKFLOW_TILES = {
+    gold:        { Icon: FaCoins,        label: 'Gold Testing',       tone: 'amber' },
+    gold_cert:   { Icon: FaCertificate,  label: 'Gold Certificate',   tone: 'red'   },
+    silver:      { Icon: FaBalanceScale, label: 'Silver Testing',     tone: 'slate' },
+    silver_cert: { Icon: FaFileAlt,      label: 'Silver Certificate', tone: 'blue'  },
+    photo_cert:  { Icon: FaImage,        label: 'Photo Certificate',  tone: 'green' },
+};
+
+// Python dashboard ordered tiles as GT, GC, SC, PC (no ST). The SERN-only
+// ST workflow moves to the secondary row below the hero so the hero matches
+// Python's 6-card row exactly (2 stat cards + 4 workflow tiles).
+const HERO_WORKFLOW_KEYS  = ['gold', 'gold_cert', 'silver_cert', 'photo_cert'];
+const EXTRA_WORKFLOW_KEYS = ['silver'];
+
+// Python-style operator control panel dashboard.
+//   Row 1: Welcome | Active Customers | Customer Credit | Weight Loss
+//   Row 2: Revenue Today | Total Revenue | GT | GC | SC | PC
+//   Below: ST + Cash In Hand + Active Tests + Completed Today, governance,
+//          recents.
+// Per operator direction — visual style mirrors Python; SERN governance
+// content (anomalies widget, recents, ST workflow tile, operational stats)
+// preserved below the hero rather than dropped.
+export default function Dashboard() {
+    const navigate = useNavigate();
+
+    const fetchSummary = useCallback(
+        () => api.get('/analytics/summary').then((r) => r.data?.data ?? r.data),
+        []
     );
-}
+    const { data, loading, error, reload } = useFetch(fetchSummary);
 
-// ── Revenue breakdown modal ───────────────────────────────────────────────────
-function RevenueBreakdownModal({ show, onHide, scope }) {
-    const { addToast } = useToast();
-    const fetchBreakdown = useCallback(() => api.get('/analytics/revenue-breakdown').then(r => r.data?.data), []);
-    const { data, loading } = useFetch(fetchBreakdown);
+    const [totalRevenue,   setTotalRevenue]   = useState(0);
+    const [workflowSummary, setWorkflowSummary] = useState({});
+    const [activeCustomers, setActiveCustomers] = useState(null);
 
-    const d = data?.[scope];
-    const title = scope === 'today' ? 'Today\'s Revenue Breakdown' : 'All-Time Revenue Breakdown';
+    const reloadBreakdown = useCallback(() => {
+        api.get('/analytics/revenue-breakdown')
+            .then((r) => setTotalRevenue(r.data?.data?.allTime?.revenue?.total ?? 0))
+            .catch(() => {});
+    }, []);
 
-    return (
-        <Modal show={show} onHide={onHide} centered size="sm">
-            <Modal.Header closeButton><Modal.Title style={{ fontSize: '1rem' }}>{title}</Modal.Title></Modal.Header>
-            <Modal.Body>
-                {loading ? <div className="text-center py-3"><Spinner animation="border" size="sm" /></div> : d && (
-                    <>
-                        <h6 className="text-success fw-bold mb-2">Revenue</h6>
-                        <Table size="sm" className="mb-3">
-                            <tbody>
-                                <tr><td>Cash</td><td className="text-end fw-semibold">{fmt(d.revenue.cash)}</td></tr>
-                                <tr><td>UPI</td><td className="text-end fw-semibold">{fmt(d.revenue.upi)}</td></tr>
-                                <tr><td>Balance</td><td className="text-end fw-semibold">{fmt(d.revenue.balance)}</td></tr>
-                                <tr className="table-success"><td><strong>Total</strong></td><td className="text-end fw-bold">{fmt(d.revenue.total)}</td></tr>
-                            </tbody>
-                        </Table>
-                        <h6 className="text-danger fw-bold mb-2">Expense</h6>
-                        <Table size="sm" className="mb-3">
-                            <tbody>
-                                <tr><td>Weight Loss</td><td className="text-end fw-semibold">{fmt(d.expense.weight_loss)}</td></tr>
-                                <tr><td>Other</td><td className="text-end fw-semibold">{fmt(d.expense.total - d.expense.weight_loss)}</td></tr>
-                                <tr className="table-danger"><td><strong>Total</strong></td><td className="text-end fw-bold">{fmt(d.expense.total)}</td></tr>
-                            </tbody>
-                        </Table>
-                        {scope === 'allTime' && (
-                            <div className="mb-2">
-                                <span className="text-muted small">Cash in Hand: </span>
-                                <strong>{fmt(d.cashInHand)}</strong>
-                            </div>
-                        )}
-                        <div className={`p-2 rounded text-center fw-bold ${d.pnl >= 0 ? 'bg-success text-white' : 'bg-danger text-white'}`}>
-                            P&L: {fmt(d.pnl)}
-                        </div>
-                    </>
-                )}
-            </Modal.Body>
-        </Modal>
-    );
-}
+    const reloadWorkflowSummary = useCallback(() => {
+        api.get('/workflow/summary')
+            .then((r) => setWorkflowSummary(r.data?.data || {}))
+            .catch(() => {});
+    }, []);
 
-// ── Customer credit quick-action modal ────────────────────────────────────────
-function CustomerActionModal({ show, onHide, actionType }) {
-    const { addToast } = useToast();
-    const [customers,   setCustomers]   = useState([]);
-    const [customerId,  setCustomerId]  = useState('');
-    const [amount,      setAmount]      = useState('');
-    const [mode,        setMode]        = useState('cash');
-    const [reason,      setReason]      = useState('');
-    const [submitting,  setSubmitting]  = useState(false);
+    const reloadCustomers = useCallback(() => {
+        api.get('/customers')
+            .then((r) => {
+                const payload = r.data?.data ?? r.data ?? [];
+                const total = r.data?.total ?? (Array.isArray(payload) ? payload.length : 0);
+                setActiveCustomers(total);
+            })
+            .catch(() => setActiveCustomers(0));
+    }, []);
 
     useEffect(() => {
-        if (!show) return;
-        api.get('/customers').then(r => setCustomers(r.data?.data ?? r.data ?? [])).catch(() => {});
-        setCustomerId(''); setAmount(''); setMode('cash'); setReason('');
-    }, [show]);
+        reloadBreakdown();
+        reloadWorkflowSummary();
+        reloadCustomers();
+    }, [reloadBreakdown, reloadWorkflowSummary, reloadCustomers]);
 
-    const isCredit = actionType === 'credit';
-    const title    = isCredit ? 'Customer Credit' : 'Weight Loss Entry';
+    useEffect(() => {
+        const id = setInterval(() => {
+            reload(); reloadBreakdown(); reloadWorkflowSummary();
+        }, POLL_FALLBACK_MS);
+        return () => clearInterval(id);
+    }, [reload, reloadBreakdown, reloadWorkflowSummary]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!customerId || !amount) { addToast('Customer and amount are required', 'error'); return; }
-        setSubmitting(true);
-        try {
-            if (isCredit) {
-                await api.post('/credit-history', {
-                    customer_id: customerId, amount: parseFloat(amount),
-                    mode_of_payment: mode, type: 'CREDIT', description: 'Manual credit from dashboard',
-                });
-            } else {
-                await api.post('/weight-loss', {
-                    customer_id: customerId, amount: parseFloat(amount),
-                    mode_of_payment: mode, reason: reason || 'Weight loss',
-                });
-            }
-            addToast(`${title} recorded successfully`, 'success');
-            onHide();
-        } catch (err) {
-            addToast(err?.response?.data?.error || err.message, 'error');
-        } finally {
-            setSubmitting(false);
+    const refreshAll = useCallback(() => {
+        reload(); reloadBreakdown(); reloadWorkflowSummary(); reloadCustomers();
+    }, [reload, reloadBreakdown, reloadWorkflowSummary, reloadCustomers]);
+
+    useSocket(
+        ['gold_test', 'silver_test', 'gold_cert', 'silver_cert', 'workflow'],
+        {
+            'item:added':   refreshAll,
+            'item:updated': refreshAll,
+            'item:done':    refreshAll,
+            'cert:created': refreshAll,
+            'cert:updated': refreshAll,
+            'cert:done':    refreshAll,
+        },
+        [refreshAll]
+    );
+
+    const [breakdownScope, setBreakdownScope] = useState(null);  // 'today' | 'allTime' | 'cash'
+    const [actionModal,    setActionModal]    = useState(null);  // 'credit' | 'weightloss'
+    const [showGoldTestModal, setShowGoldTestModal] = useState(false);
+    const [showSilverTestModal, setShowSilverTestModal] = useState(false);
+    const [certModal, setCertModal] = useState({ show: false, type: 'gold' });
+
+    const handleWorkflowClick = (key) => {
+        if (key === 'gold') {
+            setShowGoldTestModal(true);
+        } else if (key === 'silver') {
+            setShowSilverTestModal(true);
+        } else if (key === 'gold_cert') {
+            setCertModal({ show: true, type: 'gold' });
+        } else if (key === 'silver_cert') {
+            setCertModal({ show: true, type: 'silver' });
+        } else if (key === 'photo_cert') {
+            setCertModal({ show: true, type: 'photo' });
         }
     };
 
-    const selected = customers.find(c => c.id === customerId);
+    if (loading && !data) {
+        return (
+            <div className="py-dash-loading"><Spinner animation="border" /></div>
+        );
+    }
 
     return (
-        <Modal show={show} onHide={onHide} centered size="sm">
-            <Modal.Header closeButton><Modal.Title style={{ fontSize: '1rem' }}>{title}</Modal.Title></Modal.Header>
-            <Modal.Body>
-                <Form onSubmit={handleSubmit}>
-                    <Form.Group className="mb-2">
-                        <Form.Label className="small fw-semibold">Customer</Form.Label>
-                        <Form.Select size="sm" value={customerId} onChange={e => setCustomerId(e.target.value)} required>
-                            <option value="">Select customer…</option>
-                            {customers.map(c => <option key={c.id} value={c.id}>{c.name} — ₹{c.balance}</option>)}
-                        </Form.Select>
-                        {selected && <small className="text-muted">Balance: {fmt(selected.balance)}</small>}
-                    </Form.Group>
-                    <Form.Group className="mb-2">
-                        <Form.Label className="small fw-semibold">Amount (₹)</Form.Label>
-                        <Form.Control size="sm" type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required />
-                    </Form.Group>
-                    <Form.Group className="mb-2">
-                        <Form.Label className="small fw-semibold">Mode</Form.Label>
-                        <Form.Select size="sm" value={mode} onChange={e => setMode(e.target.value)}>
-                            <option value="cash">Cash</option>
-                            <option value="upi">UPI</option>
-                            <option value="balance">Balance</option>
-                        </Form.Select>
-                    </Form.Group>
-                    {!isCredit && (
-                        <Form.Group className="mb-2">
-                            <Form.Label className="small fw-semibold">Reason</Form.Label>
-                            <Form.Control size="sm" value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Gold test weight loss" />
-                        </Form.Group>
-                    )}
-                    <div className="d-grid mt-3">
-                        <Button size="sm" type="submit" variant="primary" disabled={submitting}>
-                            {submitting ? <Spinner size="sm" animation="border" /> : `Save ${title}`}
-                        </Button>
+        <div className="py-dash">
+            {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+
+            {/* ── HERO ROW 1 — Welcome + Active Customers + 2 large action tiles ── */}
+            <section className="py-hero-row py-hero-row--top" aria-label="Welcome and quick actions">
+                <div className="py-welcome">
+                    <div className="py-welcome__title">
+                        <span>Welcome</span>
+                        <span>Back!</span>
                     </div>
-                </Form>
-            </Modal.Body>
-        </Modal>
-    );
-}
+                    <img
+                        src={`${process.env.PUBLIC_URL || ''}/welcome.png`}
+                        alt=""
+                        className="py-welcome__img"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                </div>
 
-// ── Recent table ──────────────────────────────────────────────────────────────
-function RecentTable({ title, data, columns }) {
-    return (
-        <Card className="shadow-sm border-0 mb-4">
-            <Card.Header className="bg-white border-0 pt-3 pb-0"><h6 className="fw-bold">{title}</h6></Card.Header>
-            <Card.Body className="p-0">
-                <Table responsive hover className="mb-0 small">
-                    <thead className="text-muted">
-                        <tr>{columns.map(c => <th key={c.key} className="px-3 py-2">{c.label}</th>)}</tr>
-                    </thead>
-                    <tbody>
-                        {!data?.length
-                            ? <tr><td colSpan={columns.length} className="text-center text-muted py-3">No data</td></tr>
-                            : data.map((r, i) => (
-                                <tr key={r.id || i}>
-                                    {columns.map(c => (
-                                        <td key={c.key} className="px-3 py-2">
-                                            {c.isDate ? fmtD(r[c.key])
-                                            : c.isCurr ? fmt(r[c.key])
-                                            : c.key === 'status' ? <Badge bg={getVariant(r[c.key])} style={{ fontSize: '0.65rem' }}>{r[c.key]}</Badge>
-                                            : r[c.key]}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))
-                        }
-                    </tbody>
-                </Table>
-            </Card.Body>
-        </Card>
-    );
-}
+                <button
+                    type="button"
+                    className="py-stat-card py-stat-card--clickable"
+                    onClick={() => navigate('/customers')}
+                    aria-label="Open customer list"
+                >
+                    <div className="py-stat-card__value py-stat-card__value--lg">
+                        {activeCustomers === null ? '…' : fmtN(activeCustomers)}
+                    </div>
+                    <div className="py-stat-card__label">Active Customers</div>
+                </button>
 
-const POLL = 30_000;
+                <button
+                    type="button"
+                    className="py-tile py-tile--credit"
+                    onClick={() => setActionModal('credit')}
+                    aria-label="Open Customer Credit"
+                >
+                    <FaWallet className="py-tile__icon" aria-hidden="true" />
+                    <span className="py-tile__label">Customer Credit</span>
+                </button>
 
-export default function Dashboard() {
-    const fetchSummary = useCallback(() => api.get('/analytics/summary').then(r => r.data?.data ?? r.data), []);
-    const { data, loading, error, reload } = useFetch(fetchSummary);
+                <button
+                    type="button"
+                    className="py-tile py-tile--wl"
+                    onClick={() => setActionModal('weightloss')}
+                    aria-label="Open Weight Loss"
+                >
+                    <FaBalanceScale className="py-tile__icon" aria-hidden="true" />
+                    <span className="py-tile__label">Weight Loss</span>
+                </button>
+            </section>
 
-    useEffect(() => { const id = setInterval(reload, POLL); return () => clearInterval(id); }, [reload]);
+            {/* ── HERO ROW 2 — 2 stat cards + 4 workflow tiles (Python parity) ── */}
+            <section className="py-hero-row py-hero-row--bottom" aria-label="Financials and workflow dispatch">
+                <button
+                    type="button"
+                    className="py-stat-card py-stat-card--clickable"
+                    onClick={() => setBreakdownScope('today')}
+                    aria-label="Open Revenue Today breakdown"
+                >
+                    <div className="py-stat-card__value">{fmtINR(data?.todayRevenue)}</div>
+                    <div className="py-stat-card__label">Revenue today</div>
+                </button>
 
-    // Breakdown modal state
-    const [breakdown, setBreakdown] = useState(null); // 'today' | 'allTime'
+                <button
+                    type="button"
+                    className="py-stat-card py-stat-card--clickable"
+                    onClick={() => setBreakdownScope('allTime')}
+                    aria-label="Open Total Revenue breakdown"
+                >
+                    <div className="py-stat-card__value">{fmtINR(totalRevenue)}</div>
+                    <div className="py-stat-card__label">Total Revenue</div>
+                </button>
 
-    // Quick-action modal state
-    const [actionModal, setActionModal] = useState(null); // 'credit' | 'weightloss'
+                {HERO_WORKFLOW_KEYS.map((key) => {
+                    const meta = WORKFLOW_TILES[key];
+                    const Icon = meta.Icon;
+                    const wfSummary = workflowSummary[key];
+                    const openCount = (wfSummary?.todo || 0) + (wfSummary?.in_progress || 0);
+                    return (
+                        <button
+                            key={key}
+                            type="button"
+                            className={`py-tile py-tile--${meta.tone}`}
+                            onClick={() => handleWorkflowClick(key)}
+                            title={meta.label}
+                            aria-label={`Open ${meta.label}`}
+                        >
+                            <Icon className="py-tile__icon" aria-hidden="true" />
+                            <span className="py-tile__label">{meta.label}</span>
+                            {openCount > 0 && (
+                                <span className="py-tile__count" title={`${openCount} open`}>
+                                    {openCount}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+            </section>
 
-    if (loading && !data) return <Container className="py-5 text-center"><Spinner animation="border" /></Container>;
+            {/* ── SECONDARY ROW — ST tile + remaining operational stats ── */}
+            <section className="py-secondary-row" aria-label="Operational stats">
+                {EXTRA_WORKFLOW_KEYS.map((key) => {
+                    const meta = WORKFLOW_TILES[key];
+                    const Icon = meta.Icon;
+                    const wfSummary = workflowSummary[key];
+                    const openCount = (wfSummary?.todo || 0) + (wfSummary?.in_progress || 0);
+                    return (
+                        <button
+                            key={key}
+                            type="button"
+                            className={`py-tile py-tile--${meta.tone}`}
+                            onClick={() => handleWorkflowClick(key)}
+                            title={meta.label}
+                            aria-label={`Open ${meta.label}`}
+                        >
+                            <Icon className="py-tile__icon" aria-hidden="true" />
+                            <span className="py-tile__label">{meta.label}</span>
+                            {openCount > 0 && (
+                                <span className="py-tile__count">{openCount}</span>
+                            )}
+                        </button>
+                    );
+                })}
 
-    const testCols = [
-        { key: 'created_at', label: 'Date', isDate: true },
-        { key: 'auto_number', label: 'ID' },
-        { key: 'customer_name', label: 'Customer' },
-        { key: 'status', label: 'Status' },
-        { key: 'total', label: 'Amount', isCurr: true },
-    ];
-    const certCols = [
-        { key: 'issue_date', label: 'Date', isDate: true },
-        { key: 'certificate_no', label: 'Cert No' },
-        { key: 'customer_name', label: 'Customer' },
-        { key: 'total_amount', label: 'Amount', isCurr: true },
-    ];
+                <button
+                    type="button"
+                    className="py-stat-card py-stat-card--clickable"
+                    onClick={() => navigate('/cash-in-hand')}
+                    aria-label="Open Cash In Hand ledger"
+                >
+                    <div className="py-stat-card__value">{fmtINR(data?.cashInHand)}</div>
+                    <div className="py-stat-card__label">Cash In Hand</div>
+                </button>
 
-    const stats = [
-        { title: 'Today Revenue',    value: fmt(data?.todayRevenue),    color: 'success', onClick: () => setBreakdown('today')   },
-        { title: 'Today Expense',    value: fmt(data?.todayExpense),     color: 'danger',  onClick: () => setBreakdown('today')   },
-        { title: 'Total Revenue',    value: fmt(data?.totalRevenue),     color: 'primary', onClick: () => setBreakdown('allTime') },
-        { title: 'Cash In Hand',     value: fmt(data?.cashInHand),       color: 'info',    onClick: () => setBreakdown('allTime') },
-        { title: 'Active Tests',     value: fmtN(data?.activeTests),     color: 'warning'  },
-        { title: 'Completed Today',  value: fmtN(data?.completedToday),  color: 'success'  },
-    ];
+                <button
+                    type="button"
+                    className="py-stat-card py-stat-card--clickable"
+                    onClick={() => navigate('/weight-loss')}
+                    aria-label="Open Expense today"
+                >
+                    <div className="py-stat-card__value">{fmtINR(data?.todayExpense)}</div>
+                    <div className="py-stat-card__label">Expense today</div>
+                </button>
 
-    const quickActions = [
-        { title: 'Customer Credit',  color: 'primary', action: 'credit',     desc: 'Add credit for a customer' },
-        { title: 'Weight Loss',      color: 'danger',  action: 'weightloss', desc: 'Record weight loss expense' },
-    ];
+                <div className="py-stat-card">
+                    <div className="py-stat-card__value">{fmtN(data?.activeTests)}</div>
+                    <div className="py-stat-card__label">Active Tests</div>
+                </div>
 
-    return (
-        <Container fluid className="py-4">
-            <h2 className="mb-4 fw-bold">Dashboard</h2>
-            {error && <Alert variant="danger">{error}</Alert>}
+                <div className="py-stat-card">
+                    <div className="py-stat-card__value">{fmtN(data?.completedToday)}</div>
+                    <div className="py-stat-card__label">Completed Today</div>
+                </div>
+            </section>
 
-            {data && (
-                <>
-                    {/* Stat cards */}
-                    <Row className="mb-2">
-                        {stats.map(s => (
-                            <Col md={4} sm={6} key={s.title}>
-                                <StatCard title={s.title} value={s.value} color={s.color} onClick={s.onClick} />
-                            </Col>
-                        ))}
-                    </Row>
+            {/* ── GOVERNANCE TELEMETRY ── */}
+            <SystemAnomaliesWidget />
 
-                    {/* Quick-action cards */}
-                    <Row className="mb-4">
-                        {quickActions.map(qa => (
-                            <Col md={3} sm={6} key={qa.title}>
-                                <Card
-                                    className="shadow-sm border-0 mb-3"
-                                    style={{ borderLeft: `4px solid var(--bs-${qa.color})`, cursor: 'pointer' }}
-                                    onClick={() => setActionModal(qa.action)}
-                                >
-                                    <Card.Body className="py-3">
-                                        <h6 className="fw-bold mb-1" style={{ fontSize: '0.85rem' }}>{qa.title}</h6>
-                                        <small className="text-muted">{qa.desc}</small>
-                                    </Card.Body>
-                                </Card>
-                            </Col>
-                        ))}
-                    </Row>
+            {/* ── RECENTS ── */}
+            <section className="dash-recents-row" aria-label="Recent activity">
+                <RecentTestsTable        rows={data?.recentTests || []} />
+                <RecentCertificatesTable rows={data?.recentCertificates || []} />
+            </section>
 
-                    {/* Recent tables */}
-                    <Row>
-                        <Col lg={6}><RecentTable title="Recent Tests"        data={data.recentTests}        columns={testCols} /></Col>
-                        <Col lg={6}><RecentTable title="Recent Certificates" data={data.recentCertificates} columns={certCols} /></Col>
-                    </Row>
-                </>
-            )}
+            {/* ── MODALS ── */}
+            <RevenueTodayModal   show={breakdownScope === 'today'}   onHide={() => setBreakdownScope(null)} />
+            <RevenueAllTimeModal show={breakdownScope === 'allTime'} onHide={() => setBreakdownScope(null)} />
+            <CashInHandModal     show={breakdownScope === 'cash'}    onHide={() => setBreakdownScope(null)} />
+            <CustomerCreditModal show={actionModal === 'credit'}     onHide={() => setActionModal(null)} onSuccess={refreshAll} />
+            <WeightLossModal     show={actionModal === 'weightloss'} onHide={() => setActionModal(null)} onSuccess={refreshAll} />
 
-            <RevenueBreakdownModal
-                show={!!breakdown}
-                onHide={() => setBreakdown(null)}
-                scope={breakdown || 'today'}
+            {/* ── INTAKE FORM MODALS ── */}
+            <NewGoldTestModal
+                show={showGoldTestModal}
+                onHide={() => setShowGoldTestModal(false)}
+                onSuccess={refreshAll}
             />
-
-            <CustomerActionModal
-                show={!!actionModal}
-                onHide={() => setActionModal(null)}
-                actionType={actionModal}
+            <NewSilverTestModal
+                show={showSilverTestModal}
+                onHide={() => setShowSilverTestModal(false)}
+                onSuccess={refreshAll}
             />
-        </Container>
+            <NewCertificateModal
+                show={certModal.show}
+                type={certModal.type}
+                onHide={() => setCertModal(prev => ({ ...prev, show: false }))}
+                onSuccess={refreshAll}
+            />
+        </div>
     );
 }

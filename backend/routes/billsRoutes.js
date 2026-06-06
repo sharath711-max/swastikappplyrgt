@@ -37,7 +37,7 @@ router.get('/', (req, res) => {
 
         if (mod === 'gold_cert') {
             rows = db.prepare(`
-                SELECT p.id, p.auto_number AS bill_number, c.name AS customer_name, c.phone,
+                SELECT p.id, COALESCE(p.bill_no, p.auto_number) AS bill_number, p.auto_number, c.name AS customer_name, c.phone,
                        p.gst, p.total, p.total_tax, p.mode_of_payment,
                        p.created AS date, 'gold_cert' AS module
                 FROM gold_certificate p
@@ -47,7 +47,7 @@ router.get('/', (req, res) => {
             `).all(...params);
         } else if (mod === 'silver_cert') {
             rows = db.prepare(`
-                SELECT p.id, p.auto_number AS bill_number, c.name AS customer_name, c.phone,
+                SELECT p.id, COALESCE(p.bill_no, p.auto_number) AS bill_number, p.auto_number, c.name AS customer_name, c.phone,
                        p.gst, p.total, p.total_tax, p.mode_of_payment,
                        p.created AS date, 'silver_cert' AS module
                 FROM silver_certificate p
@@ -57,7 +57,7 @@ router.get('/', (req, res) => {
             `).all(...params);
         } else if (mod === 'photo_cert') {
             rows = db.prepare(`
-                SELECT p.id, p.auto_number AS bill_number, c.name AS customer_name, c.phone,
+                SELECT p.id, COALESCE(p.bill_no, p.auto_number) AS bill_number, p.auto_number, c.name AS customer_name, c.phone,
                        p.gst, p.total, p.total_tax, p.mode_of_payment,
                        p.created AS date, 'photo_cert' AS module
                 FROM photo_certificate p
@@ -72,7 +72,7 @@ router.get('/', (req, res) => {
             if (end_date)   { testFilters.push("date(p.created) <= date(?)"); testParams.push(end_date); }
             const testWhere = `WHERE ${testFilters.join(' AND ')}`;
             rows = db.prepare(`
-                SELECT p.id, p.auto_number AS bill_number, c.name AS customer_name, c.phone,
+                SELECT p.id, COALESCE(p.bill_no, p.auto_number) AS bill_number, p.auto_number, c.name AS customer_name, c.phone,
                        0 AS gst, p.total, 0 AS total_tax, p.mode_of_payment,
                        p.created AS date, 'gold_test' AS module
                 FROM gold_test p
@@ -87,7 +87,7 @@ router.get('/', (req, res) => {
             if (end_date)   { testFilters.push("date(p.created) <= date(?)"); testParams.push(end_date); }
             const testWhere = `WHERE ${testFilters.join(' AND ')}`;
             rows = db.prepare(`
-                SELECT p.id, p.auto_number AS bill_number, c.name AS customer_name, c.phone,
+                SELECT p.id, COALESCE(p.bill_no, p.auto_number) AS bill_number, p.auto_number, c.name AS customer_name, c.phone,
                        0 AS gst, p.total, 0 AS total_tax, p.mode_of_payment,
                        p.created AS date, 'silver_test' AS module
                 FROM silver_test p

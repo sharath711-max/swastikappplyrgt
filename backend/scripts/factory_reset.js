@@ -1,4 +1,5 @@
 const { db } = require('../db/db');
+const { applyMigrations } = require('../db/migrations');
 
 const tablesToClear = [
     'gold_test_item',
@@ -40,6 +41,21 @@ const upsertGlobalValue = (key, value) => {
 
 try {
     const resetDatabase = db.transaction(() => {
+        const resetOnlyDeleteTriggers = [
+            'trg_nodelete_gold_test',
+            'trg_nodelete_silver_test',
+            'trg_nodelete_gold_cert',
+            'trg_nodelete_gold_cert_items',
+            'trg_nodelete_silver_cert',
+            'trg_nodelete_silver_cert_items',
+            'trg_nodelete_photo_cert',
+            'trg_nodelete_photo_cert_items',
+        ];
+
+        for (const trigger of resetOnlyDeleteTriggers) {
+            db.exec(`DROP TRIGGER IF EXISTS ${trigger}`);
+        }
+
         for (const table of tablesToClear) {
             if (!existingTables.has(table)) {
                 continue;
@@ -70,6 +86,7 @@ try {
     });
 
     resetDatabase();
+    applyMigrations();
 
     db.exec('VACUUM');
     console.log('[OK] All records cleared successfully.');

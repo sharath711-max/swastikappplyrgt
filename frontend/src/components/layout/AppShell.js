@@ -10,7 +10,6 @@ import './AppShell.css';
  * Ensures the Header, Sidebar, and Global Contexts remain alive while the body re-renders.
  */
 const AppShell = ({ children }) => {
-    console.log("AppShell rendering...");
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     return (

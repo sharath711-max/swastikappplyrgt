@@ -13,6 +13,7 @@ const ensureCashRegisterSchema = () => {
     db.exec(`
         CREATE TABLE IF NOT EXISTS cash_register (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            auto_number TEXT UNIQUE,
             date DATETIME NOT NULL,
             type TEXT CHECK (type IN ('IN','OUT')) NOT NULL,
             amount REAL NOT NULL,
@@ -20,6 +21,7 @@ const ensureCashRegisterSchema = () => {
             created_at DATETIME NOT NULL
         )
     `);
+    db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cash_register_auto_number ON cash_register(auto_number) WHERE auto_number IS NOT NULL`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_cash_register_date ON cash_register(date)`);
 };
 

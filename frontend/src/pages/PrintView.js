@@ -55,30 +55,41 @@ const resolveLegacyRequest = (type, id) => {
     return `/list/${type}/${id}`;
 };
 
-const buildReceiptSnapshot = (payload) => ({
+const buildReceiptSnapshot = (payload, routeType) => ({
     lab: {
-        name: 'SWASTIK GOLD LAB',
+        name: 'Swastik Assayers',
         tagline: 'Testing & Certification',
         address: payload?.customer?.address || '',
     },
     receipt: {
         number: payload?.header?.auto_number || payload?.bill_number || '-',
         createdAt: payload?.header?.created_at || payload?.created_at || payload?.createdon,
-        type: payload?.header?.entity_type || 'document',
+        type: (payload?.header?.metal_type && payload?.header?.entity_type)
+            ? `${payload.header.metal_type}-${payload.header.entity_type}`
+            : (routeType || payload?.header?.entity_type || 'document'),
         status: payload?.status || payload?.header?.status || 'DONE',
     },
     customer: {
         name: payload?.customer?.name || payload?.customer_name || '-',
         phone: payload?.customer?.phone || payload?.customer_phone || '',
     },
-    items: (payload?.items || []).map((item) => ({
-        id: item.id || item.item_number,
-        name: item.item_type || item.item_name || item.name || 'Item',
-        label: item.item_number || item.certificate_number || '',
-        weight: item.net_weight || item.gross_weight || 0,
-        amount: Number(item.item_total || item.total || 0),
-        purity: item.purity,
-    })),
+    items: (payload?.items || []).map((item) => {
+        // Coerce backend-formatted strings to numbers so the truthy-string
+        // problem doesn't make a zero net_weight win over a real gross_weight.
+        const gross  = Number(item.gross_weight) || 0;
+        const sample = Number(item.test_weight) || 0;
+        const net    = Number(item.net_weight) || 0;
+        return {
+            id: item.id || item.item_number,
+            name: item.item_type || item.item_name || item.name || 'Item',
+            label: item.item_number || item.certificate_number || '',
+            weight: gross > 0 ? gross : net,
+            grossWeight:  gross > 0 ? gross : undefined,
+            sampleWeight: sample > 0 ? sample : undefined,
+            amount: Number(item.item_total || item.total || 0),
+            purity: item.purity,
+        };
+    }),
     totals: {
         subtotal: Number(payload?.totals?.base || payload?.base || 0),
         tax: Number(payload?.totals?.tax || payload?.tax || 0),
@@ -195,13 +206,14 @@ const PrintView = () => {
 
             <div className="print-content">
                 {layout === 'receipt' ? (
-                    <ThermalReceipt snapshot={buildReceiptSnapshot(printPayload)} />
+                    <ThermalReceipt snapshot={buildReceiptSnapshot(printPayload, type)} />
                 ) : selectedItem ? (
                     <PrintManager
                         type={resolvedType}
                         data={printPayload}
                         item={selectedItem}
                         photos={printPayload?.photos || []}
+                        layout={layout || 'full'}
                     />
                 ) : (
                     queryParams.get('itemLevel') === 'true' && printPayload?.items && printPayload.items.length > 0 ? (
@@ -212,6 +224,7 @@ const PrintView = () => {
                                     data={printPayload}
                                     item={it}
                                     photos={printPayload?.photos || []}
+                                    layout={layout || 'full'}
                                 />
                             </div>
                         ))
@@ -221,6 +234,7 @@ const PrintView = () => {
                             data={printPayload}
                             item={null}
                             photos={printPayload?.photos || []}
+                            layout={layout || 'full'}
                         />
                     )
                 )}

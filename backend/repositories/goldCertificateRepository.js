@@ -15,16 +15,17 @@ class GoldCertificateRepository {
             const nowObj = new Date();
             const timestamp = nowObj.toISOString();
             const certId = genId('GCR');
-            const parentAutoNumber = SequenceService.generateGlobalSequence();
+            const billNo = require('../services/v2/sequenceService')._generateGlobalSequenceWork('gold', { context: 'CERT', isGst: Boolean(gst) });
+            const parentAutoNumber = require('../services/v2/sequenceService').generateTechnicalAutoNumber('GC');
 
             // 1. Insert Parent (Initial values, will be updated by roll-up)
             this.db.prepare(`
                 INSERT INTO gold_certificate (
-                    id, auto_number, customer_id, status, mode_of_payment, total, 
+                    id, auto_number, bill_no, customer_id, status, mode_of_payment, total, 
                     gst, gst_bill_number, total_tax, created, lastmodified
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-                certId, parentAutoNumber, customer_id, status, mode_of_payment, 0,
+                certId, parentAutoNumber, billNo, customer_id, status, mode_of_payment, 0,
                 gst ? 1 : 0, gst_bill_number, total_tax, timestamp, timestamp
             );
 
@@ -33,7 +34,8 @@ class GoldCertificateRepository {
             let itemSeq = 1;
             for (const item of items) {
                 const itemId = genId('GCI');
-                const itemNumber = `${parentAutoNumber}-${itemSeq++}`;
+                const itemNumber = `${billNo}-${itemSeq++}`;
+                const itemAutoNumber = require('../services/v2/sequenceService').generateTechnicalAutoNumber('GCI');
 
                 // Authoritative calculation
                 const calculated = CertificateCalculationService.calculateGoldItem({
@@ -43,12 +45,12 @@ class GoldCertificateRepository {
 
                 this.db.prepare(`
                     INSERT INTO gold_certificate_item (
-                        id, gold_certificate_id, item_number, item_type,
+                        id, gold_certificate_id, auto_number, parent_auto_number, item_number, item_type,
                         gross_weight, test_weight, net_weight, purity,
                         fine_weight, item_total, returned, created, certificate_number, name
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
-                    itemId, certId, itemNumber, item.item_type || 'Item',
+                    itemId, certId, itemAutoNumber, parentAutoNumber, itemNumber, item.item_type || 'Item',
                     calculated.gross_weight, calculated.test_weight, calculated.net_weight, calculated.purity,
                     calculated.fine_weight, calculated.item_total, calculated.is_returned ? 1 : 0,
                     timestamp, item.certificate_number || `A${String(itemSeq - 1).padStart(2, '0')}`, item.name || ''
@@ -56,6 +58,8 @@ class GoldCertificateRepository {
 
                 insertedItems.push({
                     id: itemId,
+                    auto_number: itemAutoNumber,
+                    parent_auto_number: parentAutoNumber,
                     item_number: itemNumber,
                     ...calculated,
                     created: timestamp
@@ -67,7 +71,7 @@ class GoldCertificateRepository {
             // Since we are in a transaction, let's call the logic directly or ensure updateCertificateTotals works with the raw db
             CertificateCalculationService.updateCertificateTotals(certId, this.db);
 
-            return { id: certId, auto_number: parentAutoNumber, items: insertedItems, created: timestamp };
+            return { id: certId, auto_number: parentAutoNumber, bill_no: billNo, items: insertedItems, created: timestamp };
         })();
     }
 
@@ -89,11 +93,12 @@ class GoldCertificateRepository {
             query += ` AND (
                 c.name LIKE ? 
                 OR c.phone LIKE ? 
+                OR gc.bill_no LIKE ?
                 OR gc.auto_number LIKE ? 
-                OR EXISTS (SELECT 1 FROM gold_certificate_item gci WHERE gci.gold_certificate_id = gc.id AND gci.item_number LIKE ?)
+                OR EXISTS (SELECT 1 FROM gold_certificate_item gci WHERE gci.gold_certificate_id = gc.id AND (gci.item_number LIKE ? OR gci.auto_number LIKE ? OR gci.parent_auto_number LIKE ?))
             )`;
             const s = `%${filters.search}%`;
-            params.push(s, s, s, s);
+            params.push(s, s, s, s, s, s, s);
         }
         query += " ORDER BY gc.created DESC";
         if (filters.limit) { query += " LIMIT ? OFFSET ?"; params.push(filters.limit, filters.offset || 0); }
@@ -110,11 +115,12 @@ class GoldCertificateRepository {
             query += ` AND (
                 c.name LIKE ? 
                 OR c.phone LIKE ? 
+                OR gc.bill_no LIKE ?
                 OR gc.auto_number LIKE ? 
-                OR EXISTS (SELECT 1 FROM gold_certificate_item gci WHERE gci.gold_certificate_id = gc.id AND gci.item_number LIKE ?)
+                OR EXISTS (SELECT 1 FROM gold_certificate_item gci WHERE gci.gold_certificate_id = gc.id AND (gci.item_number LIKE ? OR gci.auto_number LIKE ? OR gci.parent_auto_number LIKE ?))
             )`;
             const s = `%${filters.search}%`;
-            params.push(s, s, s, s);
+            params.push(s, s, s, s, s, s, s);
         }
         return this.db.prepare(query).get(...params).total;
     }

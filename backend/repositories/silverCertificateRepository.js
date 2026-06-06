@@ -13,20 +13,22 @@ class SilverCertificateRepository {
             const nowObj = new Date();
             const timestamp = nowObj.toISOString();
             const certId = genId('SCR');
-            const parentAutoNumber = SequenceService.generateGlobalSequence();
+            const billNo = require('../services/v2/sequenceService')._generateGlobalSequenceWork('silver', { context: 'CERT', isGst: false });
+            const parentAutoNumber = require('../services/v2/sequenceService').generateTechnicalAutoNumber('SC');
 
             // 1. Insert Parent
             this.db.prepare(`
-                INSERT INTO silver_certificate (id, auto_number, customer_id, status, created, lastmodified)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `).run(certId, parentAutoNumber, customer_id, status, timestamp, timestamp);
+                INSERT INTO silver_certificate (id, auto_number, bill_no, customer_id, status, created, lastmodified)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).run(certId, parentAutoNumber, billNo, customer_id, status, timestamp, timestamp);
 
             // 2. Insert Items
             const insertedItems = [];
             let itemSeq = 1;
             for (const item of items) {
                 const itemId = genId('SCI');
-                const itemNumber = `${parentAutoNumber}-${itemSeq++}`;
+                const itemNumber = `${billNo}-${itemSeq++}`;
+                const itemAutoNumber = require('../services/v2/sequenceService').generateTechnicalAutoNumber('SCI');
                 const certNum = item.certificate_number || `SC-${getNextSequence('silver_cert_seq')}`;
 
                 // Recalculate to be sure
@@ -34,12 +36,12 @@ class SilverCertificateRepository {
 
                 this.db.prepare(`
                     INSERT INTO silver_certificate_item (
-                        id, silver_certificate_id, item_number, certificate_number, 
+                        id, silver_certificate_id, auto_number, parent_auto_number, item_number, certificate_number, 
                         name, item_type, gross_weight, test_weight, net_weight, 
                         purity, fine_weight, item_total, returned, created
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
-                    itemId, certId, itemNumber, certNum,
+                    itemId, certId, itemAutoNumber, parentAutoNumber, itemNumber, certNum,
                     item.name || item.item_name || calculated.item_name,
                     item.item_type || item.item_name || calculated.item_name,
                     calculated.gross_weight, calculated.test_weight,
@@ -49,6 +51,8 @@ class SilverCertificateRepository {
 
                 insertedItems.push({
                     id: itemId,
+                    auto_number: itemAutoNumber,
+                    parent_auto_number: parentAutoNumber,
                     item_number: itemNumber,
                     certificate_number: certNum,
                     ...calculated,
@@ -60,7 +64,7 @@ class SilverCertificateRepository {
             // 3. Roll-up Totals
             CertificateCalculationService.updateCertificateTotals(certId, this.db);
 
-            return { id: certId, auto_number: parentAutoNumber, items: insertedItems, created: timestamp };
+            return { id: certId, auto_number: parentAutoNumber, bill_no: billNo, items: insertedItems, created: timestamp };
         })();
     }
 
@@ -82,11 +86,12 @@ class SilverCertificateRepository {
             query += ` AND (
                 c.name LIKE ? 
                 OR c.phone LIKE ? 
+                OR sc.bill_no LIKE ?
                 OR sc.auto_number LIKE ? 
-                OR EXISTS (SELECT 1 FROM silver_certificate_item sci WHERE sci.silver_certificate_id = sc.id AND sci.item_number LIKE ?)
+                OR EXISTS (SELECT 1 FROM silver_certificate_item sci WHERE sci.silver_certificate_id = sc.id AND (sci.item_number LIKE ? OR sci.auto_number LIKE ? OR sci.parent_auto_number LIKE ?))
             )`;
             const s = `%${filters.search}%`;
-            params.push(s, s, s, s);
+            params.push(s, s, s, s, s, s, s);
         }
         query += " ORDER BY sc.created DESC";
         if (filters.limit) { query += " LIMIT ? OFFSET ?"; params.push(filters.limit, filters.offset || 0); }
@@ -103,11 +108,12 @@ class SilverCertificateRepository {
             query += ` AND (
                 c.name LIKE ? 
                 OR c.phone LIKE ? 
+                OR sc.bill_no LIKE ?
                 OR sc.auto_number LIKE ? 
-                OR EXISTS (SELECT 1 FROM silver_certificate_item sci WHERE sci.silver_certificate_id = sc.id AND sci.item_number LIKE ?)
+                OR EXISTS (SELECT 1 FROM silver_certificate_item sci WHERE sci.silver_certificate_id = sc.id AND (sci.item_number LIKE ? OR sci.auto_number LIKE ? OR sci.parent_auto_number LIKE ?))
             )`;
             const s = `%${filters.search}%`;
-            params.push(s, s, s, s);
+            params.push(s, s, s, s, s, s, s);
         }
         return this.db.prepare(query).get(...params).total;
     }

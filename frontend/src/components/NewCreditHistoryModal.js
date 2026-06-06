@@ -4,6 +4,7 @@ import { FaSave, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import runModalSubmit from '../utils/handleSubmit';
+import useSafeModalClose from '../hooks/useSafeModalClose';
 
 const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
     const { addToast } = useToast();
@@ -11,19 +12,26 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
     const [errors, setErrors] = useState({});
     const [formData, setFormData] = useState({
         amount: '',
+        transaction_type: 'DEPOSIT',
         type: 'CREDIT',
         mode_of_payment: 'Cash',
-        description: ''
+        description: '[DEPOSIT] '
     });
     const resetForm = () => {
         setFormData({
             amount: '',
+            transaction_type: 'DEPOSIT',
             type: 'CREDIT',
             mode_of_payment: 'Cash',
-            description: ''
+            description: '[DEPOSIT] '
         });
         setErrors({});
     };
+
+    // Route every close through the safe-close chokepoint so React-Bootstrap's
+    // backdrop can never be orphaned and block page clicks.
+    const { safeClose } = useSafeModalClose({ show, onHide });
+    const closeSafely = () => safeClose({ reset: resetForm });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -59,10 +67,7 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
                     addToast('Transaction recorded successfully', 'success');
                 },
                 reload: onSuccess,
-                close: () => {
-                    resetForm();
-                    onHide();
-                }
+                close: closeSafely
             });
         } catch (error) {
             console.error('Error recording transaction:', error);
@@ -73,7 +78,7 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
     };
 
     return (
-        <Modal show={show} onHide={onHide} centered backdrop="static" size="lg">
+        <Modal show={show} onHide={closeSafely} centered backdrop="static" size="lg">
             <Modal.Header closeButton className="bg-light">
                 <Modal.Title className="fw-bold text-primary">
                     <FaMoneyBillWave className="me-2" /> New Financial Transaction
@@ -83,37 +88,69 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
                 <Modal.Body className="p-4">
                     <Row className="g-3">
                         <Col md={6}>
-                            <Form.Group>
+                            <Form.Group controlId="transaction_type">
                                 <Form.Label className="fw-semibold small text-muted text-uppercase">Transaction Type</Form.Label>
-                                <div className="d-flex gap-3 mt-1">
-                                    <Form.Check
-                                        type="radio"
-                                        label="CREDIT (Payment Received / Jama)"
-                                        name="type"
-                                        value="CREDIT"
-                                        checked={formData.type === 'CREDIT'}
-                                        onChange={handleChange}
-                                        id="type-credit"
-                                        className="fw-medium text-success"
-                                    />
-                                    <Form.Check
-                                        type="radio"
-                                        label="DEBIT (Billed / Udhaar)"
-                                        name="type"
-                                        value="DEBIT"
-                                        checked={formData.type === 'DEBIT'}
-                                        onChange={handleChange}
-                                        id="type-debit"
-                                        className="fw-medium text-danger"
-                                    />
-                                </div>
+                                <Form.Select
+                                    name="transaction_type"
+                                    value={formData.transaction_type}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFormData(prev => {
+                                            let mappedType = prev.type;
+                                            if (val === 'DEPOSIT' || val === 'SETTLEMENT' || val === 'DISCOUNT') {
+                                                mappedType = 'CREDIT';
+                                            }
+                                            let desc = prev.description;
+                                            if (!prev.description || (prev.description.startsWith('[') && prev.description.includes(']'))) {
+                                                desc = `[${val}] `;
+                                            }
+                                            return { ...prev, transaction_type: val, type: mappedType, description: desc };
+                                        });
+                                    }}
+                                >
+                                    <option value="DEPOSIT">DEPOSIT (Payment Received / Jama)</option>
+                                    <option value="CORRECTION">CORRECTION (Adjustment)</option>
+                                    <option value="SETTLEMENT">SETTLEMENT (Account Settlement)</option>
+                                    <option value="DISCOUNT">DISCOUNT (Waiver / Discount)</option>
+                                </Form.Select>
                             </Form.Group>
                         </Col>
+
+                        {formData.transaction_type === 'CORRECTION' ? (
+                            <Col md={6}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold small text-muted text-uppercase">Adjustment Direction</Form.Label>
+                                    <div className="d-flex gap-3 mt-1">
+                                        <Form.Check
+                                            type="radio"
+                                            label="CREDIT (Reduce Customer Balance)"
+                                            name="type"
+                                            value="CREDIT"
+                                            checked={formData.type === 'CREDIT'}
+                                            onChange={handleChange}
+                                            id="type-credit"
+                                            className="fw-medium text-success"
+                                        />
+                                        <Form.Check
+                                            type="radio"
+                                            label="DEBIT (Increase Customer Balance)"
+                                            name="type"
+                                            value="DEBIT"
+                                            checked={formData.type === 'DEBIT'}
+                                            onChange={handleChange}
+                                            id="type-debit"
+                                            className="fw-medium text-danger"
+                                        />
+                                    </div>
+                                </Form.Group>
+                            </Col>
+                        ) : null}
 
                         <Col md={6}>
                             <Form.Group controlId="amount">
                                 <Form.Label className="fw-semibold small text-muted text-uppercase">Amount (₹)</Form.Label>
                                 <Form.Control
+                                    autoFocus
                                     type="number"
                                     name="amount"
                                     value={formData.amount}
@@ -174,7 +211,7 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
                     </div>
                 </Modal.Body>
                 <Modal.Footer className="bg-light border-top-0">
-                    <Button variant="link" className="text-muted text-decoration-none" onClick={onHide} disabled={loading}>
+                    <Button variant="link" className="text-muted text-decoration-none" onClick={closeSafely} disabled={loading}>
                         <FaTimes className="me-1" /> Cancel
                     </Button>
                     <Button variant="primary" type="submit" className="px-4 fw-bold shadow-sm" disabled={loading}>

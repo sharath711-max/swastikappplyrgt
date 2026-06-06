@@ -2,13 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Toast, DataTable } from '../components/SalesforceComponents';
 import { FaWeight, FaPlus, FaDownload } from 'react-icons/fa';
 import api from '../services/api';
+import CustomerCombobox from '../components/customer/CustomerCombobox';
 
 const WeightLoss = () => {
     const [entries, setEntries] = useState([]);
-    // Using 'customers' to pick who the weight loss is associated with if applicable,
-    // or maybe it's general lab weight loss. The screenshot usually implies context.
-    // I'll assume it's transaction based.
-    const [customers, setCustomers] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toasts, setToasts] = useState([]);
@@ -51,15 +48,6 @@ const WeightLoss = () => {
         URL.revokeObjectURL(url);
     };
 
-    const fetchCustomers = useCallback(async () => {
-        try {
-            const res = await api.get('/customers');
-            setCustomers(res.data);
-        } catch (err) {
-            console.error(err);
-        }
-    }, []);
-
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
@@ -76,8 +64,7 @@ const WeightLoss = () => {
 
     useEffect(() => {
         fetchData();
-        fetchCustomers();
-    }, [fetchData, fetchCustomers]);
+    }, [fetchData]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -190,14 +177,11 @@ const WeightLoss = () => {
                     </div>
                     <div style={{ marginBottom: '16px' }}>
                         <label className="form-label">Customer (Optional)</label>
-                        <select
-                            className="form-control"
+                        <CustomerCombobox
                             value={formData.customer_id}
-                            onChange={e => setFormData({ ...formData, customer_id: e.target.value })}
-                        >
-                            <option value="">-- General Loss --</option>
-                            {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                            onChange={(id) => setFormData({ ...formData, customer_id: id || '' })}
+                            placeholder="Search customer, or leave blank for general loss…"
+                        />
                     </div>
                     <div style={{ marginBottom: '16px' }}>
                         <label className="form-label">Amount (₹)</label>

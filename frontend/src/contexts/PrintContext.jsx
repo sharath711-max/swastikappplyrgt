@@ -21,27 +21,43 @@ function resolveJob(routeType, id, { itemId, itemIndex, layout } = {}) {
     return { endpoint: resolved.ep, printType: layout === 'receipt' ? 'receipt' : resolved.pt, layout };
 }
 
-function buildReceiptSnapshot(payload) {
+function buildReceiptSnapshot(payload, routeType) {
     return {
-        lab: { name: 'SWASTIK GOLD LAB', tagline: 'Testing & Certification', address: '' },
+        lab: { name: 'Swastik Assayers', tagline: 'Testing & Certification', address: '' },
         receipt: {
             number: payload?.header?.auto_number || payload?.bill_number || '-',
             createdAt: payload?.header?.created_at || payload?.created_at || payload?.createdon,
-            type: payload?.header?.entity_type || 'document',
+            type: (payload?.header?.metal_type && payload?.header?.entity_type)
+                ? `${payload.header.metal_type}-${payload.header.entity_type}`
+                : (routeType || payload?.header?.entity_type || 'document'),
             status: payload?.status || 'DONE',
         },
         customer: {
             name: payload?.customer?.name || payload?.customer_name || '-',
             phone: payload?.customer?.phone || payload?.customer_phone || '',
         },
-        items: (payload?.items || []).map(i => ({
-            id: i.id || i.item_number,
-            name: i.item_type || i.item_name || i.name || 'Item',
-            label: i.item_number || i.certificate_number || '',
-            weight: i.net_weight || i.gross_weight || 0,
-            amount: Number(i.item_total || i.total || 0),
-            purity: i.purity,
-        })),
+        items: (payload?.items || []).map(i => {
+            // Backend `_formatWeight` returns strings ("11.000", "0.000"),
+            // so `i.net_weight || i.gross_weight` short-circuits on "0.000"
+            // because non-empty strings are truthy. Coerce to Number first
+            // and treat zero as "no value" so the gross/net fallback works.
+            const gross  = Number(i.gross_weight) || 0;
+            const sample = Number(i.test_weight) || 0;
+            const net    = Number(i.net_weight) || 0;
+            return {
+                id: i.id || i.item_number,
+                name: i.item_type || i.item_name || i.name || 'Item',
+                label: i.item_number || i.certificate_number || '',
+                // Total Wt column on the receipt = gross weight (matches
+                // Python's `data.total_weight`). Fall back to net only when
+                // gross is missing entirely.
+                weight: gross > 0 ? gross : net,
+                grossWeight:  gross > 0 ? gross : undefined,
+                sampleWeight: sample > 0 ? sample : undefined,
+                amount: Number(i.item_total || i.total || 0),
+                purity: i.purity,
+            };
+        }),
         totals: {
             subtotal: Number(payload?.totals?.base || payload?.base || 0),
             tax: Number(payload?.totals?.tax || payload?.tax || 0),
@@ -88,7 +104,8 @@ export function PrintProvider({ children }) {
                 item,
                 photos,
                 itemLevel: opts.itemLevel || false,
-                receiptData: resolved.printType === 'receipt' ? buildReceiptSnapshot(data) : null,
+                layout: opts.layout || 'full',
+                receiptData: resolved.printType === 'receipt' ? buildReceiptSnapshot(data, routeType) : null,
             });
         } catch (err) {
             console.error('Print fetch failed:', err);

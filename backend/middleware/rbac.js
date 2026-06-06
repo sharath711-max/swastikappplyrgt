@@ -50,10 +50,6 @@ const PERMISSIONS = Object.freeze({
 
     // Audit log access
     'audit:read'             : ['admin'],
-
-    // System management
-    'system:backup'          : ['admin'],
-    'system:restore'         : ['admin'],
 });
 
 /**

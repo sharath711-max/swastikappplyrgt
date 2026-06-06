@@ -1,330 +1,480 @@
 .workflow-page {
     background: #f1f5f9;
     min-height: 100vh;
-    padding: 32px;
-    font-family: var(--font-main);
+    padding: 16px 20px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* Header Panel with Glassmorphism */
-.board-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    padding: 24px 32px;
-    border-radius: 20px;
-    margin-bottom: 32px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+/* Search input custom classes — augment the SLDS form-element wrapper in
+   WorkflowBoard.js so the icon positioning + focus colour stay project-
+   specific. Other header chrome (.board-header, .board-title, search
+   wrapper / clear / refresh button) replaced by SLDS page-header during
+   the SLDS refresh; the orphaned rules were removed in the Pass 3 sweep. */
+.workflow-search-icon {
+    color: #94a3b8;
+    font-size: 12px;
+    pointer-events: none;
 }
 
-.board-title h1 {
-    color: #0f172a;
-    font-weight: 800;
-    margin: 0;
-    font-size: 2.2rem;
-    letter-spacing: -0.02em;
-}
-
-.board-title p {
-    color: #64748b;
-    margin: 4px 0 0 0;
-    font-weight: 500;
-}
-
-/* Secondary Navigation / Tab Pills with Material Awareness */
-.tab-navigation {
-    display: flex;
-    gap: 12px;
-    background: #e2e8f0;
-    padding: 8px;
-    border-radius: 20px;
-    margin-bottom: 32px;
-    width: fit-content;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.tab-pill {
-    padding: 10px 28px;
-    border-radius: 16px;
-    border: none;
-    background: transparent;
-    color: #64748b;
-    font-weight: 700;
-    font-size: 0.95rem;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.tab-pill:hover {
-    color: #0f172a;
-    background: rgba(255, 255, 255, 0.5);
-}
-
-.tab-pill.active {
+.workflow-search-input {
+    padding: 4px 24px 4px 26px;
+    height: 28px;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    font-size: 12px;
+    outline: none;
+    width: 100%;
     background: #ffffff;
     color: #0f172a;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+    transition: border-color 0.12s;
 }
 
-/* Material Type Themes */
-.theme-gold .tab-pill.active {
-    border-bottom: 3px solid #ffb300;
+.workflow-search-input:focus {
+    border-color: #0176d3;
 }
 
-.theme-silver .tab-pill.active {
-    border-bottom: 3px solid #94a3b8;
+/* Workflow Body — vertical rail + Kanban main */
+.workflow-body {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
 }
 
-.theme-cert .tab-pill.active {
-    border-bottom: 3px solid #6366f1;
+.workflow-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Kanban System */
+.workflow-main .section-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 4px 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Large code badge — echo of the active sidebar workflow.
+   Reuses .workflow-code--<key> tints from AppShell.css for tint parity. */
+.workflow-main .workflow-code--lg {
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+}
+
+.workflow-main .section-title-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.workflow-main .search-result-info {
+    padding: 6px 4px 10px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.workflow-main .search-result-clear {
+    margin-left: 8px;
+    color: #ef4444;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+    .workflow-body {
+        flex-direction: column;
+    }
+}
+
+/* Kanban System — compact, operational, no animation gimmicks */
 .kanban-grid {
     display: flex;
-    gap: 24px;
+    gap: 12px;
     overflow-x: auto;
-    padding-bottom: 16px;
+    padding-bottom: 8px;
 }
 
 .kanban-column {
     flex: 1;
-    min-width: 380px;
+    min-width: 300px;
     background: #f8fafc;
-    border-radius: 20px;
-    min-height: calc(100vh - 300px);
-    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    min-height: calc(100vh - 220px);
+    border: 1px solid #d1d5db;
     display: flex;
     flex-direction: column;
     padding: 0;
     overflow: hidden;
-    transition: all 0.3s ease;
 }
-
-
 
 .column-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 24px;
+    padding: 8px 12px;
     border-bottom: 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .column-body {
-    padding: 24px;
+    padding: 10px;
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 8px;
 }
 
 .column-title {
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: 12px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     margin: 0;
 }
 
 .column-count {
-    background: #f1f5f9;
-    color: #64748b;
-    padding: 4px 12px;
-    border-radius: 30px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.05em;
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    padding: 1px 8px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Consolas', 'Courier New', monospace;
 }
 
-/* Kanban Cards */
+/* Group meta chips on the right side of the column header so the
+   space-between layout reads as [title] ... [severity + count]. */
+.column-header__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Column-level severity = oldest item in this column. Sits inline on the
+   header next to the count so supervisors can read queue pressure (volume)
+   and aging (time pressure) in a single glance. DONE columns never render
+   this chip — aging is irrelevant once sealed. */
+.column-severity {
+    display: inline-block;
+    padding: 1px 6px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.03em;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    background: #ffffff;
+}
+.column-severity--warm {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fcd34d;
+}
+.column-severity--hot {
+    background: #fed7aa;
+    color: #9a3412;
+    border-color: #fb923c;
+}
+.column-severity--cold {
+    background: #fecaca;
+    color: #991b1b;
+    border-color: #f87171;
+}
+
+/* Kanban Cards — flat, compact, low-radius */
 .kanban-card {
     background: #ffffff;
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: none;
+    border: 1px solid #d1d5db;
+    border-left: 3px solid #cbd5e1;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: background 0.12s, border-color 0.12s;
     position: relative;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 4px;
 }
 
 .kanban-card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-    border-color: #cbd5e1;
-}
-
-.kanban-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    opacity: 0.1;
-    transition: opacity 0.3s;
-}
-
-.kanban-card:hover::after {
-    opacity: 1;
-}
-
-/* Status-based Accents */
-.column-body>.kanban-card:hover {
-    border-left: 4px solid currentColor;
+    background: #f8fafc;
+    border-color: #94a3b8;
 }
 
 .ready-indicator {
     position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 24px;
-    height: 24px;
+    top: 8px;
+    right: 8px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: #10b981;
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
-    font-weight: 900;
-    box-shadow: 0 8px 15px rgba(16, 185, 129, 0.4);
-    animation: pulse 2s infinite;
+    font-size: 8px;
+    font-weight: 700;
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-    }
+/* Sealed indicator on DONE cards. Muted slate, not alarm-red — the goal is
+   institutional finality, not warning. Sits where the ready-indicator dot
+   normally lives (top-right corner); the two never co-occur because the
+   ready-indicator is for IN_PROGRESS only. */
+.kanban-card__sealed-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    background: #1e293b;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+}
 
-    70% {
-        transform: scale(1.1);
-        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-    }
+/* Treat the sealed card itself slightly differently — a muted left-border
+   tone replaces the aging gradient (DONE is always fresh per the aging
+   utility, so the warm/hot/cold border classes never apply here). The
+   background gets a faint slate wash so the row reads "archived" at a
+   glance without being noisy. */
+.kanban-card--sealed {
+    border-left-color: #475569;
+    background: #f8fafc;
+}
+.kanban-card--sealed .card-customer {
+    color: #334155;
+}
 
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
+.card-sealed-tag {
+    font-size: 9px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    padding: 1px 5px;
+    background: #1e293b;
+    color: #f8fafc;
+    border-radius: 2px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    margin-left: 6px;
+}
+
+/* Phase2Modal "Sealed" badge in the header — replaces the generic "View Only"
+   badge for DONE records. Slate, lock-glyph, institutional finality. Not
+   alarm-red, not animated. */
+.sealed-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    background: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+
+/* Sealed ribbon at the top of Phase2Modal's body. Single sentence answers
+   "why" the record cannot be edited — converts the operator's reading
+   from "system blocked me" to "system is protecting institutional truth."
+   Muted slate panel, lock glyph on the left, the explanatory text on the
+   right. No animation. */
+.sealed-ribbon {
+    background: #f1f5f9;
+    border-left: 4px solid #334155;
+    border-radius: 3px;
+    padding: 12px 16px;
+    color: #1e293b;
+}
+.sealed-ribbon__icon {
+    flex-shrink: 0;
+    font-size: 18px;
+    color: #334155;
+    margin-top: 2px;
+}
+.sealed-ribbon__body {
+    flex: 1;
+    min-width: 0;
+}
+.sealed-ribbon__title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #0f172a;
+    text-transform: uppercase;
+}
+.sealed-ribbon__why {
+    font-size: 13px;
+    color: #334155;
+    margin-top: 2px;
+    line-height: 1.45;
+}
+
+/* Draft-state footer — reassurance during interruption, NOT a warning.
+   Muted slate, conditional appearance (only when the parent form is
+   dirty), no animation. Sits inside the modal body so it follows the
+   form content and is dismissed with the rest of the modal. */
+.draft-state-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #475569;
+}
+.draft-state-footer__icon {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: #64748b;
+}
+.draft-state-footer__text {
+    line-height: 1.4;
 }
 
 .card-customer {
-    font-size: 1.1rem;
+    font-size: 12px;
     font-weight: 700;
-    margin-bottom: 4px;
+    color: #0f172a;
+    margin-bottom: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .card-meta {
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 400;
+    color: #64748b;
 }
 
 .card-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    margin-top: 12px;
-    padding-top: 16px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.2);
+    gap: 8px;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #e5e7eb;
 }
 
 .type-tag {
-    font-size: 10px;
+    font-size: 9px;
     text-transform: uppercase;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.05em;
-    padding: 2px 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
+    padding: 1px 5px;
+    background: #f1f5f9;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    color: #475569;
+    font-family: 'Consolas', 'Courier New', monospace;
 }
 
 .card-amount {
-    font-weight: 800;
-    font-size: 1rem;
+    font-weight: 700;
+    font-size: 12px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    margin-left: auto; /* always pin the amount to the far right, regardless of how many tags precede it */
 }
 
-/* Action Buttons */
+/* Aging badge — surfaces queue-time pressure inline on each card. Three
+   severity buckets (warm/hot/cold) at 30m, 2h, 24h. DONE cards never show
+   one (aging is irrelevant once sealed). */
+.kanban-card__aging-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 5px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.03em;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    vertical-align: baseline;
+}
+.kanban-card__aging-badge--warm {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fcd34d;
+}
+.kanban-card__aging-badge--hot {
+    background: #fed7aa;
+    color: #9a3412;
+    border-color: #fb923c;
+}
+.kanban-card__aging-badge--cold {
+    background: #fecaca;
+    color: #991b1b;
+    border-color: #f87171;
+}
+
+/* Lift the card's left bar to match aging severity. The base card already
+   sets a 3px slate-grey border-left — these overrides only tint the same
+   element, so no layout shift. */
+.kanban-card--aging-warm { border-left-color: #fcd34d; }
+.kanban-card--aging-hot  { border-left-color: #fb923c; }
+.kanban-card--aging-cold { border-left-color: #f87171; }
+
+.empty-state {
+    font-size: 11px;
+    color: #94a3b8;
+    text-align: center;
+    padding: 16px 8px;
+    font-style: italic;
+}
+
+/* Action Buttons — flat, dense */
 .btn-action {
     background: #0f172a !important;
     color: white !important;
-    border: none !important;
-    padding: 10px 24px !important;
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    transition: all 0.3s ease !important;
+    border: 1px solid #0f172a !important;
+    padding: 6px 14px !important;
+    border-radius: 3px !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    transition: background 0.12s !important;
 }
 
 .btn-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    background: #1e293b !important;
 }
 
-.btn-secondary-action {
-    background: rgba(0, 0, 0, 0.05) !important;
-    color: #0f172a !important;
-    border: 1px solid #e2e8f0 !important;
-    padding: 10px 20px !important;
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    transition: all 0.2s !important;
-}
-
-.btn-secondary-action:hover {
-    background: white !important;
-    border-color: #0f172a !important;
-}
-
-/* Context Menu Overrides */
+/* Context Menu — flat, compact */
 .context-menu {
     position: fixed;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
     z-index: 9999;
     overflow: hidden;
-    border: 1px solid #e2e8f0;
-    min-width: 180px;
-    animation: menuFade 0.2s ease-out;
-}
-
-@keyframes menuFade {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    border: 1px solid #d1d5db;
+    min-width: 160px;
 }
 
 .menu-item {
     width: 100%;
-    padding: 12px 16px;
+    padding: 6px 12px;
     border: none;
     background: none;
     text-align: left;
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 500;
+    font-size: 12px;
     color: #334155;
     display: flex;
     align-items: center;
-    gap: 12px;
-    transition: background 0.2s;
+    gap: 8px;
+    transition: background 0.12s;
     cursor: pointer;
 }
 
@@ -334,9 +484,100 @@
 }
 
 .menu-item.danger {
-    color: #ef4444;
+    color: #dc2626;
 }
 
 .menu-item.danger:hover {
     background: #fef2f2;
+}
+/* Prerequisite banner — workflow guidance, not governance enforcement.
+   Calm slate, info-icon, no animation. Sits at the top of cert-creation
+   modals so operators see the canonical path before they start typing.
+   The modal still accepts direct entry; the banner just sets the
+   expectation. */
+.prereq-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: #f1f5f9;
+    border-left: 3px solid #64748b;
+    border-radius: 3px;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.prereq-banner__icon {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #475569;
+    margin-top: 2px;
+}
+.prereq-banner__text { flex: 1; }
+
+/* Sequence-policy helper. Calm slate one-liner under the cert-workflow
+   section title, where the (Axxx) preview appears. Purpose: reduce
+   operator suspicion about numbering irregularities — not teach the
+   sequence engine. Always-on (no toggle, no hover), so operators
+   passively absorb the policy. */
+.sequence-policy-helper {
+    margin: -8px 0 12px 4px;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.45;
+    max-width: 880px;
+}
+
+/* Card-quick-print receipt button. Inline next to the #shortId badge
+   in the kanban card header. Icon-only, subtle hover, no chrome.
+   stopPropagation on click + mousedown so the parent card's onClick
+   and the draggable drag-start gesture don't both fire when the
+   operator targets the button. */
+.kanban-card__receipt-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    padding: 2px 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.kanban-card__receipt-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.kanban-card__receipt-btn:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 1px;
+}
+
+/* WhatsApp share — DONE cards only. Mirrors the receipt button but tinted
+   WhatsApp green so the share affordance reads at a glance. */
+.kanban-card__whatsapp-btn {
+    background: transparent;
+    border: none;
+    color: #25d366;
+    padding: 2px 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.kanban-card__whatsapp-btn:hover {
+    background: #dcfce7;
+    color: #128c3a;
+}
+.kanban-card__whatsapp-btn:focus-visible {
+    outline: 2px solid #25d366;
+    outline-offset: 1px;
 }

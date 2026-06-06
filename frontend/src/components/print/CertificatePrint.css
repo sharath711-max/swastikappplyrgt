@@ -340,92 +340,194 @@
   background: #f8fafc;
 }
 
-/* Thermal Receipt styles (80mm) */
-.thermal-receipt {
-  width: 100mm;
-  padding: 5mm;
-  background: white;
-  font-family: 'Courier New', Courier, monospace;
-  color: #000;
+/* Thermal Receipt styles (58mm / 80mm - matched to SSS.pdf) */
+/* Multi-page output: customer copy + one tester slip per item. Each
+   .thermal-receipt-wrapper is one printed page; @media print breaks
+   between them so a 2-item receipt prints as 3 pages (1 customer + 2
+   tester) in a single print dialog. */
+.thermal-receipt-root {
+  /* Container for all pages — no visual treatment of its own. */
 }
 
-.purity-box {
-  background: #000;
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: bold;
-}
-
-.receipt {
-  width: 100mm;
-  max-width: 100mm;
+.thermal-receipt-wrapper {
+  width: 78mm;
+  max-width: 78mm;
   min-height: auto;
   background: #ffffff;
   color: #000000;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 12px;
-  line-height: 1.35;
-  padding: 5mm;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  line-height: 1.2;
+  padding: 0 4mm 4mm 4mm;
   box-sizing: border-box;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
-.receipt__header,
-.receipt__section,
-.receipt__footer {
-  margin: 4px 0;
-  padding: 2px 0;
+/* Page-break — every page except the last. Both modern `break-after`
+   and legacy `page-break-after` for browser compatibility. */
+@media print {
+  .thermal-receipt-wrapper {
+    page-break-after: always;
+    break-after: page;
+  }
+  .thermal-receipt-wrapper:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
 }
 
-.receipt__brand {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+/* Tester slip variant — bottom border to visually mirror the Python
+   per-item slip's `border-bottom: 2px solid black` on the table. */
+.thermal-receipt-wrapper--tester .tr-table--tester {
+  border-bottom: 2px solid #000;
 }
 
-.receipt__strong {
-  font-weight: 700;
+.tr-header {
+  text-align: center;
+  margin-bottom: 4px;
 }
 
-.receipt__subtle {
-  font-size: 11px;
+.tr-logo {
+  display: block;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 2px;
+  object-fit: contain;
 }
 
-.receipt__item {
-  padding: 4px 0;
-}
-
-.receipt__item + .receipt__item {
-  border-top: 1px dotted #000;
-}
-
-.receipt__item-name {
+.tr-brand {
+  font-size: 13px;
   font-weight: 700;
   margin-bottom: 2px;
 }
 
-.receipt__total {
-  font-weight: 700;
-  font-size: 13px;
+.tr-address, .tr-phone {
+  font-size: 8px;
+  white-space: pre-wrap;
+  line-height: 1.1;
 }
 
-.center {
-  text-align: center;
+.tr-divider {
+  border-top: 1px solid #000;
+  margin: 4px 0;
 }
 
-.right {
+.tr-meta {
+  margin-bottom: 4px;
+}
+
+.tr-meta-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.tr-meta-left {
+  text-align: left;
+}
+
+.tr-meta-right {
   text-align: right;
 }
 
-.receipt__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0;
+.tr-label {
+  font-weight: 700;
+  font-size: 9px;
 }
 
-.divider {
-  border-top: 1px dashed #000;
-  margin: 5px 0;
+.tr-value {
+  font-size: 9px;
+}
+
+.tr-customer-name {
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.tr-customer-phone {
+  font-size: 9px;
+}
+
+.tr-mt-small {
+  margin-top: 4px;
+}
+
+.tr-test-type {
+  margin-top: 4px;
+  font-size: 10px;
+}
+
+.tr-bold {
+  font-weight: 700;
+}
+
+.tr-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+
+.tr-table th {
+  font-weight: 700;
+  padding: 4px 0;
+  font-size: 9px;
+  border-bottom: 1px solid #000;
+}
+
+.tr-table td {
+  padding: 4px 0;
+  font-size: 9px;
+  vertical-align: top;
+}
+
+.tr-col-sl {
+  width: 12%;
+  text-align: left;
+}
+
+.tr-col-item {
+  width: 33%;
+  text-align: left;
+}
+
+.tr-col-wt {
+  width: 20%;
+  text-align: center;
+}
+
+.tr-col-amt {
+  width: 15%;
+  text-align: right;
+}
+
+.tr-grand-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #000;
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.tr-footer {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.tr-thank-you {
+  font-weight: 700;
+  font-size: 9px;
+}
+
+/* Subordinate sequence-policy line in the memo footer. Passive, slate,
+   smaller than memo-note; sits below the institutional note and above the
+   signature so it reads as a footnote, not a warning. */
+.memo-sequence-policy {
+  margin-top: 8px;
+  font-size: 9px;
+  color: #64748b;
+  line-height: 1.4;
+  font-style: italic;
 }

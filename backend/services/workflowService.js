@@ -7,6 +7,7 @@ const {
 const { getRequestId }          = require('../utils/audit');
 const testServiceV2             = require('./v2/testService');
 const certServiceV2             = require('./v2/certificateService');
+const seqSvc                    = require('./v2/sequenceService');
 const photoCertRepo             = require('../repositories/photoCertificateRepository');
 const documentDeliveryService   = require('./documentDeliveryService');
 const { writeAuditLog }         = require('./auditLogService');
@@ -25,6 +26,20 @@ const TABLE_MAP = Object.freeze({
     silver_cert: 'silver_certificate',
     photo_cert : 'photo_certificate',
 });
+
+// ─── Timestamp helpers ────────────────────────────────────────────────────────
+//
+// SQLite stores `created` as 'YYYY-MM-DD HH:MM:SS[.sss]' in UTC with NO offset
+// marker. `new Date(thatString)` parses it as LOCAL time in V8 / Node, which
+// silently shifts wall-clock age by the system TZ offset (5.5h for IST).
+// Used by getSummary() so aging is correct in every timezone.
+function _parseDbTimestampMs(s) {
+    if (s instanceof Date) return s.getTime();
+    if (typeof s !== 'string') return Number(s);
+    const trimmed = s.trim();
+    if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed)) return new Date(trimmed).getTime();
+    return new Date(trimmed.replace(' ', 'T') + 'Z').getTime();
+}
 
 // ─── Idempotency key helpers ──────────────────────────────────────────────────
 
@@ -49,7 +64,10 @@ class WorkflowService {
                 'Gold Test' AS description,
                 gt.total AS total, gt.mode_of_payment, gt.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN gt.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN gt.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM gold_test_item
+                 WHERE gold_test_id = gt.id AND deletedon IS NULL) AS items_summary
             FROM gold_test gt
             JOIN customer c ON gt.customer_id = c.id
             WHERE gt.deletedon IS NULL
@@ -61,7 +79,10 @@ class WorkflowService {
                 'Silver Test' AS description,
                 st.total AS total, st.mode_of_payment, st.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN st.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN st.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM silver_test_item
+                 WHERE silver_test_id = st.id AND deletedon IS NULL) AS items_summary
             FROM silver_test st
             JOIN customer c ON st.customer_id = c.id
             WHERE st.deletedon IS NULL
@@ -73,7 +94,10 @@ class WorkflowService {
                 'Gold Certificate' AS description,
                 gc.total AS total, gc.mode_of_payment, gc.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN gc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN gc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM gold_certificate_item
+                 WHERE gold_certificate_id = gc.id AND deletedon IS NULL) AS items_summary
             FROM gold_certificate gc
             JOIN customer c ON gc.customer_id = c.id
             WHERE gc.deletedon IS NULL
@@ -85,7 +109,10 @@ class WorkflowService {
                 'Silver Certificate' AS description,
                 sc.total AS total, sc.mode_of_payment, sc.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN sc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN sc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM silver_certificate_item
+                 WHERE silver_certificate_id = sc.id AND deletedon IS NULL) AS items_summary
             FROM silver_certificate sc
             JOIN customer c ON sc.customer_id = c.id
             WHERE sc.deletedon IS NULL
@@ -97,7 +124,10 @@ class WorkflowService {
                 'Photo Certificate' AS description,
                 pc.total AS total, pc.mode_of_payment, pc.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN pc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN pc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM photo_certificate_item
+                 WHERE photo_certificate_id = pc.id AND deletedon IS NULL) AS items_summary
             FROM photo_certificate pc
             JOIN customer c ON pc.customer_id = c.id
             WHERE pc.deletedon IS NULL
@@ -105,6 +135,51 @@ class WorkflowService {
             ORDER BY 9 DESC, 2 DESC
         `;
         return db.prepare(query).all();
+    }
+
+    // ── SUMMARY (per-workflow counts + oldest open-item age) ─────────────────
+    //
+    // Used by the sidebar to surface queue pressure and operator aging without
+    // fetching the full kanban payload. "Open" = TODO or IN_PROGRESS.
+    // oldest_open_age_ms is the wall-clock ms since the oldest open item's
+    // `createdon`; 0 if no open items.
+    //
+    // Implementation: one per-table aggregation that returns status counts +
+    // MIN(created) over open rows only. Replaces the earlier getAllItems()
+    // UNION-then-filter approach which scanned every DONE row in JS — for a
+    // db with 30k+ DONE rows that took ~350 ms per call; this version uses
+    // the (status, deletedon) index per table and runs in single-digit ms.
+    async getSummary() {
+        const now = Date.now();
+        const workflows = ['gold', 'silver', 'gold_cert', 'silver_cert', 'photo_cert'];
+        const summary = {};
+        for (const w of workflows) {
+            const table = TABLE_MAP[w];
+            const row = db.prepare(
+                `SELECT
+                    COUNT(CASE WHEN status = 'TODO'        THEN 1 END) AS todo,
+                    COUNT(CASE WHEN status = 'IN_PROGRESS' THEN 1 END) AS in_progress,
+                    COUNT(CASE WHEN status = 'DONE'        THEN 1 END) AS done,
+                    MIN(CASE WHEN status IN ('TODO','IN_PROGRESS') THEN created END) AS oldest_open_created
+                 FROM ${table}
+                 WHERE deletedon IS NULL`
+            ).get();
+            let oldestOpenAgeMs = 0;
+            if (row?.oldest_open_created) {
+                const t = _parseDbTimestampMs(row.oldest_open_created);
+                if (Number.isFinite(t)) {
+                    const age = now - t;
+                    if (age > 0) oldestOpenAgeMs = age;
+                }
+            }
+            summary[w] = {
+                todo       : row?.todo        || 0,
+                in_progress: row?.in_progress || 0,
+                done       : row?.done        || 0,
+                oldest_open_age_ms: oldestOpenAgeMs,
+            };
+        }
+        return summary;
     }
 
     async getKanbanBoard(limit = 50) {
@@ -120,6 +195,14 @@ class WorkflowService {
             DONE       : items.filter(i => i.status === 'DONE').slice(0, limit),
             sequence   : Date.now(),
             meta       : { limit, counts },
+            // Operator-facing preview of the next A001-Z999 label that will be
+            // assigned to the next cert item created. Read-only peek — does not
+            // increment the global counter.
+            nextCertSeqs: {
+                gold  : seqSvc.peekNextCertificateItemNumber('gold'),
+                silver: seqSvc.peekNextCertificateItemNumber('silver'),
+                photo : seqSvc.peekNextCertificateItemNumber('photo'),
+            },
         };
     }
 
@@ -549,12 +632,34 @@ class WorkflowService {
                 }
             }
 
+            // Compute weight_loss as a transparent operational side-effect.
+            // Same formula as _finalizeTest: sum of max(0, gross - test - net)
+            // across non-deleted items. Used downstream to auto-link a WLH
+            // row when > 0; if 0, no WLH is inserted.
+            const itemTableMap = {
+                gold_cert  : { table: 'gold_certificate_item',   fk: 'gold_certificate_id' },
+                silver_cert: { table: 'silver_certificate_item', fk: 'silver_certificate_id' },
+                photo_cert : { table: 'photo_certificate_item',  fk: 'photo_certificate_id' },
+            };
+            const itemMeta = itemTableMap[type];
+            const certItems = db.prepare(
+                `SELECT gross_weight, test_weight, net_weight
+                 FROM ${itemMeta.table}
+                 WHERE ${itemMeta.fk} = ? AND deletedon IS NULL`
+            ).all(id);
+            const totalWtLoss = certItems.reduce((acc, item) =>
+                acc + Math.max(0,
+                    Number(item.gross_weight || 0) -
+                    Number(item.test_weight  || 0) -
+                    Number(item.net_weight   || 0)
+                ), 0);
+
             // updateStatus becomes a SAVEPOINT inside our BEGIN IMMEDIATE.
             // Snapshot is computed inside updateStatus after the fee write, so it
             // captures the canonical fee total, not the pre-finalization item sum.
             const result = certType === 'photo'
-                ? photoCertRepo.updateStatus(id, 'DONE', actor, {})
-                : certServiceV2.updateStatus(certType, id, 'DONE', {});
+                ? photoCertRepo.updateStatus(id, 'DONE', actor, { weight_loss: totalWtLoss })
+                : certServiceV2.updateStatus(certType, id, 'DONE', { weight_loss: totalWtLoss });
 
             // Audit written in the same commit — never orphaned.
             // requestId passed explicitly so the column is populated even when

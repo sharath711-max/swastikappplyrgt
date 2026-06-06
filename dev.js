@@ -237,8 +237,8 @@ function startWithPM2(lanIp) {
             console.log('\n');
 
             log('🌐 ACCESS (Network IP):', colors.cyan);
-            log(`   Backend API:    http://${lanIp}:5000`, colors.bright + colors.green);
-            log(`   Health Check:   http://${lanIp}:5000/health`, colors.dim);
+            log(`   Backend API:    http://${lanIp}:6001`, colors.bright + colors.green);
+            log(`   Health Check:   http://${lanIp}:6001/health`, colors.dim);
             console.log('\n');
 
             log('📊 PM2 MANAGEMENT:', colors.cyan);
@@ -316,7 +316,7 @@ function startFrontendProcess(processes, lanIp) {
             HOST: '0.0.0.0',
             PORT: '3000',
             BROWSER: 'none',
-            REACT_APP_API_URL: `http://${lanIp}:5000/api`,
+            REACT_APP_API_URL: `http://${lanIp}:6001/api`,
             REACT_APP_LAN_IP: lanIp,
             GENERATE_SOURCEMAP: 'false'
         };
@@ -352,7 +352,7 @@ function startFrontendProcess(processes, lanIp) {
 }
 
 function startBackendProcess(processes, lanIp) {
-    log('\nStarting Backend (port 5000)...', colors.green);
+    log('\nStarting Backend (port 6001)...', colors.green);
 
     try {
         const corsAllowedOrigins = [
@@ -367,7 +367,7 @@ function startBackendProcess(processes, lanIp) {
             shell: true,
             env: {
                 ...process.env,
-                PORT: '5000',
+                PORT: '6001',
                 HOST: '0.0.0.0',
                 NODE_ENV: 'development',
                 CORS_ALLOWED_ORIGINS: corsAllowedOrigins
@@ -411,7 +411,7 @@ async function start() {
     console.log('\n');
 
     // 1. Kill ports
-    killPorts([3000, 5000]);
+    killPorts([3000, 6001]);
 
     // 2. Check dependencies
     const depsOk = checkDependencies();
@@ -493,8 +493,8 @@ async function start() {
 
         log('🌐 ACCESS (Network IP — share with any device on LAN):', colors.cyan);
         log(`   Frontend App:   http://${lanIp}:3000`, colors.bright + colors.green);
-        log(`   Backend API:    http://${lanIp}:5000`, colors.white);
-        log(`   Health Check:   http://${lanIp}:5000/health`, colors.dim);
+        log(`   Backend API:    http://${lanIp}:6001`, colors.white);
+        log(`   Health Check:   http://${lanIp}:6001/health`, colors.dim);
         console.log('\n');
 
         log('🔐 DEFAULT CREDENTIALS:', colors.cyan);

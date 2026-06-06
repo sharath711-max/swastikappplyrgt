@@ -6,6 +6,7 @@ import api from '../services/api';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import { usePrint } from '../contexts/PrintContext';
+import { useRecordModal } from '../contexts/RecordModalContext';
 import NewCreditHistoryModal from '../components/NewCreditHistoryModal';
 import NewWeightLossHistoryModal from '../components/NewWeightLossHistoryModal';
 
@@ -64,6 +65,55 @@ const RelatedList = ({ title, data, columns, emptyMessage }) => (
     </div>
 );
 
+// Cert workflow status → badge. Workflow status only (TODO/IN_PROGRESS/DONE);
+// "Printed/Delivered" delivery state is a separate concern not in this payload.
+const CERT_STATUS = {
+    TODO:        { bg: 'warning', label: 'Pending' },
+    IN_PROGRESS: { bg: 'info',    label: 'In Progress' },
+    DONE:        { bg: 'success', label: 'Done' },
+};
+const StatusBadge = ({ status }) => {
+    const s = CERT_STATUS[status] || { bg: 'secondary', label: status || '—' };
+    return <Badge bg={s.bg}>{s.label}</Badge>;
+};
+const GstCell = ({ on }) => on
+    ? <Badge bg="dark">GST</Badge>
+    : <span className="text-muted">—</span>;
+
+// Shared column set for the three certificate tables. The only per-type
+// difference is the print route used by the View action — every other column
+// (items / amount / pay / GST / status) comes straight from listCertificates.
+const certColumns = (printType, triggerPrint, addToast) => [
+    { header: 'Record No', field: 'auto_number' },
+    { header: 'Date',   render: r => new Date(r.created).toLocaleDateString() },
+    { header: 'Items',  render: r => r.item_count ?? '—' },
+    { header: 'Amount', render: r => formatCurrency(r.total) },
+    { header: 'Pay',    render: r => r.mode_of_payment || '—' },
+    { header: 'GST',    render: r => <GstCell on={!!r.gst} /> },
+    { header: 'Status', render: r => <StatusBadge status={r.status} /> },
+    { header: 'Action', render: r => <Button size="sm" variant="link" onClick={async () => {
+        try { await triggerPrint(printType, r.id); }
+        catch { addToast('Print failed. Please try again.', 'error'); }
+    }}>View</Button> },
+];
+
+// Collapsed-header summary so operators can judge a cert section's relevance
+// without expanding it: count + total amount + how many are GST bills.
+const CertSectionHeader = ({ label, list }) => {
+    const total    = list.reduce((s, r) => s + (r.total || 0), 0);
+    const gstCount = list.reduce((n, r) => n + (r.gst ? 1 : 0), 0);
+    return (
+        <div className="d-flex justify-content-between align-items-center w-100 me-3">
+            <span>{label} ({list.length})</span>
+            {list.length > 0 && (
+                <small className="text-muted fw-normal">
+                    {formatCurrency(total)}{gstCount > 0 ? ` · ${gstCount} GST` : ''}
+                </small>
+            )}
+        </div>
+    );
+};
+
 const eventMeta = (ev) => {
     const map = {
         gold_test:   { bg: 'warning',   label: 'Gold Test' },
@@ -82,6 +132,7 @@ const CustomerProfile = () => {
     const { openModal } = useModal();
     const { id } = useParams();
     const navigate = useNavigate();
+    const { openRecord } = useRecordModal();
     const { triggerPrint } = usePrint();
 
     const [activeTab, setActiveTab] = useState('details');
@@ -136,11 +187,15 @@ const CustomerProfile = () => {
                 api.get(`/weight-loss?customer_id=${id}`)
             ]);
             setRelatedData({
+                // Tests / credit / weight-loss routes return { success, data }.
                 goldTests: gt.data.data || [],
                 silverTests: st.data.data || [],
-                goldCerts: gc.data.data || [],
-                silverCerts: sc.data.data || [],
-                photoCerts: pc.data.data || [],
+                // Gold/Silver cert list returns { certificates, total, pages };
+                // photo cert returns a raw array. Reading .data.data here left
+                // every cert section silently empty.
+                goldCerts: gc.data.certificates || [],
+                silverCerts: sc.data.certificates || [],
+                photoCerts: Array.isArray(pc.data) ? pc.data : (pc.data.certificates || []),
                 creditHistory: ch.data.data || [],
                 weightLoss: wlh.data.data || [],
                 loaded: true
@@ -312,42 +367,21 @@ const CustomerProfile = () => {
                                 ) : (
                                     <Accordion defaultActiveKey={['0']} alwaysOpen>
                                         <Accordion.Item eventKey="0">
-                                            <Accordion.Header>Gold Certificates ({relatedData.goldCerts.length})</Accordion.Header>
+                                            <Accordion.Header><CertSectionHeader label="Gold Certificates" list={relatedData.goldCerts} /></Accordion.Header>
                                             <Accordion.Body>
                                                 <RelatedList title="Gold Certificates" data={relatedData.goldCerts}
                                                     emptyMessage="No Gold Certificates found."
-                                                    columns={[
-                                                        { header: 'Record No', field: 'auto_number' },
-                                                        { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Total', render: r => formatCurrency(r.total) },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={async () => {
-                                                            try {
-                                                                await triggerPrint('gold-certificate', r.id);
-                                                            } catch (err) {
-                                                                addToast('Print failed. Please try again.', 'error');
-                                                            }
-                                                        }}>View</Button> }
-                                                    ]}
+                                                    columns={certColumns('gold-certificate', triggerPrint, addToast)}
                                                 />
                                             </Accordion.Body>
                                         </Accordion.Item>
 
                                         <Accordion.Item eventKey="1">
-                                            <Accordion.Header>Silver Certificates ({relatedData.silverCerts.length})</Accordion.Header>
+                                            <Accordion.Header><CertSectionHeader label="Silver Certificates" list={relatedData.silverCerts} /></Accordion.Header>
                                             <Accordion.Body>
                                                 <RelatedList title="Silver Certificates" data={relatedData.silverCerts}
                                                     emptyMessage="No Silver Certificates found."
-                                                    columns={[
-                                                        { header: 'Record No', field: 'auto_number' },
-                                                        { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={async () => {
-                                                            try {
-                                                                await triggerPrint('silver-certificate', r.id);
-                                                            } catch (err) {
-                                                                addToast('Print failed. Please try again.', 'error');
-                                                            }
-                                                        }}>View</Button> }
-                                                    ]}
+                                                    columns={certColumns('silver-certificate', triggerPrint, addToast)}
                                                 />
                                             </Accordion.Body>
                                         </Accordion.Item>
@@ -361,7 +395,7 @@ const CustomerProfile = () => {
                                                         { header: 'Record No', field: 'auto_number' },
                                                         { header: 'Status', render: r => <Badge bg={r.status === 'DONE' ? 'success' : 'warning'}>{r.status}</Badge> },
                                                         { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => navigate(`/record/gold-tests/${r.id}`)}>View</Button> }
+                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => openRecord('gold-tests', r.id)}>View</Button> }
                                                     ]}
                                                 />
                                             </Accordion.Body>
@@ -376,28 +410,18 @@ const CustomerProfile = () => {
                                                         { header: 'Record No', field: 'auto_number' },
                                                         { header: 'Status', render: r => <Badge bg={r.status === 'DONE' ? 'success' : 'warning'}>{r.status}</Badge> },
                                                         { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => navigate(`/record/silver-tests/${r.id}`)}>View</Button> }
+                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={() => openRecord('silver-tests', r.id)}>View</Button> }
                                                     ]}
                                                 />
                                             </Accordion.Body>
                                         </Accordion.Item>
 
                                         <Accordion.Item eventKey="4">
-                                            <Accordion.Header>Photo Certificates ({relatedData.photoCerts.length})</Accordion.Header>
+                                            <Accordion.Header><CertSectionHeader label="Photo Certificates" list={relatedData.photoCerts} /></Accordion.Header>
                                             <Accordion.Body>
                                                 <RelatedList title="Photo Certificates" data={relatedData.photoCerts}
                                                     emptyMessage="No Photo Certificates found."
-                                                    columns={[
-                                                        { header: 'Record No', field: 'auto_number' },
-                                                        { header: 'Date', render: r => new Date(r.created).toLocaleDateString() },
-                                                        { header: 'Action', render: r => <Button size="sm" variant="link" onClick={async () => {
-                                                            try {
-                                                                await triggerPrint('photo-certificate', r.id);
-                                                            } catch (err) {
-                                                                addToast('Print failed. Please try again.', 'error');
-                                                            }
-                                                        }}>View</Button> }
-                                                    ]}
+                                                    columns={certColumns('photo-certificate', triggerPrint, addToast)}
                                                 />
                                             </Accordion.Body>
                                         </Accordion.Item>

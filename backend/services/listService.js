@@ -14,6 +14,34 @@ function normalizePositiveInteger(value, fallback, max = Number.MAX_SAFE_INTEGER
     return Math.min(parsed, max);
 }
 
+// Server-side list filters. Applies only clauses valid for the type's shape:
+// parent records (status / mode / gst), items (status via parent `p`), and
+// ledgers (txn type / mode). Date range applies to t.created everywhere.
+// Returns a clause fragment appended before ORDER BY, plus its bound params.
+function buildFilters(type, p = {}) {
+    const isItem   = type.endsWith('-items');
+    const isLedger = type === 'credit-history' || type === 'weight-loss-history';
+    const clauses = [];
+    const params  = [];
+
+    if (p.start_date) { clauses.push('DATE(t.created) >= DATE(?)'); params.push(p.start_date); }
+    if (p.end_date)   { clauses.push('DATE(t.created) <= DATE(?)'); params.push(p.end_date); }
+
+    if (isItem) {
+        if (p.status) { clauses.push('p.status = ?'); params.push(p.status); }
+    } else if (isLedger) {
+        if (p.txn_type) { clauses.push('t.type = ?'); params.push(p.txn_type); }
+        if (p.mode)     { clauses.push('t.mode_of_payment = ?'); params.push(p.mode); }
+    } else {
+        if (p.status) { clauses.push('t.status = ?'); params.push(p.status); }
+        if (p.mode)   { clauses.push('t.mode_of_payment = ?'); params.push(p.mode); }
+        if (type.includes('certificate') && (p.gst === '1' || p.gst === '0')) {
+            clauses.push('t.gst = ?'); params.push(Number(p.gst));
+        }
+    }
+    return { clause: clauses.length ? ' AND ' + clauses.join(' AND ') : '', params };
+}
+
 class ListService {
     async getList(type, params) {
         const page = normalizePositiveInteger(params.page, DEFAULT_PAGE);
@@ -73,17 +101,18 @@ class ListService {
         // Standard search logic: Name, Phone. Added Auto/Item Number.
         // Removed ID search as per requirement.
         const parentSearchClause = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.auto_number LIKE ?)";
-        const childSearchClause = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.item_number LIKE ? OR p.auto_number LIKE ?)";
+        const childSearchClause = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.item_number LIKE ? OR p.auto_number LIKE ? OR t.item_type LIKE ? OR t.name LIKE ?)";
 
         switch (type) {
             case 'gold-tests':
                 query = getParentQuery('gold_test');
                 countQuery = getParentCount('gold_test');
                 if (search) {
-                    query += parentSearchClause;
-                    countQuery += parentSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm);
+                    const sc = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.auto_number LIKE ? OR EXISTS (SELECT 1 FROM gold_test_item WHERE gold_test_id = t.id AND deletedon IS NULL AND (item_type LIKE ? OR name LIKE ?)))";
+                    query += sc;
+                    countQuery += sc;
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -92,10 +121,11 @@ class ListService {
                 query = getParentQuery('silver_test');
                 countQuery = getParentCount('silver_test');
                 if (search) {
-                    query += parentSearchClause;
-                    countQuery += parentSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm);
+                    const sc = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.auto_number LIKE ? OR EXISTS (SELECT 1 FROM silver_test_item WHERE silver_test_id = t.id AND deletedon IS NULL AND (item_type LIKE ? OR name LIKE ?)))";
+                    query += sc;
+                    countQuery += sc;
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -104,10 +134,11 @@ class ListService {
                 query = getParentQuery('gold_certificate');
                 countQuery = getParentCount('gold_certificate');
                 if (search) {
-                    query += parentSearchClause;
-                    countQuery += parentSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm);
+                    const sc = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.auto_number LIKE ? OR EXISTS (SELECT 1 FROM gold_certificate_item WHERE gold_certificate_id = t.id AND deletedon IS NULL AND (item_type LIKE ? OR name LIKE ?)))";
+                    query += sc;
+                    countQuery += sc;
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -116,10 +147,11 @@ class ListService {
                 query = getParentQuery('silver_certificate');
                 countQuery = getParentCount('silver_certificate');
                 if (search) {
-                    query += parentSearchClause;
-                    countQuery += parentSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm);
+                    const sc = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.auto_number LIKE ? OR EXISTS (SELECT 1 FROM silver_certificate_item WHERE silver_certificate_id = t.id AND deletedon IS NULL AND (item_type LIKE ? OR name LIKE ?)))";
+                    query += sc;
+                    countQuery += sc;
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -128,10 +160,11 @@ class ListService {
                 query = getParentQuery('photo_certificate');
                 countQuery = getParentCount('photo_certificate');
                 if (search) {
-                    query += parentSearchClause;
-                    countQuery += parentSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm);
+                    const sc = " AND (c.name LIKE ? OR c.phone LIKE ? OR t.auto_number LIKE ? OR EXISTS (SELECT 1 FROM photo_certificate_item WHERE photo_certificate_id = t.id AND deletedon IS NULL AND (item_type LIKE ? OR name LIKE ?)))";
+                    query += sc;
+                    countQuery += sc;
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -142,9 +175,8 @@ class ListService {
                 if (search) {
                     query += childSearchClause;
                     countQuery += childSearchClause;
-                    // childSearchClause has 4 params
-                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -155,8 +187,8 @@ class ListService {
                 if (search) {
                     query += childSearchClause;
                     countQuery += childSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -167,8 +199,8 @@ class ListService {
                 if (search) {
                     query += childSearchClause;
                     countQuery += childSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -179,8 +211,8 @@ class ListService {
                 if (search) {
                     query += childSearchClause;
                     countQuery += childSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
@@ -191,16 +223,17 @@ class ListService {
                 if (search) {
                     query += childSearchClause;
                     countQuery += childSearchClause;
-                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
-                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+                    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+                    countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
                 }
                 query += " ORDER BY t.created DESC";
                 break;
 
             case 'credit-history':
-                // credit_history uses 'created' not 'createdon', and has no 'deletedon'
-                query = `SELECT t.*, t.created, c.name as customer_name FROM credit_history t ${joinCustomer} WHERE 1=1`;
-                countQuery = `SELECT COUNT(*) as total FROM credit_history t ${joinCustomer} WHERE 1=1`;
+                // credit_history now follows the standard lifecycle contract
+                // (created/lastmodified/deletedon). Soft-deleted rows excluded.
+                query = `SELECT t.*, t.created, c.name as customer_name FROM credit_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
+                countQuery = `SELECT COUNT(*) as total FROM credit_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
                 if (search) {
                     query += " AND (c.name LIKE ? OR c.phone LIKE ?)";
                     countQuery += " AND (c.name LIKE ? OR c.phone LIKE ?)";
@@ -211,9 +244,9 @@ class ListService {
                 break;
 
             case 'weight-loss-history':
-                // weight_loss_history uses 'created' not 'createdon', and has no 'deletedon'
-                query = `SELECT t.*, t.created, c.name as customer_name FROM weight_loss_history t ${joinCustomer} WHERE 1=1`;
-                countQuery = `SELECT COUNT(*) as total FROM weight_loss_history t ${joinCustomer} WHERE 1=1`;
+                // weight_loss_history now follows the standard lifecycle contract.
+                query = `SELECT t.*, t.created, c.name as customer_name FROM weight_loss_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
+                countQuery = `SELECT COUNT(*) as total FROM weight_loss_history t ${joinCustomer} WHERE t.deletedon IS NULL`;
                 if (search) {
                     query += " AND (c.name LIKE ? OR c.phone LIKE ?)";
                     countQuery += " AND (c.name LIKE ? OR c.phone LIKE ?)";
@@ -225,6 +258,16 @@ class ListService {
 
             default:
                 throw new Error('Invalid list type');
+        }
+
+        // Apply optional filters (status / date / mode / gst / txn type) after
+        // search but before ORDER BY, so their params bind ahead of LIMIT/OFFSET.
+        const { clause: filterClause, params: filterParams } = buildFilters(type, params);
+        if (filterClause) {
+            query = query.replace(' ORDER BY', ` ${filterClause} ORDER BY`);
+            countQuery += filterClause;
+            queryParams.push(...filterParams);
+            countParams.push(...filterParams);
         }
 
         return execute();

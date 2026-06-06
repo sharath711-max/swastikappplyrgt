@@ -1,8 +1,0 @@
-All 4 files in the airesponse folder renamed to .txt:
-
-resp-04_May_2026_13_00_00.txt
-resp-04_May_2026_13_32_37.txt
-resp-04_May_2026_13_37_40.txt
-resp-04_May_2026_14_00_00.txt
-
-Memory updated: future response files will be saved with .txt extension from the start.

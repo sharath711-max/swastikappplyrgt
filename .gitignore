@@ -17,6 +17,8 @@ backend/db/*.sqlite3
 backend/db/*.db-wal
 backend/db/*.db-shm
 backend/db/init.sql.bak
+backend/db/*.db.backup-*
+backend/db/shadow_diff_*.json
 
 # Logs
 backend/logs/
@@ -68,4 +70,9 @@ id_mapping.json
 # claude ignore
 .claude/
 .gemini/
-.openai/    
+.openai/
+
+# Local credentials / secrets (never commit)
+credentials.local.txt
+*.local.txt
+*.secrets

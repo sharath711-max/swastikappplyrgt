@@ -45,6 +45,35 @@ class SequenceService {
             return `${currentDateStr}-${paddedSeq}`;
         })();
     }
+
+    static generateTechnicalAutoNumber(prefix) {
+        return rawTransaction(() => {
+            const cleanPrefix = String(prefix || '').trim().toUpperCase();
+            if (!cleanPrefix) throw new Error('generateTechnicalAutoNumber: prefix is required');
+
+            const now = new Date(Date.now() + (5.5 * 60 * 60 * 1000));
+            const stamp = [
+                now.getUTCFullYear(),
+                String(now.getUTCMonth() + 1).padStart(2, '0'),
+                String(now.getUTCDate()).padStart(2, '0'),
+                String(now.getUTCHours()).padStart(2, '0'),
+                String(now.getUTCMinutes()).padStart(2, '0'),
+                String(now.getUTCSeconds()).padStart(2, '0'),
+            ].join('');
+            const key = `AUTO_NUMBER_${cleanPrefix}_${stamp}`;
+
+            db.prepare("INSERT OR IGNORE INTO globals (key, value, created, lastmodified) VALUES (?, '0', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)").run(key);
+            const row = db.prepare(`
+                UPDATE globals
+                   SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT),
+                       lastmodified = CURRENT_TIMESTAMP
+                 WHERE key = ?
+                 RETURNING CAST(value AS INTEGER) AS seq
+            `).get(key);
+
+            return `${cleanPrefix}-${stamp}-${row.seq}`;
+        })();
+    }
 }
 
 module.exports = SequenceService;

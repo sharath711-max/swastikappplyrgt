@@ -2,6 +2,7 @@ const { db, now, genId, getNextSequence, transaction } = require('../db/db');
 const SequenceService = require('../services/sequenceService');
 const SilverTestCalculationService = require('../services/silverTestCalculationService');
 const { buildCompletionRequestId, claimCompletion } = require('../utils/completionGuard');
+const wlhRepo = require('./weightLossHistoryRepository');
 
 class SilverTestRepository {
     constructor() {
@@ -39,13 +40,13 @@ class SilverTestRepository {
 
                 this.db.prepare(`
                     INSERT INTO silver_test_item (
-                        id, silver_test_id, item_number, item_type, 
+                        id, silver_test_id, item_number, name, item_type, 
                         gross_weight, sample_weight, test_weight, net_weight,
                         purity, fine_weight, item_total,
                         returned, created
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
-                    itemId, testId, itemNumber, calculated.item_type,
+                    itemId, testId, itemNumber, item.name || item.description || '', calculated.item_type,
                     calculated.gross_weight,
                     item.sample_weight || calculated.test_weight, // Keep raw sample_weight if provided
                     calculated.test_weight,
@@ -60,6 +61,7 @@ class SilverTestRepository {
                 insertedItems.push({
                     id: itemId,
                     item_number: itemNumber,
+                    name: item.name || item.description || '',
                     ...calculated,
                     created: timestamp
                 });
@@ -284,14 +286,14 @@ class SilverTestRepository {
 
             // 3. Record Weight Loss if applicable
             if (weightLossAmount > 0) {
-                const wlhId = genId('WLH');
                 const test = this.db.prepare("SELECT customer_id FROM silver_test WHERE id = ?").get(id);
-
                 if (test) {
-                    this.db.prepare(`
-                        INSERT INTO weight_loss_history (id, customer_id, amount, reason, created)
-                        VALUES (?, ?, ?, ?, ?)
-                    `).run(wlhId, test.customer_id, weightLossAmount, `Silver Test Finalization: ${id}`, timestamp);
+                    wlhRepo.insertWithinTransaction(this.db, {
+                        customer_id    : test.customer_id,
+                        amount         : weightLossAmount,
+                        reason         : `Silver Test Finalization: ${id}`,
+                        mode_of_payment: mode_of_payment || null,
+                    });
                 }
             }
 

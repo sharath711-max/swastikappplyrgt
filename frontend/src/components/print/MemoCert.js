@@ -65,6 +65,10 @@ const MemoCert = ({ test, items = [] }) => {
                 <div className="memo-note">
                     <strong>Note:</strong> This is a computer-generated test memo. Purity results are based on XRF analysis.
                 </div>
+                <div className="memo-sequence-policy">
+                    Sequence numbers reset each calendar year. Existing records permanently retain their original sequence.
+                    Skipped numbers can occur after cancellations, retries, or protected audit flows.
+                </div>
                 <div className="memo-signature">
                     Authorized Signatory
                 </div>

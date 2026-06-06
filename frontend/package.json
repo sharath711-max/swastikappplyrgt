@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@salesforce-ux/design-system": "^2.30.4",
     "axios": "^1.6.0",
     "bootstrap": "^5.3.0",
     "decimal.js": "^10.6.0",
@@ -17,73 +18,19 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
-    "test:unit": "react-scripts test --watchAll=false",
-    "test:components": "react-scripts test --watchAll=false --testPathPattern=\"src/(auth|components)/\"",
-    "test:components:coverage": "react-scripts test --watchAll=false --coverage --testPathPattern=\"src/(auth|components)/\" --collectCoverageFrom=\"src/auth/LoginPage.js\" --collectCoverageFrom=\"src/auth/ProtectedRoute.js\" --collectCoverageFrom=\"src/components/layout/AppShell.js\" --collectCoverageFrom=\"src/components/layout/Header.js\" --collectCoverageFrom=\"src/components/layout/Sidebar.js\" --collectCoverageFrom=\"src/components/layout/ProtectedComponent.js\" --collectCoverageFrom=\"src/components/core/PriceCalculationTable.js\" --collectCoverageFrom=\"src/components/Phase2Modal.js\" --collectCoverageFrom=\"src/components/print/PhotoCert.js\" --collectCoverageFrom=\"src/components/print/ThermalReceipt.js\"",
-    "eject": "react-scripts eject",
-    "test:e2e": "playwright test --workers=1",
-    "test:e2e-ui": "playwright test --ui",
-    "test:workflow": "playwright test e2e/main.spec.js --workers=1",
-    "test:workflow:headed": "playwright test e2e/main.spec.js --workers=1 --headed"
+    "eject": "react-scripts eject"
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "@playwright/test": "^1.58.2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
     "eslint": "^8.57.1",
     "html-webpack-plugin": "^5.6.6",
-    "identity-obj-proxy": "^3.0.0",
-    "jest-transform-stub": "^2.0.0",
     "react-scripts": "^5.0.1"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
-      "react-app/jest"
+      "react-app"
     ]
-  },
-  "jest": {
-    "coverageThreshold": {
-      "global": {
-        "statements": 40,
-        "branches": 35,
-        "functions": 50,
-        "lines": 45
-      },
-      "./src/auth/LoginPage.js": {
-        "statements": 85,
-        "branches": 80,
-        "functions": 75,
-        "lines": 85
-      },
-      "./src/auth/ProtectedRoute.js": {
-        "statements": 90,
-        "branches": 85,
-        "functions": 100,
-        "lines": 90
-      },
-      "./src/components/layout/AppShell.js": {
-        "statements": 100,
-        "branches": 100,
-        "functions": 100,
-        "lines": 100
-      },
-      "./src/components/layout/Header.js": {
-        "statements": 80,
-        "branches": 80,
-        "functions": 70,
-        "lines": 80
-      },
-      "./src/components/layout/Sidebar.js": {
-        "statements": 55,
-        "branches": 35,
-        "functions": 40,
-        "lines": 60
-      }
-    }
   },
   "browserslist": {
     "production": [

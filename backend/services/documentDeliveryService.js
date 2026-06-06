@@ -6,7 +6,6 @@ const certServiceV2   = require('./v2/certificateService');
 const photoCertRepo   = require('../repositories/photoCertificateRepository');
 const whatsappService = require('./whatsappService');
 const logger = require('../utils/logger');
-const { generateDeliveryDocumentHTML } = require('../utils/deliveryDocumentTemplate');
 const { getJwtSecret } = require('../config/env');
 
 const DELIVERY_SCOPE = 'workflow_delivery_document';
@@ -32,7 +31,7 @@ class DocumentDeliveryService {
             process.env.PUBLIC_BASE_URL ||
             process.env.APP_PUBLIC_URL ||
             process.env.BACKEND_PUBLIC_URL ||
-            `http://localhost:${process.env.PORT || 5000}`
+            `http://localhost:${process.env.PORT || 6001}`
         ).replace(/\/+$/, '');
     }
 
@@ -244,38 +243,8 @@ class DocumentDeliveryService {
         }));
     }
 
-    async generatePdf(type, record, filePath) {
-        let chromium;
-        try {
-            ({ chromium } = require('playwright'));
-        } catch (error) {
-            throw new Error('PDF generation is unavailable because Playwright is not installed.');
-        }
-
-        const html = generateDeliveryDocumentHTML({
-            record: this.normalizeRecord(type, record),
-            verifyUrl: this.buildVerifyUrl(record.auto_number),
-            generatedAt: new Date().toISOString()
-        });
-
-        const browser = await chromium.launch({ headless: true });
-        try {
-            const page = await browser.newPage();
-            await page.setContent(html, { waitUntil: 'networkidle' });
-            await page.pdf({
-                path: filePath,
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '0',
-                    right: '0',
-                    bottom: '0',
-                    left: '0'
-                }
-            });
-        } finally {
-            await browser.close();
-        }
+    async generatePdf() {
+        throw new Error('PDF generation is unavailable because no PDF renderer is configured.');
     }
 
     normalizeRecord(type, record) {

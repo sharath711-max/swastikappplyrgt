@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-const BASE_URL = (process.env.REACT_APP_API_URL || 'http://localhost:5000')
+const BASE_URL = (process.env.REACT_APP_API_URL || 'http://localhost:6001')
     .replace(/\/api$/, ''); // strip /api suffix if present
 
 /**

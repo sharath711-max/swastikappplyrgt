@@ -19,10 +19,10 @@ export default function PrintPortal() {
         : job.itemLevel && job.data?.items?.length > 0
             ? job.data.items.map((it, idx) => (
                 <div key={it.id || idx} style={{ pageBreakAfter: idx < job.data.items.length - 1 ? 'always' : 'auto' }}>
-                    <PrintManager type={job.printType} data={job.data} item={it} photos={job.photos} />
+                    <PrintManager type={job.printType} data={job.data} item={it} photos={job.photos} layout={job.layout} />
                 </div>
             ))
-            : <PrintManager type={job.printType} data={job.data} item={job.item} photos={job.photos} />;
+            : <PrintManager type={job.printType} data={job.data} item={job.item} photos={job.photos} layout={job.layout} />;
 
     return createPortal(
         <div id="in-page-print-root">{content}</div>,

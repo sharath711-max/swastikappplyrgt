@@ -43,6 +43,7 @@ const path      = require('path');
 const fs        = require('fs');
 const crypto    = require('crypto');
 const bcrypt    = require('bcryptjs');
+const { toNodeStatus } = require('../config/statusSemantics');
 
 // ─── CLI args ──────────────────────────────────────────────────────────────
 const args    = process.argv.slice(2);
@@ -85,11 +86,12 @@ const customerIdMap = new Map(); // py_int → sern_text
 
 // ─── Status mapping ────────────────────────────────────────────────────────
 function mapStatus(pyStatus) {
-    switch ((pyStatus || '').toLowerCase()) {
-        case 'ongoing':   return 'TODO';
-        case 'pending':   return 'IN_PROGRESS';
-        case 'completed': return 'DONE';
-        default:          return 'TODO';
+    try {
+        return toNodeStatus(pyStatus, { strict: true });
+    } catch (err) {
+        warn(`${err.message} - migration cannot infer operator queue safely`);
+        counts.warnings++;
+        throw err;
     }
 }
 
@@ -101,6 +103,27 @@ function mapPayment(mop) {
     if (m === 'upi')     return 'UPI';
     if (m === 'balance') return 'Balance';
     return mop; // pass-through unknown values
+}
+
+// ─── GST Bill Number clean-up ──────────────────────────────────────────────
+function cleanBillNumber(gstBillVal) {
+    if (gstBillVal === null || gstBillVal === undefined) return null;
+    const str = String(gstBillVal).trim();
+    if (str === '' || str === '-1' || str === '0') return null;
+    const val = parseInt(str, 10);
+    if (!isNaN(val) && val <= 0) return null;
+    return str;
+}
+
+// ─── Clean Weights to satisfy SQLite constraints ───────────────────────────
+function cleanWeights(grossVal, testVal) {
+    let gross = parseFloat(grossVal || 0);
+    let test  = parseFloat(testVal || 0);
+    if (test < 0) test = 0;
+    if (gross < test) gross = test;
+    if (gross <= 0) gross = 0.001;
+    const net = Math.round((gross - test) * 1000) / 1000;
+    return { gross, test, net };
 }
 
 // ─── Table existence helper ────────────────────────────────────────────────
@@ -219,17 +242,15 @@ function runMigration() {
             const item    = data[i];
             const itemId  = genId('GTI');
             const itemNum = `${autoNum}-${i + 1}`;
-            const gross   = parseFloat(item.total_weight || 0);
-            const test    = parseFloat(item.test_weight  || 0);
-            const net     = gross - test;
-            const purity  = item.purity != null ? parseFloat(item.purity) : null;
-            const fine    = (purity != null && net > 0) ? Math.round((net * purity / 100) * 1000) / 1000 : 0;
+            const cleaned = cleanWeights(item.total_weight, item.test_weight);
+            const purity  = item.purity != null ? Math.min(100, Math.max(0, parseFloat(item.purity))) : null;
+            const fine    = (purity != null && cleaned.net > 0) ? Math.round((cleaned.net * purity / 100) * 1000) / 1000 : 0;
             const returned = item.returned ? 1 : 0;
 
             if (!DRY_RUN) insertGoldItem.run(
                 itemId, itemNum, newId,
                 item.name || null, item.item || 'Gold',
-                gross, 0, test, net,
+                cleaned.gross, 0, cleaned.test, cleaned.net,
                 purity, fine, item.total || 0,
                 returned, t.created || ts
             );
@@ -265,15 +286,13 @@ function runMigration() {
             counts.silver_tests++;
             for (let i = 0; i < data.length; i++) {
                 const item   = data[i];
-                const gross  = parseFloat(item.total_weight || 0);
-                const test   = parseFloat(item.test_weight  || 0);
-                const net    = gross - test;
-                const purity = item.purity != null ? parseFloat(item.purity) : null;
-                const fine   = (purity != null && net > 0) ? Math.round(net * purity / 100 * 1000) / 1000 : 0;
+                const cleaned = cleanWeights(item.total_weight, item.test_weight);
+                const purity = item.purity != null ? Math.min(100, Math.max(0, parseFloat(item.purity))) : null;
+                const fine   = (purity != null && cleaned.net > 0) ? Math.round(cleaned.net * purity / 100 * 1000) / 1000 : 0;
                 if (!DRY_RUN) insertSilverItem.run(
                     genId('STI'), `${autoNum}-${i + 1}`, newId,
                     item.name || null, item.item || 'Silver',
-                    gross, 0, test, net,
+                    cleaned.gross, 0, cleaned.test, cleaned.net,
                     purity, fine, item.total || 0,
                     item.returned ? 1 : 0, t.created || ts
                 );
@@ -313,7 +332,7 @@ function runMigration() {
         catch { counts.warnings++; }
 
         const isGst   = c.gst ? 1 : 0;
-        const billNum = c.gst_bill_number ? String(c.gst_bill_number) : null;
+        const billNum = cleanBillNumber(c.gst_bill_number);
 
         // Track high-water mark for sequence seeding
         const billInt = parseInt(c.gst_bill_number, 10) || 0;
@@ -322,9 +341,10 @@ function runMigration() {
 
         let totalNet = 0, totalFine = 0;
         for (const item of data) {
-            const gross = parseFloat(item.total_weight || 0), test = parseFloat(item.test_weight || 0);
-            totalNet  += gross - test;
-            totalFine += item.purity ? (gross - test) * parseFloat(item.purity) / 100 : 0;
+            const cleaned = cleanWeights(item.total_weight, item.test_weight);
+            const purity  = item.purity != null ? Math.min(100, Math.max(0, parseFloat(item.purity))) : null;
+            totalNet  += cleaned.net;
+            totalFine += (purity != null) ? cleaned.net * purity / 100 : 0;
         }
 
         if (!DRY_RUN) insertGoldCert.run(
@@ -337,16 +357,14 @@ function runMigration() {
 
         for (let i = 0; i < data.length; i++) {
             const item    = data[i];
-            const gross   = parseFloat(item.total_weight || 0);
-            const test    = parseFloat(item.test_weight  || 0);
-            const net     = gross - test;
-            const purity  = item.purity != null ? parseFloat(item.purity) : null;
-            const fine    = (purity != null && net > 0) ? Math.round(net * purity / 100 * 1000) / 1000 : 0;
+            const cleaned = cleanWeights(item.total_weight, item.test_weight);
+            const purity  = item.purity != null ? Math.min(100, Math.max(0, parseFloat(item.purity))) : null;
+            const fine    = (purity != null && cleaned.net > 0) ? Math.round(cleaned.net * purity / 100 * 1000) / 1000 : 0;
             const certNum = item.certificate_number || certLabel(i + 1);
             if (!DRY_RUN) insertGoldCertItem.run(
                 genId('GCI'), `${autoNum}-${i + 1}`, newId, certNum,
                 item.name || null, item.item || 'Gold',
-                gross, test, net, purity, fine, item.total || 0,
+                cleaned.gross, cleaned.test, cleaned.net, purity, fine, item.total || 0,
                 item.returned ? 1 : 0, c.created || ts
             );
             counts.gold_cert_items++;
@@ -378,7 +396,10 @@ function runMigration() {
         try { data = typeof c.data === 'string' ? JSON.parse(c.data) : (c.data || []); }
         catch { counts.warnings++; }
         let totalNet = 0;
-        for (const item of data) totalNet += parseFloat(item.total_weight || 0) - parseFloat(item.test_weight || 0);
+        for (const item of data) {
+            const cleaned = cleanWeights(item.total_weight, item.test_weight);
+            totalNet += cleaned.net;
+        }
         const isGst   = c.gst ? 1 : 0;
         const billInt = parseInt(c.gst_bill_number, 10) || 0;
         if (isGst  && billInt > maxGstBill)    maxGstBill    = billInt;
@@ -386,22 +407,20 @@ function runMigration() {
         if (!DRY_RUN) insertSilverCert.run(
             newId, autoNum, custId, mapStatus(c.status),
             c.total || 0, Math.round(totalNet * 1000) / 1000,
-            isGst, c.total_tax || 0, c.gst_bill_number ? String(c.gst_bill_number) : null,
+            isGst, c.total_tax || 0, cleanBillNumber(c.gst_bill_number),
             mapPayment(c.mode_of_payment), c.created || ts, ts
         );
         counts.silver_certs++;
         for (let i = 0; i < data.length; i++) {
             const item   = data[i];
-            const gross  = parseFloat(item.total_weight || 0);
-            const test   = parseFloat(item.test_weight  || 0);
-            const net    = gross - test;
-            const purity = item.purity != null ? parseFloat(item.purity) : null;
-            const fine   = (purity != null && net > 0) ? Math.round(net * purity / 100 * 1000) / 1000 : 0;
+            const cleaned = cleanWeights(item.total_weight, item.test_weight);
+            const purity = item.purity != null ? Math.min(100, Math.max(0, parseFloat(item.purity))) : null;
+            const fine   = (purity != null && cleaned.net > 0) ? Math.round(cleaned.net * purity / 100 * 1000) / 1000 : 0;
             if (!DRY_RUN) insertSilverCertItem.run(
                 genId('SCI'), `${autoNum}-${i + 1}`, newId,
                 item.certificate_number || certLabel(i + 1),
                 item.name || null, item.item || 'Silver',
-                gross, test, net, purity, fine, item.total || 0,
+                cleaned.gross, cleaned.test, cleaned.net, purity, fine, item.total || 0,
                 item.returned ? 1 : 0, c.created || ts
             );
             counts.silver_cert_items++;
@@ -438,23 +457,21 @@ function runMigration() {
         if (!DRY_RUN) insertPhotoCert.run(
             newId, autoNum, custId, mapStatus(c.status), c.total || 0,
             c.gst ? 1 : 0, c.total_tax || 0,
-            c.gst_bill_number ? String(c.gst_bill_number) : null,
+            cleanBillNumber(c.gst_bill_number),
             mapPayment(c.mode_of_payment), c.created || ts, ts
         );
         counts.photo_certs++;
         for (let i = 0; i < data.length; i++) {
             const item      = data[i];
             const mediaPath = Array.isArray(media) && media[i] ? JSON.stringify(media[i]) : null;
-            const gross     = parseFloat(item.total_weight || 0);
-            const test      = parseFloat(item.test_weight  || 0);
-            const net       = gross - test;
-            const purity    = item.purity != null ? parseFloat(item.purity) : null;
-            const fine      = (purity != null && net > 0) ? Math.round(net * purity / 100 * 1000) / 1000 : 0;
+            const cleaned   = cleanWeights(item.total_weight, item.test_weight);
+            const purity    = item.purity != null ? Math.min(100, Math.max(0, parseFloat(item.purity))) : null;
+            const fine      = (purity != null && cleaned.net > 0) ? Math.round(cleaned.net * purity / 100 * 1000) / 1000 : 0;
             if (!DRY_RUN) insertPhotoCertItem.run(
                 genId('PCI'), `${autoNum}-${i + 1}`, newId,
                 item.certificate_number || certLabel(i + 1),
                 item.name || null, item.item || 'Photo',
-                gross, test, net, purity, fine, item.total || 0,
+                cleaned.gross, cleaned.test, cleaned.net, purity, fine, item.total || 0,
                 item.returned ? 1 : 0, mediaPath, c.created || ts
             );
             counts.photo_cert_items++;

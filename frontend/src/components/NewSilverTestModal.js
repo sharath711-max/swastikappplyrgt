@@ -1,118 +1,126 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useCustomerSearch } from '../hooks/useCustomerSearch';
-import { Modal, Button, Form, Row, Col, InputGroup, ListGroup, Badge } from 'react-bootstrap';
-import { FaPlus, FaTrash, FaSearch } from 'react-icons/fa';
+import { Modal, Button, Form, Row, Col, InputGroup } from 'react-bootstrap';
+import { FaPlus, FaTrash } from 'react-icons/fa';
 import api from '../services/api';
-import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
 import { preventDuplicateCreate } from '../utils/certificateGuard';
 import runModalSubmit from '../utils/handleSubmit';
+import DraftStateFooter from './core/DraftStateFooter';
+import useEnterAdvance from '../hooks/useEnterAdvance';
+import useFocusWhen from '../hooks/useFocusWhen';
+import { validateItem, OPERATIONS, ACTORS } from '../shared/domain/validation';
+import useSafeModalClose from '../hooks/useSafeModalClose';
+import CustomerCombobox from './customer/CustomerCombobox';
 
-const emptyDraft = {
-    item: '',
-    grossWeight: '',
-    sampleWeight: '',
-    netWeight: 0,
-    returned: false
-};
+const MAX_ITEMS = 20;
+const WORKFLOW_TYPE = 'ST';
 
-const parseWeight = (value) => {
-    if (value === '' || value === null || value === undefined) return null;
-    const num = parseFloat(value);
-    return Number.isFinite(num) ? num : null;
-};
+const emptyRow = () => ({
+    id:          (window.crypto?.randomUUID?.() || `r${Date.now()}${Math.random().toString(36).slice(2)}`),
+    name:        '',
+    item:        '',
+    totalWeight: '',
+    testWeight:  '0',
+    returned:    false,
+    errors:      {},
+});
 
-const toFixedNumber = (value, digits) => {
-    const num = Number(value);
-    if (!Number.isFinite(num)) return null;
-    return Number(num.toFixed(digits));
-};
+const emptyNewCustomer = { name: '', phone: '', balance: '0', notes: '' };
 
-const deriveWeights = (draft) => {
-    const gross = parseWeight(draft.grossWeight) || 0;
-    const sample = parseWeight(draft.sampleWeight) || 0;
-    const net = Math.max(0, toFixedNumber(gross - sample, 3));
-    return { gross, sample, net };
-};
+const formatDate = (d) =>
+    d.toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+    });
 
-const emptyNewCustomer = { name: '', phone: '', balance: '', notes: '' };
+const toValidationData = (row) => ({
+    item_type:     row.item,
+    description:   row.name || row.item,
+    gross_weight:  row.totalWeight,
+    sample_weight: row.testWeight,
+    returned:      row.returned,
+});
 
 const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
     const { addToast } = useToast();
-    const { openModal } = useModal();
-    const [searchTerm,       setSearchTerm]       = useState('');
-    const [showSuggestions,  setShowSuggestions]  = useState(false);
+
+    // Customer state — combobox manages its own search input + result list.
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-    const { filteredCustomers, reload: reloadCustomers } = useCustomerSearch({
-        show, searchTerm, addToast, limit: 5,
-    });
-    const dropdownRef = useRef(null);
-    const submitReqIdRef = useRef(null);
-
-    const [sampleDraft, setSampleDraft] = useState(emptyDraft);
-    const [sampleItems, setSampleItems] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState({});
-
-    // Inline new-customer form
-    const [showNewCust, setShowNewCust] = useState(false);
+    const [showNewCust, setShowNewCust] = useState(true);
     const [newCustData, setNewCustData] = useState(emptyNewCustomer);
     const [savingCust,  setSavingCust]  = useState(false);
 
-    const currentDate = new Date().toLocaleDateString('en-US');
+    const [sampleRows, setSampleRows] = useState([emptyRow()]);
+    const [loading,    setLoading]    = useState(false);
+
+    const submitReqRef = useRef(null);
+
+    const dateDisplay = formatDate(new Date());
+
+    // Draft-dirty derivation — any user-provided content counts. Balance
+    // defaults to '0'; not treated as draft.
+    const hasDraftEntries = (
+        !!selectedCustomer
+        || (newCustData.name && newCustData.name.trim() !== '')
+        || (newCustData.phone && newCustData.phone.trim() !== '')
+        || (newCustData.notes && newCustData.notes.trim() !== '')
+        || sampleRows.some(r => r.name || r.item || r.totalWeight || r.returned || (r.testWeight && r.testWeight !== '0'))
+    );
+
+    const resetTransientState = () => { setLoading(false); };
+    const { safeClose, mountedRef } = useSafeModalClose({ show, onHide });
+    const closeSafely = () => safeClose({ reset: resetTransientState });
+
+    // Enter-rhythm: Enter advances to the next focusable element instead of
+    // submitting. Restores the legacy Python intake cadence.
+    const onEnterAdvance = useEnterAdvance();
 
     useEffect(() => {
-        if (show) resetForm();
+        if (show) {
+            setSelectedCustomer(null);
+            setShowNewCust(true);
+            setNewCustData(emptyNewCustomer);
+            setSampleRows([emptyRow()]);
+            submitReqRef.current = null;
+        }
     }, [show]);
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setShowSuggestions(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    const handleCustomerSelect = (c) => {
+        setSelectedCustomer(c);
+        setShowNewCust(false);
+    };
 
-    const resetForm = () => {
-        setSearchTerm('');
-        setShowSuggestions(false);
+    const handleAddCustomerLinkClick = (e) => {
+        e.preventDefault();
+        setShowNewCust(true);
         setSelectedCustomer(null);
-        setSampleDraft(emptyDraft);
-        setSampleItems([]);
-        setErrors({});
-    };
-
-    const customerDisplay = (customer) => {
-        if (!customer) return '';
-        return `${customer.name}${customer.phone ? `(${customer.phone})` : ''}`;
-    };
-
-    const handleCustomerSelect = (customer) => {
-        setSelectedCustomer(customer);
-        setSearchTerm(customerDisplay(customer));
-        setShowSuggestions(false);
     };
 
     const saveNewCustomer = async (e) => {
         e.preventDefault();
         if (!newCustData.name.trim()) { addToast('Name is required', 'error'); return; }
+        if (newCustData.phone && newCustData.phone.length !== 10) {
+            addToast('Phone must be 10 digits', 'error'); return;
+        }
         setSavingCust(true);
         try {
-            const res = await api.post('/customers', {
-                name   : newCustData.name.trim(),
-                phone  : newCustData.phone.trim() || undefined,
-                balance: parseFloat(newCustData.balance) || 0,
-                notes  : newCustData.notes.trim() || undefined,
+            await runModalSubmit({
+                action: async () => {
+                    const res = await api.post('/customers', {
+                        name:    newCustData.name.trim(),
+                        phone:   newCustData.phone.trim() || undefined,
+                        balance: parseFloat(newCustData.balance) || 0,
+                        notes:   newCustData.notes.trim() || undefined,
+                    });
+                    addToast('Customer created', 'success');
+                    return res.data?.data ?? res.data;
+                },
+                close: () => { setNewCustData(emptyNewCustomer); },
+                reload: async (created) => {
+                    if (created) handleCustomerSelect(created);
+                },
             });
-            const created = res.data?.data ?? res.data;
-            addToast('Customer created', 'success');
-            setShowNewCust(false);
-            setNewCustData(emptyNewCustomer);
-            await reloadCustomers();
-            if (created) handleCustomerSelect(created);
         } catch (err) {
             addToast(err?.response?.data?.error || err.message, 'error');
         } finally {
@@ -120,530 +128,323 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
         }
     };
 
-    const handleWeightFieldInput = (field, value) => {
-        setSampleDraft((prev) => ({ ...prev, [field]: value }));
+    const updateRow = (idx, field, value) => {
+        setSampleRows(rows => rows.map((r, i) =>
+            i === idx ? { ...r, [field]: value, errors: { ...r.errors, [field]: undefined } } : r
+        ));
     };
 
-
-
-    const MAX_ITEMS = 20;
-
-    const addSampleToList = () => {
-        if (sampleItems.length >= MAX_ITEMS) {
+    const addRow = () => {
+        if (sampleRows.length >= MAX_ITEMS) {
             addToast(`A test cannot have more than ${MAX_ITEMS} items`, 'error');
             return;
         }
+        const lastRow = sampleRows[sampleRows.length - 1];
+        const newRow = {
+            ...emptyRow(),
+            name: lastRow ? lastRow.name : '',
+            item: lastRow ? lastRow.item : '',
+        };
+        setSampleRows(rows => [...rows, newRow]);
+    };
 
-        const item = sampleDraft.item.trim();
-        const { gross, sample, net } = deriveWeights(sampleDraft);
+    const removeRow = (idx) => {
+        setSampleRows(rows => rows.length === 1 ? rows : rows.filter((_, i) => i !== idx));
+    };
 
-        let localErrors = {};
-        if (!item) localErrors.item = true;
-        if (gross <= 0) localErrors.grossWeight = true;
+    const validateRows = () => {
+        let firstErrorMsg = null;
+        const validated = sampleRows.map(row => {
+            const errors = {};
 
-        if (Object.keys(localErrors).length > 0) {
-            setErrors(prev => ({ ...prev, sample: localErrors }));
-            addToast('Please enter Item Type and Gross Weight', 'error');
-            return;
-        }
+            if (!row.item.trim()) errors.item = 'Item type is required';
 
-        if (sample > gross) {
-            setErrors(prev => ({ ...prev, sample: { ...prev.sample, sampleWeight: true } }));
-            addToast('Sample weight cannot exceed gross weight', 'error');
-            return;
-        }
-
-        setErrors(prev => ({ ...prev, sample: {} }));
-
-        setSampleItems((prev) => [
-            ...prev,
-            {
-                id: `${Date.now()}-${Math.random()}`,
-                seq: prev.length + 1,
-                item,
-                grossWeight: gross,
-                sampleWeight: sample,
-                netWeight: net,
-                returned: sampleDraft.returned
+            const total = parseFloat(row.totalWeight);
+            if (!Number.isFinite(total) || total <= 0) {
+                errors.totalWeight = 'Total weight must be greater than 0';
             }
-        ]);
 
-        setSampleDraft(emptyDraft);
+            const test = parseFloat(row.testWeight);
+            if (Number.isFinite(test) && test < 0) {
+                errors.testWeight = 'Test weight cannot be negative';
+            }
+            if (Number.isFinite(total) && Number.isFinite(test) && test > total) {
+                errors.testWeight = `Test weight (${test}g) cannot exceed total weight (${total}g)`;
+            }
+
+            if (Object.keys(errors).length === 0) {
+                const result = validateItem({
+                    workflow_type: WORKFLOW_TYPE,
+                    context: { operation: OPERATIONS.CREATE, actor: ACTORS.USER },
+                    data: toValidationData(row),
+                });
+                if (!result.valid) {
+                    const fieldMap = {
+                        item_type:     'item',
+                        description:   'item',
+                        gross_weight:  'totalWeight',
+                        sample_weight: 'testWeight',
+                    };
+                    result.errors.forEach(err => {
+                        const uiField = fieldMap[err.field] || err.field;
+                        if (!errors[uiField]) errors[uiField] = err.message;
+                    });
+                }
+            }
+
+            if (!firstErrorMsg) {
+                const k = Object.keys(errors)[0];
+                if (k) firstErrorMsg = errors[k];
+            }
+            return { ...row, errors };
+        });
+
+        setSampleRows(validated);
+        return { valid: !firstErrorMsg, firstErrorMsg };
     };
 
-    const removeSample = (id) => {
-        setSampleItems((prev) => prev.filter((s) => s.id !== id).map((s, idx) => ({ ...s, seq: idx + 1 })));
-    };
-
-    const handleSave = async (e) => {
+    const handleSubmit = async (e) => {
         if (e) e.preventDefault();
+        if (!selectedCustomer) { addToast('Please select a customer', 'error'); return; }
 
-        if (!selectedCustomer) {
-            setErrors(prev => ({ ...prev, customer: true }));
-            addToast('Please select a customer', 'error');
-            return;
-        }
-        if (sampleItems.length === 0) {
-            addToast('Add at least one sample item', 'error');
-            return;
-        }
-
-        setErrors({});
+        const { valid, firstErrorMsg } = validateRows();
+        if (!valid) { addToast(firstErrorMsg || 'Please fix validation errors', 'error'); return; }
 
         setLoading(true);
         try {
             await runModalSubmit({
                 action: async () => {
-                    if (!preventDuplicateCreate('ST', selectedCustomer.id)) {
+                    if (!preventDuplicateCreate('ST', selectedCustomer.id))
                         throw new Error('Duplicate silver test submission blocked');
-                    }
 
-                    if (!submitReqIdRef.current) {
-                        submitReqIdRef.current = window.crypto?.randomUUID?.() || Date.now().toString();
-                    }
+                    if (!submitReqRef.current)
+                        submitReqRef.current = window.crypto?.randomUUID?.() || Date.now().toString();
 
-                    const payload = {
+                    await api.post('/silver-tests', {
                         customer_id: selectedCustomer.id,
-                        items: sampleItems.map((s) => ({
-                            item_name: s.item,
-                            gross_weight: s.grossWeight,
-                            test_weight: s.sampleWeight,
-                            sample_weight: s.sampleWeight,
-                            returned: s.returned
-                        }))
-                    };
+                        items: sampleRows.map(r => ({
+                            name:         r.name || '',
+                            item_name:    r.name || r.item,
+                            item_type:    r.item,
+                            description:  r.name || '',
+                            gross_weight: parseFloat(r.totalWeight),
+                            total_weight: parseFloat(r.totalWeight),
+                            test_weight:  parseFloat(r.testWeight) || 0,
+                            sample_weight:parseFloat(r.testWeight) || 0,
+                            returned:     r.returned,
+                        })),
+                    }, { headers: { 'X-Request-Id': submitReqRef.current } });
 
-                    await api.post('/silver-tests', payload, {
-                        headers: { 'X-Request-Id': submitReqIdRef.current }
-                    });
-                    addToast('Silver Test Created Successfully', 'success');
+                    addToast(`Silver Test created — ${sampleRows.length} item(s)`, 'success');
                 },
                 reload: onSuccess,
-                close: () => {
-                    submitReqIdRef.current = null;
-                    resetForm();
-                    onHide();
-                }
+                close: () => { submitReqRef.current = null; closeSafely(); },
             });
-        } catch (error) {
-            if (error.message === 'Duplicate silver test submission blocked') {
+        } catch (err) {
+            if (!mountedRef.current) return;
+            if (err.message === 'Duplicate silver test submission blocked') {
                 addToast('Silver Test creation is already in progress', 'warning');
                 return;
             }
-            addToast(error.response?.data?.error || 'Failed to create test', 'error');
+            addToast(err?.response?.data?.error || 'Failed to create test', 'error');
         } finally {
-            setLoading(false);
+            if (mountedRef.current) setLoading(false);
         }
     };
 
+    const firstItemRef = useRef(null);
+    const sampleBlockVisible = selectedCustomer && !showNewCust;
+    useFocusWhen(firstItemRef, sampleBlockVisible);
+
     return (
-        <Modal show={show} onHide={onHide} centered dialogClassName="modal-container" className="new-sample-modal">
-            <Modal.Header closeButton className="new-sample-header">
-                <Modal.Title className="fw-bold">New Sample Entry</Modal.Title>
+        <>
+        <Modal show={show} onHide={closeSafely} backdrop="static" centered dialogClassName="modal-xxl">
+            <Modal.Header closeButton>
+                <Modal.Title as="h3" id="newTestModalTitle">New Silver Test</Modal.Title>
             </Modal.Header>
 
-            <Modal.Body>
-                <Form.Group className="mb-3">
-                    <Form.Label className="field-label">Date <span className="required">*</span></Form.Label>
-                    <Form.Control value={currentDate} readOnly />
-                </Form.Group>
+            <Modal.Body className="m-3 mb-0" onKeyDown={onEnterAdvance}>
+                {/* Customer search — server-side combobox (Wave A2) */}
+                <div className="mb-3">
+                    <CustomerCombobox
+                        value={selectedCustomer?.id}
+                        onChange={(_id, c) => c ? handleCustomerSelect(c) : setSelectedCustomer(null)}
+                        autoFocus
+                    />
+                </div>
 
-                <Form.Group className="mb-3" ref={dropdownRef}>
-                    <Form.Label className="field-label">Customer Search <span className="required">*</span></Form.Label>
-                    <InputGroup>
-                        <InputGroup.Text><FaSearch /></InputGroup.Text>
-                        <Form.Control
-                            placeholder="Search by name or phone"
-                            value={searchTerm}
-                            isInvalid={errors.customer}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setShowSuggestions(true);
-                                if (!e.target.value.trim()) {
-                                    setSelectedCustomer(null);
-                                }
-                                if (errors.customer) setErrors(prev => ({ ...prev, customer: false }));
-                            }}
-                            onFocus={() => setShowSuggestions(true)}
-                        />
-                        {errors.customer && <Form.Control.Feedback type="invalid">Customer Selection Required</Form.Control.Feedback>}
-                    </InputGroup>
+                {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
+                <a href="#" id="addCustomerBtn" onClick={handleAddCustomerLinkClick}>
+                    Add New Customer?
+                </a>
 
-                    {showSuggestions && searchTerm && (
-                        <ListGroup className="suggestion-list">
-                            {filteredCustomers.length > 0 ? (
-                                filteredCustomers.map((c) => (
-                                    <ListGroup.Item
-                                        key={c.id}
-                                        action
-                                        onClick={() => handleCustomerSelect(c)}
-                                        className="d-flex justify-content-between align-items-center"
-                                    >
-                                        <span>{customerDisplay(c)}</span>
-                                        <Badge bg={c.deletedon ? 'danger' : 'success'}>{c.deletedon ? 'Inactive' : 'Active'}</Badge>
-                                    </ListGroup.Item>
-                                ))
-                            ) : (
-                                <ListGroup.Item className="py-2">
-                                    <div className="text-center text-muted small mb-1">No customers found.</div>
-                                    {!showNewCust && (
-                                        <div className="text-center">
-                                            <Button variant="link" size="sm" className="p-0"
-                                                onClick={() => { setShowNewCust(true); setShowSuggestions(false); }}>
-                                                + Add new customer?
-                                            </Button>
-                                        </div>
+                {showNewCust && (
+                    <div id="addCustomerBlock">
+                        <hr />
+                        <Form id="addCustomerForm" onSubmit={saveNewCustomer} autoComplete="off" noValidate>
+                            <Row>
+                                <Col lg={6}>
+                                    <InputGroup size="lg" className="mb-3">
+                                        <InputGroup.Text className="fw-bold">Name</InputGroup.Text>
+                                        <Form.Control
+                                            name="name" type="text"
+                                            value={newCustData.name}
+                                            onChange={(e) => setNewCustData(p => ({ ...p, name: e.target.value }))}
+                                            required
+                                        />
+                                    </InputGroup>
+                                </Col>
+                                <Col lg={6}>
+                                    <InputGroup size="lg" className="mb-3">
+                                        <InputGroup.Text className="fw-bold">Phone</InputGroup.Text>
+                                        <InputGroup.Text>+91</InputGroup.Text>
+                                        <Form.Control
+                                            name="phone" type="tel" inputMode="numeric"
+                                            pattern="[0-9]{10}" minLength={10} maxLength={10}
+                                            value={newCustData.phone}
+                                            onChange={(e) => setNewCustData(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
+                                        />
+                                    </InputGroup>
+                                </Col>
+                                <Col lg={6}>
+                                    <InputGroup size="lg" className="mb-3">
+                                        <InputGroup.Text className="fw-bold">Initial Balance</InputGroup.Text>
+                                        <Form.Control
+                                            name="balance" type="number"
+                                            value={newCustData.balance}
+                                            onChange={(e) => setNewCustData(p => ({ ...p, balance: e.target.value }))}
+                                        />
+                                    </InputGroup>
+                                </Col>
+                                <InputGroup size="lg" className="mb-3">
+                                    <InputGroup.Text className="fw-bold">Notes</InputGroup.Text>
+                                    <Form.Control
+                                        name="notes" as="textarea"
+                                        value={newCustData.notes}
+                                        onChange={(e) => setNewCustData(p => ({ ...p, notes: e.target.value }))}
+                                    />
+                                </InputGroup>
+                            </Row>
+                            <div className="d-flex justify-content-end">
+                                <Button id="addCustomerSubmitBtn" type="submit" variant="primary" className="m-1" disabled={savingCust}>
+                                    {savingCust && (
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" />
                                     )}
-                                </ListGroup.Item>
-                            )}
-                        </ListGroup>
-                    )}
-
-                    {/* Inline new-customer form */}
-                    {showNewCust && (
-                        <div className="p-2 mt-2 rounded" style={{ background: '#f0fdf4', border: '1px solid #198754' }}>
-                            <div className="d-flex justify-content-between align-items-center mb-2">
-                                <small className="fw-bold text-success">New Customer</small>
-                                <Button variant="link" size="sm" className="p-0 text-muted"
-                                    onClick={() => { setShowNewCust(false); setNewCustData(emptyNewCustomer); }}>
-                                    Cancel
+                                    Add
                                 </Button>
                             </div>
-                            <Form onSubmit={saveNewCustomer}>
-                                <Row className="g-2">
-                                    <Col xs={12} sm={6}>
-                                        <Form.Control size="sm" placeholder="Name *" required
-                                            value={newCustData.name}
-                                            onChange={e => setNewCustData(p => ({ ...p, name: e.target.value }))} />
-                                    </Col>
-                                    <Col xs={12} sm={6}>
-                                        <Form.Control size="sm" placeholder="Phone"
-                                            value={newCustData.phone}
-                                            onChange={e => setNewCustData(p => ({ ...p, phone: e.target.value }))} />
-                                    </Col>
-                                    <Col xs={6}>
-                                        <Form.Control size="sm" type="number" placeholder="Initial Balance (₹)" min="0"
-                                            value={newCustData.balance}
-                                            onChange={e => setNewCustData(p => ({ ...p, balance: e.target.value }))} />
-                                    </Col>
-                                    <Col xs={6}>
-                                        <Button size="sm" type="submit" variant="success" className="w-100" disabled={savingCust}>
-                                            {savingCust ? 'Saving…' : 'Create & Select'}
-                                        </Button>
-                                    </Col>
-                                </Row>
-                            </Form>
+                        </Form>
+                    </div>
+                )}
+
+                {sampleBlockVisible && (
+                    <div id="sampleDetailsBlock">
+                        <hr />
+                        <div className="d-flex justify-content-between align-items-center my-4">
+                            <h4 className="m-0">Sample Details</h4>
+                            <InputGroup style={{ width: '25%' }}>
+                                <InputGroup.Text className="fw-bold">Date</InputGroup.Text>
+                                <Form.Control id="dateTimePicker" value={dateDisplay} readOnly />
+                            </InputGroup>
                         </div>
-                    )}
-                </Form.Group>
 
-                <Form.Group className="mb-3">
-                    <Form.Label className="field-label">Customer Name <span className="required">*</span></Form.Label>
-                    <Form.Control value={customerDisplay(selectedCustomer)} readOnly />
-                </Form.Group>
+                        <div id="sampleDetailsContainer">
+                            {sampleRows.map((row, idx) => (
+                                <div className="sampleDetails input-group input-group-lg mb-4" key={row.id}>
+                                    <div className="input-group input-group-lg mb-1">
+                                        <span className="input-group-text fw-bold">Name</span>
+                                        <Form.Control
+                                            ref={idx === 0 ? firstItemRef : undefined}
+                                            type="text" name="name" placeholder="Name" maxLength={32}
+                                            value={row.name}
+                                            onChange={(e) => updateRow(idx, 'name', e.target.value)}
+                                        />
+                                        <span className="input-group-text fw-bold">Item</span>
+                                        <Form.Control
+                                            type="text" name="item" placeholder="Item type" maxLength={32}
+                                            value={row.item}
+                                            onChange={(e) => updateRow(idx, 'item', e.target.value)}
+                                            isInvalid={!!row.errors?.item}
+                                            required
+                                        />
+                                        <span className="input-group-text fw-bold">Weight</span>
+                                        <Form.Control
+                                            type="number" name="total_weight" placeholder="Total weight"
+                                            min={0} step="any"
+                                            value={row.totalWeight}
+                                            onChange={(e) => updateRow(idx, 'totalWeight', e.target.value)}
+                                            isInvalid={!!row.errors?.totalWeight}
+                                            required
+                                        />
+                                        <span className="input-group-text">/</span>
+                                        <Form.Control
+                                            type="number" name="test_weight" placeholder="Test weight"
+                                            min={0} step="any"
+                                            value={row.testWeight}
+                                            onChange={(e) => updateRow(idx, 'testWeight', e.target.value)}
+                                            isInvalid={!!row.errors?.testWeight}
+                                            required
+                                        />
+                                        <span className="input-group-text">
+                                            <Form.Check
+                                                type="checkbox" name="returned"
+                                                checked={row.returned}
+                                                onChange={(e) => updateRow(idx, 'returned', e.target.checked)}
+                                                className="mt-0"
+                                                label={<span className="ms-1 fw-bold">Sample Returned</span>}
+                                            />
+                                        </span>
+                                        <Button
+                                            type="button" variant="danger"
+                                            className={`deleteSampleDetailsBtn ${sampleRows.length === 1 ? 'invisible' : ''}`}
+                                            onClick={() => removeRow(idx)}
+                                            aria-label="Delete sample row"
+                                        >
+                                            <FaTrash />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
 
-                <Form.Label className="field-label mb-2">Sample Item Entry</Form.Label>
-                <div className="item-entry-card p-3 mb-3 border rounded shadow-sm bg-light">
-                    <Row className="g-2 mb-2">
-                        <Col md={12}>
-                            <Form.Label className="small fw-bold">Item Type</Form.Label>
-                            <Form.Control
-                                placeholder="eg., Ring, Necklace"
-                                value={sampleDraft.item}
-                                isInvalid={errors.sample?.item}
-                                onChange={(e) => {
-                                    setSampleDraft((prev) => ({ ...prev, item: e.target.value }));
-                                    if (errors.sample?.item) setErrors(prev => ({ ...prev, sample: { ...prev.sample, item: false } }));
-                                }}
-                            />
-                        </Col>
-                    </Row>
-                    <Row className="g-2">
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Gross Wt</Form.Label>
-                            <Form.Control
-                                type="number"
-                                step="0.001"
-                                placeholder="0.000"
-                                value={sampleDraft.grossWeight}
-                                isInvalid={errors.sample?.grossWeight}
-                                onChange={(e) => {
-                                    handleWeightFieldInput('grossWeight', e.target.value);
-                                    if (errors.sample?.grossWeight) setErrors(prev => ({ ...prev, sample: { ...prev.sample, grossWeight: false } }));
-                                }}
-                            />
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Sample Wt</Form.Label>
-                            <Form.Control
-                                type="number"
-                                step="0.001"
-                                placeholder="0.000"
-                                value={sampleDraft.sampleWeight}
-                                isInvalid={errors.sample?.sampleWeight}
-                                onChange={(e) => {
-                                    handleWeightFieldInput('sampleWeight', e.target.value);
-                                    if (errors.sample?.sampleWeight) setErrors(prev => ({ ...prev, sample: { ...prev.sample, sampleWeight: false } }));
-                                }}
-                            />
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label className="small fw-bold">Net Wt</Form.Label>
-                            <Form.Control
-                                value={deriveWeights(sampleDraft).net}
-                                readOnly
-                                className="bg-white"
-                            />
-                        </Col>
-                    </Row>
-                    <div className="d-flex align-items-center gap-3 mt-2">
-                        <Form.Check
-                            type="switch"
-                            id="returned-draft"
-                            label="Returned (No Charge)"
-                            checked={sampleDraft.returned}
-                            onChange={(e) => setSampleDraft(prev => ({ ...prev, returned: e.target.checked }))}
-                            className="fw-bold"
-                        />
-                    </div>
-                    <Button className="add-sample-btn mt-3" onClick={addSampleToList}>
-                        <FaPlus className="me-1" /> Add to List
-                    </Button>
-                </div>
+                        <div className="d-flex justify-content-center">
+                            <Button
+                                id="addSampleBtn" type="button" variant="outline-info" className="w-50"
+                                onClick={addRow}
+                                disabled={sampleRows.length >= MAX_ITEMS}
+                                aria-label="Add sample row"
+                            >
+                                <FaPlus />
+                            </Button>
+                        </div>
 
-                <div className="sample-list-panel mt-3">
-                    <div className="sample-list-head">
-                        <span>Items List</span>
-                        <span className="count-pill">{sampleItems.length} items</span>
-                    </div>
-                    <div className="table-responsive">
-                        <table className="table table-bordered table-hover mb-0" style={{ fontSize: '0.85rem' }}>
-                            <thead className="table-dark">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Item</th>
-                                    <th>Gross</th>
-                                    <th>Sample</th>
-                                    <th>Net</th>
-                                    <th className="text-center">Ret?</th>
-                                    <th className="text-center"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sampleItems.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" className="text-center py-4 text-muted italic">No items added yet</td>
-                                    </tr>
-                                ) : (
-                                    sampleItems.map((s) => (
-                                        <tr key={s.id}>
-                                            <td>{s.seq}</td>
-                                            <td className="fw-bold">{s.item}</td>
-                                            <td>{s.grossWeight}g</td>
-                                            <td>{s.sampleWeight}g</td>
-                                            <td className="text-primary fw-bold">{s.netWeight}g</td>
-                                            <td className="text-center">
-                                                <Form.Check
-                                                    type="switch"
-                                                    checked={s.returned}
-                                                    onChange={() => {
-                                                        setSampleItems(prev => prev.map(item =>
-                                                            item.id === s.id ? { ...item, returned: !item.returned } : item
-                                                        ));
-                                                    }}
-                                                />
-                                            </td>
-                                            <td className="text-center">
-                                                <Button variant="link" className="p-0 text-danger" onClick={() => removeSample(s.id)}>
-                                                    <FaTrash />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))
+                        <div className="d-flex justify-content-end">
+                            <Button
+                                id="sampleDetailsSubmitBtn" type="button"
+                                variant="primary" size="lg"
+                                className="d-flex align-items-center m-1"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                            >
+                                {loading && (
+                                    <span className="spinner-border spinner-border-sm text-light me-3" role="status" />
                                 )}
-                            </tbody>
-                        </table>
+                                Submit
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                )}
+                <DraftStateFooter isDirty={hasDraftEntries} />
             </Modal.Body>
-
-            <Modal.Footer className="new-sample-footer">
-                <Button variant="primary" className="save-btn" onClick={handleSave} disabled={loading}>
-                    {loading ? 'Saving...' : 'Save'}
-                </Button>
-                <Button variant="outline-secondary" className="cancel-btn" onClick={onHide} disabled={loading}>
-                    Cancel
-                </Button>
-            </Modal.Footer>
-
-            <style>{`
-                .new-sample-modal .modal-content {
-                    border-radius: 20px;
-                    border: none;
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-                    overflow: hidden;
-                }
-                .new-sample-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 1.5rem 2rem;
-                    border: none;
-                }
-                .new-sample-header .btn-close {
-                    filter: brightness(0) invert(1);
-                    opacity: 0.8;
-                }
-                .field-label {
-                    font-size: 0.9rem;
-                    font-weight: 700;
-                    color: #374151;
-                    margin-bottom: 0.5rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.025em;
-                }
-                .required {
-                    color: #ef4444;
-                }
-                .form-control, .input-group-text {
-                    border-radius: 10px;
-                    padding: 0.75rem 1rem;
-                    border: 2px solid #e5e7eb;
-                    font-weight: 500;
-                }
-                .form-control:focus {
-                    border-color: #667eea;
-                    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-                }
-                .suggestion-list {
-                    position: absolute;
-                    left: 0;
-                    right: 0;
-                    z-index: 1000;
-                    margin-top: 5px;
-                    border-radius: 12px;
-                    overflow: hidden;
-                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-                    border: 2px solid #667eea;
-                }
-                .returned-row {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    background: #f9fafb;
-                    padding: 1rem;
-                    border-radius: 12px;
-                    margin-top: 1rem;
-                }
-                .add-sample-btn {
-                    width: 100%;
-                    padding: 1rem;
-                    border: none;
-                    background: linear-gradient(90deg, #667eea, #764ba2);
-                    font-weight: 800;
-                    border-radius: 12px;
-                    margin-top: 1.5rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.05em;
-                    transition: all 0.3s ease;
-                }
-                .add-sample-btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-                }
-                .sample-list-panel {
-                    margin-top: 2rem;
-                    border: 2px solid #f3f4f6;
-                    border-radius: 16px;
-                    overflow: hidden;
-                }
-                .sample-list-head {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 1rem 1.25rem;
-                    color: #ffffff;
-                    font-weight: 800;
-                    background: #1f2937;
-                    font-size: 1rem;
-                }
-                .count-pill {
-                    font-size: 0.8rem;
-                    background: rgba(255, 255, 255, 0.15);
-                    border-radius: 30px;
-                    padding: 4px 12px;
-                    letter-spacing: 0.05em;
-                }
-                .sample-list-body {
-                    background: #ffffff;
-                    max-height: 350px;
-                    overflow-y: auto;
-                }
-                .empty-list {
-                    padding: 3rem 1rem;
-                    text-align: center;
-                    color: #9ca3af;
-                    font-style: italic;
-                    font-weight: 500;
-                }
-                .sample-row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 1.25rem;
-                    border-bottom: 1px solid #f3f4f6;
-                    transition: background 0.2s;
-                }
-                .sample-row:hover {
-                    background: #f9fafb;
-                }
-                .sample-title {
-                    font-size: 1.1rem;
-                    font-weight: 800;
-                    color: #111827;
-                    margin-bottom: 0.2rem;
-                }
-                .sample-meta {
-                    font-size: 0.9rem;
-                    color: #6b7280;
-                    font-weight: 600;
-                }
-                .status-badge {
-                    font-size: 0.7rem;
-                    margin-left: 8px;
-                    padding: 4px 10px;
-                    border-radius: 30px;
-                    vertical-align: middle;
-                    text-transform: uppercase;
-                }
-                .new-sample-footer {
-                    padding: 1.5rem 2rem;
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 1.25rem;
-                    background: #f9fafb;
-                    border-top: 1px solid #e5e7eb;
-                }
-                .save-btn {
-                    padding: 0.9rem;
-                    border: none;
-                    background: #10b981;
-                    font-weight: 800;
-                    border-radius: 12px;
-                    color: white;
-                }
-                .save-btn:hover {
-                    background: #059669;
-                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-                }
-                .cancel-btn {
-                    padding: 0.9rem;
-                    font-weight: 700;
-                    border-radius: 12px;
-                    border: 2px solid #e5e7eb;
-                    color: #374151;
-                }
-            `}</style>
         </Modal>
+        <style>{`
+            .modal-xxl { max-width: 90vw; }
+            @media (min-width: 1400px) { .modal-xxl { max-width: 1320px; } }
+            #sampleDetailsContainer .sampleDetails .form-control.is-invalid {
+                border-color: #dc3545;
+            }
+        `}</style>
+        </>
     );
 };
 

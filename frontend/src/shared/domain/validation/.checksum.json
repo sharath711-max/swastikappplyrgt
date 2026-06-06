@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-05-31T08:18:28.636Z",
+  "files": {
+    "errorCodes.js": "d93c08ffa8414ec02e3671d91a543fc810e0ac20ebd89b5aeaea93f072bd40e5",
+    "headerRules.js": "463eb26a6b97e15156e6a64184397649cd8bb21df10a3d858d94e989fda990ae",
+    "index.js": "f4fbc490cb7ac0b0a088cdae82b86af89349ed59d7539aad45f2d499681cff49",
+    "itemRules.js": "603e3890513ea1139d6a802ba55bc128768b943574e42c77472631a2bba3597f",
+    "normalization.js": "022367660c60c401a28b416ef8fc2d9674c78a4a5ceea87ea8222727183b8d71"
+  }
+}

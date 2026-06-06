@@ -4,6 +4,7 @@ import { FaBalanceScale } from 'react-icons/fa';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import runModalSubmit from '../utils/handleSubmit';
+import useSafeModalClose from '../hooks/useSafeModalClose';
 
 const NewWeightLossHistoryModal = ({ show, onClose, onHide, customerId, onSuccess, initialAmount = '', initialReason = '' }) => {
     const { addToast } = useToast();
@@ -31,6 +32,11 @@ const NewWeightLossHistoryModal = ({ show, onClose, onHide, customerId, onSucces
         });
         setErrors({});
     }, [initialAmount, initialReason]);
+
+    // Route every close through the safe-close chokepoint so React-Bootstrap's
+    // backdrop can never be orphaned and block page clicks.
+    const { safeClose } = useSafeModalClose({ show, onHide: handleClose });
+    const closeSafely = () => safeClose({ reset: resetForm });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -66,10 +72,7 @@ const NewWeightLossHistoryModal = ({ show, onClose, onHide, customerId, onSucces
                     addToast('Weight loss recorded successfully', 'success');
                 },
                 reload: onSuccess,
-                close: () => {
-                    resetForm();
-                    handleClose();
-                }
+                close: closeSafely
             });
         } catch (error) {
             console.error('Error recording weight loss:', error);
@@ -80,7 +83,7 @@ const NewWeightLossHistoryModal = ({ show, onClose, onHide, customerId, onSucces
     };
 
     return (
-        <Modal show={show} onHide={handleClose} centered backdrop="static" className="wlh-audit-modal shadow-lg">
+        <Modal show={show} onHide={closeSafely} centered backdrop="static" className="wlh-audit-modal shadow-lg">
             <Modal.Header closeButton className="bg-gradient border-0" style={{ backgroundColor: '#2c3e50', color: '#f39c12' }}>
                 <Modal.Title className="fw-bold d-flex align-items-center gap-2">
                     <FaBalanceScale size={24} />
@@ -99,6 +102,7 @@ const NewWeightLossHistoryModal = ({ show, onClose, onHide, customerId, onSucces
                                 <InputGroup size="lg" className="shadow-sm">
                                     <InputGroup.Text className="bg-white border-end-0 text-success fw-bold">₹</InputGroup.Text>
                                     <Form.Control
+                                        autoFocus
                                         type="number"
                                         name="amount"
                                         value={formData.amount}
@@ -143,7 +147,7 @@ const NewWeightLossHistoryModal = ({ show, onClose, onHide, customerId, onSucces
                     </div>
                 </Modal.Body>
                 <Modal.Footer className="border-0 bg-white px-4 py-3">
-                    <Button variant="light" onClick={handleClose} className="px-4 fw-semibold text-secondary shadow-sm">
+                    <Button variant="light" onClick={closeSafely} className="px-4 fw-semibold text-secondary shadow-sm">
                         Cancel
                     </Button>
                     <Button variant="warning" type="submit" disabled={loading} className="px-4 fw-bold shadow-sm d-flex align-items-center gap-2">

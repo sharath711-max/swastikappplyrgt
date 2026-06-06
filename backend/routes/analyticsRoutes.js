@@ -5,6 +5,8 @@ const path = require('path');
 const { db } = require('../db/db');
 const configService = require('../services/configService');
 const { authMiddleware } = require('../middleware/authMiddleware');
+const { requireRole } = require('../middleware/rbac');
+const anomalyService = require('../services/anomalyService');
 
 const HEARTBEAT_FILE = path.join(__dirname, '../db/xrf_heartbeat.json');
 
@@ -21,8 +23,8 @@ router.get('/pnl', (req, res) => {
             params = [start_date, end_date];
         }
 
-        const grossRevenueRaw = db.prepare(`SELECT SUM(amount) as value FROM credit_history WHERE type = 'CREDIT' ${dateFilter}`).get(...params);
-        const weightLossRaw = db.prepare(`SELECT SUM(amount) as value FROM weight_loss_history WHERE 1=1 ${dateFilter}`).get(...params);
+        const grossRevenueRaw = db.prepare(`SELECT SUM(amount) as value FROM credit_history WHERE type = 'CREDIT' AND deletedon IS NULL ${dateFilter}`).get(...params);
+        const weightLossRaw = db.prepare(`SELECT SUM(amount) as value FROM weight_loss_history WHERE deletedon IS NULL ${dateFilter}`).get(...params);
         
         let cashParams = params;
         let cashDateFilter = '';
@@ -80,6 +82,7 @@ router.get('/dashboard', (req, res) => {
             SELECT reason as name, SUM(amount) as value
             FROM weight_loss_history
             WHERE date(created) >= date('now', '-30 days')
+              AND deletedon IS NULL
             GROUP BY reason
             ORDER BY value DESC
         `).all();
@@ -99,7 +102,9 @@ router.get('/summary', (req, res) => {
         const todayRevenue = db.prepare(`
             SELECT COALESCE(SUM(amount), 0) AS val
             FROM credit_history
-            WHERE type = 'DEBIT' AND date(created) = date('now','localtime')
+            WHERE type = 'DEBIT'
+              AND date(created) = date('now','localtime')
+              AND deletedon IS NULL
         `).get().val;
 
         // Cash out today
@@ -187,7 +192,8 @@ router.get('/revenue-breakdown', (req, res) => {
                     COALESCE(SUM(CASE WHEN LOWER(mode_of_payment) = 'upi'     THEN amount ELSE 0 END), 0) AS upi,
                     COALESCE(SUM(CASE WHEN LOWER(mode_of_payment) = 'balance' THEN amount ELSE 0 END), 0) AS balance,
                     COALESCE(SUM(amount), 0) AS total
-                FROM credit_history WHERE type = 'DEBIT' ${filter}
+                FROM credit_history
+                WHERE type = 'DEBIT' AND deletedon IS NULL ${filter}
             `).get();
         };
         const expenseBreakdown = (scope) => {
@@ -285,24 +291,33 @@ router.get('/search', (req, res) => {
         const tests = db.prepare(`
             SELECT gt.id, gt.auto_number, gt.status, gt.total, c.name AS customer_name, 'gold' AS metal_type
             FROM gold_test gt JOIN customer c ON gt.customer_id = c.id
-            WHERE gt.deletedon IS NULL AND (gt.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE gt.deletedon IS NULL AND (gt.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM gold_test_item WHERE gold_test_id = gt.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             UNION ALL
             SELECT st.id, st.auto_number, st.status, st.total, c.name AS customer_name, 'silver' AS metal_type
             FROM silver_test st JOIN customer c ON st.customer_id = c.id
-            WHERE st.deletedon IS NULL AND (st.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE st.deletedon IS NULL AND (st.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM silver_test_item WHERE silver_test_id = st.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             ORDER BY auto_number DESC LIMIT 10
-        `).all(like, like, like, like);
+        `).all(like, like, like, like, like, like, like, like);
 
         const certs = db.prepare(`
             SELECT gc.id, gc.auto_number, gc.status, gc.total, c.name AS customer_name, 'gold' AS metal_type
             FROM gold_certificate gc JOIN customer c ON gc.customer_id = c.id
-            WHERE gc.deletedon IS NULL AND (gc.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE gc.deletedon IS NULL AND (gc.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM gold_certificate_item WHERE gold_certificate_id = gc.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             UNION ALL
             SELECT sc.id, sc.auto_number, sc.status, sc.total, c.name AS customer_name, 'silver' AS metal_type
             FROM silver_certificate sc JOIN customer c ON sc.customer_id = c.id
-            WHERE sc.deletedon IS NULL AND (sc.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE sc.deletedon IS NULL AND (sc.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM silver_certificate_item WHERE silver_certificate_id = sc.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
+            UNION ALL
+            SELECT pc.id, pc.auto_number, pc.status, pc.total, c.name AS customer_name, 'photo' AS metal_type
+            FROM photo_certificate pc JOIN customer c ON pc.customer_id = c.id
+            WHERE pc.deletedon IS NULL AND (pc.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM photo_certificate_item WHERE photo_certificate_id = pc.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             ORDER BY auto_number DESC LIMIT 10
-        `).all(like, like, like, like);
+        `).all(like, like, like, like, like, like, like, like, like, like, like, like);
 
         res.json({ success: true, data: { customers, tests, certs } });
     } catch (e) {
@@ -355,6 +370,28 @@ router.put('/cash-in-hand', (req, res) => {
              ON CONFLICT(key) DO UPDATE SET value = excluded.value, lastmodified = CURRENT_TIMESTAMP`
         ).run(String(amount));
         res.json({ success: true, data: { cash_in_hand: amount } });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// ── GET /api/analytics/anomalies ──────────────────────────────────────────────
+// Governance telemetry: what threatens institutional truth right now.
+// Admin/manager only. Returns an ordered array of anomaly objects;
+// HIGH severity first, MEDIUM next, LOW last. Empty array = clean state.
+// Each detector is fast (indexed SQL or in-memory counters). No charts,
+// no trends — operational present-state only.
+router.get('/anomalies', requireRole('admin', 'manager', 'superadmin'), (req, res) => {
+    try {
+        const anomalies = anomalyService.listAnomalies();
+        res.json({
+            success: true,
+            data: {
+                anomalies,
+                checked_at: new Date().toISOString(),
+                total: anomalies.reduce((s, a) => s + (a.count || 0), 0),
+            },
+        });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }

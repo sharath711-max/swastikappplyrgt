@@ -1,88 +1,68 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { useLocation } from 'react-router-dom';
+import { useRecordModal } from '../contexts/RecordModalContext';
+import { usePrint } from '../contexts/PrintContext';
 import GenericListView from '../components/ListViews/GenericListView';
-import { FaEye, FaFlask, FaCertificate, FaGem, FaBook } from 'react-icons/fa';
+import { FaEye, FaPrint } from 'react-icons/fa';
 import './ListViewsPage.css';
 
+// Tab → display label. Flattened from the record categories. The sidebar only
+// surfaces the 5 record types (GT/GC/ST/SC/PC); Items + Ledger tabs remain
+// addressable by URL (?tab=...) so nothing is lost, just not in the nav.
+const TAB_LABELS = {
+    'gold-tests':               'Gold Tests',
+    'silver-tests':             'Silver Tests',
+    'gold-certificates':        'Gold Certificates',
+    'silver-certificates':      'Silver Certificates',
+    'photo-certificates':       'Photo Certificates',
+    'gold-test-items':          'Gold Items',
+    'silver-test-items':        'Silver Items',
+    'gold-certificate-items':   'Gold Cert Items',
+    'silver-certificate-items': 'Silver Cert Items',
+    'photo-certificate-items':  'Photo Cert Items',
+    'credit-history':           'Credit History',
+    'weight-loss-history':      'Weight Loss',
+};
+
+const DEFAULT_TAB = 'gold-tests';
+
 const ListViewsPage = () => {
-    const navigate = useNavigate();
     const location = useLocation();
+    const { openRecord } = useRecordModal();
+    const { triggerPrint } = usePrint();
 
-    // Mapping configuration
-    const CONFIG = {
-        tests: {
-            label: 'Tests',
-            icon: <FaFlask />,
-            subTabs: [
-                { key: 'gold-tests', label: 'Gold Tests' },
-                { key: 'silver-tests', label: 'Silver Tests' }
-            ]
-        },
-        certificates: {
-            label: 'Certificates',
-            icon: <FaCertificate />,
-            subTabs: [
-                { key: 'gold-certificates', label: 'Gold Certificates' },
-                { key: 'silver-certificates', label: 'Silver Certificates' },
-                { key: 'photo-certificates', label: 'Photo Certificates' }
-            ]
-        },
-        items: {
-            label: 'Items',
-            icon: <FaGem />,
-            subTabs: [
-                { key: 'gold-test-items', label: 'Gold Items' },
-                { key: 'silver-test-items', label: 'Silver Items' },
-                { key: 'gold-certificate-items', label: 'Gold Cert Items' },
-                { key: 'silver-certificate-items', label: 'Silver Cert Items' },
-                { key: 'photo-certificate-items', label: 'Photo Cert Items' }
-            ]
-        },
-        ledger: {
-            label: 'Ledger',
-            icon: <FaBook />,
-            subTabs: [
-                { key: 'credit-history', label: 'Credit History' },
-                { key: 'weight-loss-history', label: 'Weight Loss' }
-            ]
-        }
-    };
-
-    const getInitialState = useCallback(() => {
-        const params = new URLSearchParams(location.search);
-        const cat = params.get('category') || 'tests';
-        const tab = params.get('tab') || 'gold-tests';
-        return { category: cat, tab: tab };
-    }, [location.search]);
-
-    const [activeCategory, setActiveCategory] = useState(() => getInitialState().category);
-    const [activeTab, setActiveTab] = useState(() => getInitialState().tab);
-
-    useEffect(() => {
-        const state = getInitialState();
-        setActiveCategory(state.category);
-        setActiveTab(state.tab);
-    }, [getInitialState]);
-
-    const handleCategoryChange = (catKey) => {
-        const defaultSubTab = CONFIG[catKey].subTabs[0].key;
-        setActiveCategory(catKey);
-        setActiveTab(defaultSubTab);
-        navigate(`/list-views?category=${catKey}&tab=${defaultSubTab}`);
-    };
-
-    const handleTabChange = (tabKey) => {
-        setActiveTab(tabKey);
-        navigate(`/list-views?category=${activeCategory}&tab=${tabKey}`);
-    };
+    // Navigation now lives entirely in the sidebar — the page just renders the
+    // table for whatever `?tab=` is selected. Falls back to gold tests.
+    const params = new URLSearchParams(location.search);
+    const requestedTab = params.get('tab') || DEFAULT_TAB;
+    const activeTab = TAB_LABELS[requestedTab] ? requestedTab : DEFAULT_TAB;
+    const label = TAB_LABELS[activeTab];
 
     const viewAction = (row) => {
         const id = row.id || row.parent_id;
         if (!id) return null;
+
+        const isPrintable = activeTab.endsWith('tests') || activeTab.endsWith('certificates');
+        const printType = activeTab.replace(/s$/, '');
+
         return (
-            <button className="btn-sf-view" onClick={() => navigate(`/record/${activeTab}/${id}`)}>
-                <FaEye className="me-2" /> View
-            </button>
+            <div className="d-flex gap-2">
+                <button className="btn-sf-view" onClick={() => openRecord(activeTab, id)}>
+                    <FaEye className="me-2" /> View
+                </button>
+                {isPrintable && (
+                    <button className="btn-sf-view bg-white text-primary border-primary" style={{ border: '1px solid' }} onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                            await triggerPrint(printType, id, { layout: 'small', itemLevel: true });
+                        } catch (err) {
+                            console.error('Print failed:', err);
+                        }
+                    }} title="Print Small Certificates for all items">
+                        <FaPrint className="me-2" /> Small Cert
+                    </button>
+                )}
+            </div>
         );
     };
 
@@ -192,36 +172,9 @@ const ListViewsPage = () => {
     return (
         <div className="list-views-page">
             <div className="page-header-panel">
-                <div className="breadcrumb-label">OPERATIONS & RECORDS</div>
+                <div className="breadcrumb-label">OPERATIONS &amp; RECORDS</div>
                 <div className="title-section">
-                    <h2>{CONFIG[activeCategory].label} List Views</h2>
-                </div>
-
-                <div className="category-tabs">
-                    {Object.keys(CONFIG).map((key) => (
-                        <div
-                            key={key}
-                            className={`category-tab-item ${activeCategory === key ? 'active' : ''}`}
-                            onClick={() => handleCategoryChange(key)}
-                        >
-                            <span className="tab-icon">{CONFIG[key].icon}</span>
-                            <span>{CONFIG[key].label}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="sub-nav-container">
-                <div className="sub-nav-pills">
-                    {CONFIG[activeCategory].subTabs.map((sub) => (
-                        <button
-                            key={sub.key}
-                            className={`sub-pill ${activeTab === sub.key ? 'active' : ''}`}
-                            onClick={() => handleTabChange(sub.key)}
-                        >
-                            {sub.label}
-                        </button>
-                    ))}
+                    <h2>{label} List View</h2>
                 </div>
             </div>
 
@@ -231,8 +184,8 @@ const ListViewsPage = () => {
                         type={activeTab}
                         endpoint={`/list/${activeTab}`}
                         columns={COLUMNS[activeTab] || []}
-                        title={CONFIG[activeCategory].subTabs.find(t => t.key === activeTab)?.label}
-                        emptyMessage={`No ${activeTab.replace('-', ' ')} records found.`}
+                        title={label}
+                        emptyMessage={`No ${activeTab.replace(/-/g, ' ')} records found.`}
                     />
                 </div>
             </div>

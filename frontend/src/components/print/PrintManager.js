@@ -4,12 +4,24 @@ import SilverCert from './SilverCert';
 import PhotoCert from './PhotoCert';
 import MemoCert from './MemoCert';
 import PaymentCert from './PaymentCert';
+import SmallCert from './SmallCert';
 
 /**
  * Unified Print Manager for the SwastikCore print architecture.
  * Determines and renders the designated certificate template based on record type.
+ * Supports layout variants: 'full' (default), 'small' (compact sticker cert).
  */
-const PrintManager = ({ type, data, item, photos = [] }) => {
+const PrintManager = ({ type, data, item, photos = [], layout = 'full' }) => {
+    // Small certificate layout — Python parity (gold & silver only). Python shipped the
+    // same test-slip layout under both gold_test/ and gold_certificate/ (small_certificate.html),
+    // so the tests and the gold/silver certs share the SmallCert component.
+    // PC is intentionally excluded: Python's photo small slip dropped the photo and the
+    // cert#, leaving a bill-only stub with no operator value over the full PCI.
+    if (layout === 'small') {
+        const recordType = type.toString().toLowerCase().includes('silver') || type === 'ST' ? 'silver' : 'gold';
+        return <SmallCert test={data} item={item} recordType={recordType} />;
+    }
+
     switch (type) {
         case 'GT':
         case 'gold':

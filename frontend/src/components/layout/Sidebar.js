@@ -1,173 +1,165 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaTachometerAlt, FaUsers, FaCheckDouble, FaBars, FaChevronDown,
-    FaUserShield, FaFileInvoiceDollar, FaDatabase, FaTrash
+    FaTachometerAlt, FaUsers, FaTable, FaChartBar,
+    FaCoins, FaBalanceScale, FaCertificate, FaFileAlt, FaImage,
 } from 'react-icons/fa';
 import ProtectedComponent from './ProtectedComponent';
+import { useWorkflow, WORKFLOWS } from '../../contexts/WorkflowContext';
 import { APP_CONFIG } from '../../utils/Constants';
+
+// Icon per workflow — matches WorkflowDispatchCards on the dashboard so the
+// operator sees the same glyph in two places (sidebar nav + dashboard tile).
+const WORKFLOW_ICONS = {
+    gold:        FaCoins,
+    gold_cert:   FaCertificate,
+    silver:      FaBalanceScale,
+    silver_cert: FaFileAlt,
+    photo_cert:  FaImage,
+};
+
+const WORKFLOW_ROLES = ['admin', 'manager', 'technician', 'front_desk'];
+
+// Records sub-nav — vertical expansion of the 5 record types (GT/GC/ST/SC/PC).
+// Each links to the shared list-views page (same GT-style table) by tab.
+// Items + Ledger remain reachable by URL but are intentionally not surfaced here.
+const RECORD_LINKS = [
+    { tab: 'gold-tests',          category: 'tests',        label: 'Gold Test' },
+    { tab: 'gold-certificates',   category: 'certificates', label: 'Gold Certificate' },
+    { tab: 'silver-tests',        category: 'tests',        label: 'Silver Test' },
+    { tab: 'silver-certificates', category: 'certificates', label: 'Silver Certificate' },
+    { tab: 'photo-certificates',  category: 'certificates', label: 'Photo Certificate' },
+];
 
 const Sidebar = ({ sidebarCollapsed }) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const {
+        selectedWorkflow,
+        setSelectedWorkflow,
+        tryWorkflowSwitch,
+    } = useWorkflow();
 
-    const [expandedMenus, setExpandedMenus] = useState(() => ({
-        Admin: location.pathname.startsWith('/admin'),
-    }));
 
-    const navigation = React.useMemo(() => [
-        { type: 'section', label: 'MAIN' },
-        {
-            name: 'Dashboard',
-            path: '/',
-            icon: <FaTachometerAlt />,
-            exact: true,
-            roles: ['admin', 'manager'],
-        },
-        {
-            name: 'Customers',
-            path: '/customers',
-            icon: <FaUsers />,
-            roles: ['admin', 'manager', 'front_desk'],
-        },
-        {
-            name: 'Workflow Board',
-            path: '/workflow',
-            icon: <FaCheckDouble />,
-            roles: ['admin', 'manager', 'technician', 'front_desk'],
-        },
-        { type: 'section', label: 'TOOLS' },
-        {
-            name: 'Bills',
-            path: '/module-bills',
-            icon: <FaFileInvoiceDollar />,
-            roles: ['admin', 'manager', 'front_desk'],
-        },
-        {
-            name: 'Reports',
-            path: '/list-views',
-            icon: <FaBars />,
-            roles: ['admin', 'manager'],
-        },
-        { type: 'section', label: 'SYSTEM' },
-        {
-            name: 'Admin',
-            path: '/admin/users',
-            icon: <FaUserShield />,
-            roles: ['admin'],
-            subItems: [
-                { name: 'Users', path: '/admin/users' },
-            ],
-        },
-        {
-            name: 'Back up',
-            path: '/admin/backup',
-            icon: <FaDatabase />,
-            roles: ['admin'],
-        },
-        {
-            name: 'Recycle Bin',
-            path: '/admin/recycle-bin',
-            icon: <FaTrash />,
-            roles: ['admin'],
-        },
-    ], []);
-
-    const isActive = React.useCallback((path, exact = false) => {
+    const isActive = (path, exact = false) => {
         if (!path) return false;
-        if (path.includes('?')) {
-            const [basePath, query] = path.split('?');
-            if (location.pathname !== basePath) return false;
-            const expected = new URLSearchParams(query);
-            const current = new URLSearchParams(location.search);
-            return Array.from(expected.entries()).every(([key, value]) => current.get(key) === value);
-        }
         if (exact) return location.pathname === path;
         return location.pathname.startsWith(path);
-    }, [location.pathname, location.search]);
+    };
 
-    const isGroupActive = React.useCallback((item) => {
-        if (!item.subItems) return isActive(item.path, item.exact);
-        return item.subItems.some(sub => isActive(sub.path));
-    }, [isActive]);
+    const onWorkflowsPath = location.pathname.startsWith('/workflow');
+    const onRecordsPath   = location.pathname.startsWith('/list-views');
+    const currentRecordTab = new URLSearchParams(location.search).get('tab');
+    const [recordsOpen, setRecordsOpen] = useState(onRecordsPath);
 
-    const toggleMenu = (name) => {
-        setExpandedMenus(prev => ({ ...prev, [name]: !prev[name] }));
+    const handleSelectWorkflow = (key) => {
+        if (!tryWorkflowSwitch(key)) return;
+        setSelectedWorkflow(key);
+        if (!onWorkflowsPath) navigate('/workflow');
     };
 
     return (
-        <aside className="app-sidebar">
+        <aside className="app-sidebar app-sidebar--flat">
             <nav className="sidebar-nav">
-                {navigation.map((item, index) => {
-                    if (item.type === 'section') {
+                {/* Dashboard */}
+                <ProtectedComponent roles={['admin', 'manager']}>
+                    <Link
+                        to="/"
+                        className={`nav-item ${isActive('/', true) ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaTachometerAlt /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Dashboard</span>}
+                    </Link>
+                </ProtectedComponent>
+
+                {/* Workflow operational queues — simple icon + label rows.
+                    Operator chose Python-style sidebar: no chips, no aging
+                    dots, no count badges, no "+ New" buttons. Aging /
+                    queue-pressure signal now lives on the dashboard
+                    WorkflowDispatchCards + on the WorkflowBoard itself. */}
+                <ProtectedComponent roles={WORKFLOW_ROLES}>
+                    {WORKFLOWS.map((w) => {
+                        const isCurrent = onWorkflowsPath && selectedWorkflow === w.key;
+                        const Icon = WORKFLOW_ICONS[w.key] || FaCoins;
                         return (
-                            <div key={index} className="nav-section-label">
-                                {!sidebarCollapsed
-                                    ? <span>{item.label}</span>
-                                    : <hr className="nav-section-divider" />
-                                }
-                            </div>
+                            <button
+                                key={w.key}
+                                type="button"
+                                className={`nav-item nav-item--button ${isCurrent ? 'active' : ''}`}
+                                onClick={() => handleSelectWorkflow(w.key)}
+                                title={w.label}
+                                aria-current={isCurrent ? 'page' : undefined}
+                            >
+                                <span className="nav-icon"><Icon aria-hidden="true" /></span>
+                                {!sidebarCollapsed && <span className="nav-label">{w.label}</span>}
+                            </button>
                         );
-                    }
+                    })}
+                </ProtectedComponent>
 
-                    const NavItemContent = (
-                        <div className="nav-section">
-                            {!item.subItems ? (
-                                <Link
-                                    to={item.path}
-                                    className={`nav-item ${isActive(item.path, item.exact) ? 'active' : ''}`}
+                {/* Customers / Bills */}
+                <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
+                    <Link
+                        to="/customers"
+                        className={`nav-item ${isActive('/customers') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaUsers /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Customers</span>}
+                    </Link>
+                </ProtectedComponent>
+                <ProtectedComponent roles={['admin', 'manager']}>
+                    <div className={`nav-group ${onRecordsPath ? 'active' : ''}`}>
+                        <button
+                            type="button"
+                            className="nav-group-header nav-item--button"
+                            onClick={() => {
+                                // Collapsed rail can't show children — jump to the
+                                // first record list instead of a dead toggle.
+                                if (sidebarCollapsed) {
+                                    navigate('/list-views?category=tests&tab=gold-tests');
+                                    return;
+                                }
+                                setRecordsOpen((o) => !o);
+                            }}
+                            aria-expanded={recordsOpen}
+                            title="Records"
+                        >
+                            <span className="nav-icon"><FaTable /></span>
+                            {!sidebarCollapsed && <span className="nav-label">Records</span>}
+                            {!sidebarCollapsed && (
+                                <span
+                                    className="nav-caret"
+                                    aria-hidden="true"
+                                    style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.7 }}
                                 >
-                                    <span className="nav-icon">{item.icon}</span>
-                                    {!sidebarCollapsed && <span className="nav-label">{item.name}</span>}
-                                </Link>
-                            ) : (
-                                <div className={`nav-group ${isGroupActive(item) ? 'active' : ''}`}>
-                                    <div
-                                        className="nav-group-header"
-                                        onClick={() => !sidebarCollapsed && toggleMenu(item.name)}
-                                        style={{ cursor: !sidebarCollapsed ? 'pointer' : 'default' }}
-                                    >
-                                        <span className="nav-icon">{item.icon}</span>
-                                        {!sidebarCollapsed && (
-                                            <>
-                                                <span className="nav-label">{item.name}</span>
-                                                <FaChevronDown
-                                                    style={{
-                                                        marginLeft: 'auto',
-                                                        fontSize: '0.8em',
-                                                        transform: expandedMenus[item.name] ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                        transition: 'transform 0.2s'
-                                                    }}
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-                                    {!sidebarCollapsed && expandedMenus[item.name] && (
-                                        <div className="nav-subitems">
-                                            {item.subItems.map((subItem, subIndex) => (
-                                                <Link
-                                                    key={subIndex}
-                                                    to={subItem.path}
-                                                    className={`nav-subitem ${isActive(subItem.path) ? 'active' : ''}`}
-                                                >
-                                                    <span className="nav-icon-sm">{subItem.icon}</span>
-                                                    <span>{subItem.name}</span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                    {recordsOpen ? '▾' : '▸'}
+                                </span>
                             )}
-                        </div>
-                    );
-
-                    return item.roles ? (
-                        <ProtectedComponent key={index} roles={item.roles}>
-                            {NavItemContent}
-                        </ProtectedComponent>
-                    ) : (
-                        <React.Fragment key={index}>{NavItemContent}</React.Fragment>
-                    );
-                })}
+                        </button>
+                        {!sidebarCollapsed && recordsOpen && (
+                            <div className="nav-subitems">
+                                {RECORD_LINKS.map((r) => (
+                                    <Link
+                                        key={r.tab}
+                                        to={`/list-views?category=${r.category}&tab=${r.tab}`}
+                                        className={`nav-subitem ${onRecordsPath && currentRecordTab === r.tab ? 'active' : ''}`}
+                                    >
+                                        {r.label}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </ProtectedComponent>
+                <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
+                    <Link
+                        to="/reports"
+                        className={`nav-item ${isActive('/reports') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon"><FaChartBar /></span>
+                        {!sidebarCollapsed && <span className="nav-label">Reports</span>}
+                    </Link>
+                </ProtectedComponent>
             </nav>
 
             {!sidebarCollapsed && (

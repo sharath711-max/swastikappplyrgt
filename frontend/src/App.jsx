@@ -12,6 +12,8 @@ import ModalManager from './components/core/ModalManager';
 import AppShell from './components/layout/AppShell';
 
 import { PrintProvider } from './contexts/PrintContext';
+import { WorkflowProvider } from './contexts/WorkflowContext';
+import { RecordModalProvider } from './contexts/RecordModalContext';
 import PrintPortal from './components/print/PrintPortal';
 import Dashboard from './pages/Dashboard';
 import Verify from './pages/public/Verify';
@@ -27,8 +29,6 @@ import RecordPage from './pages/RecordPage';
 import BillsReportPage from './pages/BillsReportPage';
 import ModuleBillsPage from './pages/ModuleBillsPage';
 import ItemMasterPage from './pages/ItemMasterPage';
-import BackupPage from './pages/BackupPage';
-import RecycleBinPage from './pages/RecycleBinPage';
 
 import './index.css';
 import './styles/GlobalStyles.css';
@@ -42,6 +42,8 @@ export default function App() {
         <ModalProvider>
           <ToastContainer />
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <RecordModalProvider>
+            <WorkflowProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/verify/:autoNumber" element={<Verify />} />
@@ -75,11 +77,13 @@ export default function App() {
                   <AppShell><BillsReportPage /></AppShell>
                 </ProtectedRoute>
               } />
-              <Route path="/module-bills" element={
+              <Route path="/reports" element={
                 <ProtectedRoute roles={['admin', 'manager', 'front_desk']}>
                   <AppShell><ModuleBillsPage /></AppShell>
                 </ProtectedRoute>
               } />
+              {/* Legacy path — Bills page is now Reports */}
+              <Route path="/module-bills" element={<Navigate to="/reports" replace />} />
               <Route path="/items" element={
                 <ProtectedRoute roles={['admin', 'manager', 'technician']}>
                   <AppShell><ItemMasterPage /></AppShell>
@@ -111,17 +115,6 @@ export default function App() {
                   <AppShell><UserManagement /></AppShell>
                 </ProtectedRoute>
               } />
-              <Route path="/admin/backup" element={
-                <ProtectedRoute roles={['admin']}>
-                  <AppShell><BackupPage /></AppShell>
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/recycle-bin" element={
-                <ProtectedRoute roles={['admin']}>
-                  <AppShell><RecycleBinPage /></AppShell>
-                </ProtectedRoute>
-              } />
-
               <Route path="/record/:type/:id" element={
                 <ProtectedRoute>
                   <AppShell><RecordPage /></AppShell>
@@ -135,6 +128,8 @@ export default function App() {
             </Routes>
             <ModalManager />
             <PrintPortal />
+            </WorkflowProvider>
+            </RecordModalProvider>
           </Router>
         </ModalProvider>
         </PrintProvider>

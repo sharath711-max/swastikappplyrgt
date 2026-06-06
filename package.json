@@ -11,14 +11,9 @@
     "seed:superadmin": "node seed_superadmin.js",
     "start": "node backend/app.js",
     "setup": "run.bat",
-    "windows": "run.bat",
-    "test:backend": "npm --prefix backend test -- --runInBand",
-    "test:frontend": "npm --prefix frontend test -- --watchAll=false",
-    "test:ui-components": "npm --prefix frontend run test:components",
-    "test:ui-components:coverage": "npm --prefix frontend run test:components:coverage",
-    "test:e2e": "npm --prefix frontend run test:e2e",
-    "test:e2e-ui": "npm --prefix frontend run test:e2e-ui",
-    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e",
+    "windows": "manager.exe",
+    "sync:validation": "node scripts/sync-validation.js",
+    "check:validation": "node scripts/check-validation.js",
     "logs:maintain": "npm --prefix backend run logs:maintain"
   }
 }

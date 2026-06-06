@@ -64,7 +64,10 @@ class WorkflowService {
                 'Gold Test' AS description,
                 gt.total AS total, gt.mode_of_payment, gt.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN gt.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN gt.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM gold_test_item
+                 WHERE gold_test_id = gt.id AND deletedon IS NULL) AS items_summary
             FROM gold_test gt
             JOIN customer c ON gt.customer_id = c.id
             WHERE gt.deletedon IS NULL
@@ -76,7 +79,10 @@ class WorkflowService {
                 'Silver Test' AS description,
                 st.total AS total, st.mode_of_payment, st.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN st.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN st.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM silver_test_item
+                 WHERE silver_test_id = st.id AND deletedon IS NULL) AS items_summary
             FROM silver_test st
             JOIN customer c ON st.customer_id = c.id
             WHERE st.deletedon IS NULL
@@ -88,7 +94,10 @@ class WorkflowService {
                 'Gold Certificate' AS description,
                 gc.total AS total, gc.mode_of_payment, gc.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN gc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN gc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM gold_certificate_item
+                 WHERE gold_certificate_id = gc.id AND deletedon IS NULL) AS items_summary
             FROM gold_certificate gc
             JOIN customer c ON gc.customer_id = c.id
             WHERE gc.deletedon IS NULL
@@ -100,7 +109,10 @@ class WorkflowService {
                 'Silver Certificate' AS description,
                 sc.total AS total, sc.mode_of_payment, sc.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN sc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN sc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM silver_certificate_item
+                 WHERE silver_certificate_id = sc.id AND deletedon IS NULL) AS items_summary
             FROM silver_certificate sc
             JOIN customer c ON sc.customer_id = c.id
             WHERE sc.deletedon IS NULL
@@ -112,7 +124,10 @@ class WorkflowService {
                 'Photo Certificate' AS description,
                 pc.total AS total, pc.mode_of_payment, pc.created AS createdon,
                 c.name AS customer_name,
-                CASE WHEN pc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                CASE WHEN pc.print_snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot,
+                (SELECT GROUP_CONCAT(COALESCE(item_type, '') || ' ' || COALESCE(name, ''), ' ')
+                 FROM photo_certificate_item
+                 WHERE photo_certificate_id = pc.id AND deletedon IS NULL) AS items_summary
             FROM photo_certificate pc
             JOIN customer c ON pc.customer_id = c.id
             WHERE pc.deletedon IS NULL

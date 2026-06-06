@@ -7,7 +7,7 @@ import NewGoldTestModal from '../components/NewGoldTestModal';
 import NewSilverTestModal from '../components/NewSilverTestModal';
 import NewCertificateModal from '../components/NewCertificateModal';
 import Phase2Modal from '../components/Phase2Modal';
-import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaCertificate, FaLock, FaPlus, FaWhatsapp } from 'react-icons/fa';
+import { FaClock, FaCheck, FaTrash, FaFileInvoice, FaSearch, FaTimes, FaCertificate, FaLock, FaPlus, FaWhatsapp, FaPrint } from 'react-icons/fa';
 import { useSocket } from '../hooks/useSocket';
 import { usePrint } from '../contexts/PrintContext';
 import { useWorkflow, WORKFLOW_KEYS, WORKFLOW_BY_KEY } from '../contexts/WorkflowContext';
@@ -444,7 +444,8 @@ const WorkflowBoard = () => {
         return (
             (item.customer_name || '').toLowerCase().includes(q) ||
             (item.auto_number || '').toLowerCase().includes(q) ||
-            (item.id || '').toString().includes(q)
+            (item.id || '').toString().includes(q) ||
+            (item.items_summary || '').toLowerCase().includes(q)
         );
     });
 
@@ -503,6 +504,7 @@ const WorkflowBoard = () => {
         return registerModalCloser(closer);
     }, [registerModalCloser]);
 
+    // eslint-disable-next-line no-unused-vars
     const getTypeLabel = (type) => {
         switch (type) {
             case 'gold': return 'Gold Test';
@@ -610,6 +612,24 @@ const WorkflowBoard = () => {
                 await triggerPrint(printType, id);
             } catch (err) {
                 addToast('Failed to generate certificate. Please try again.', 'error');
+            }
+        }
+        handleCloseContextMenu();
+    };
+
+    const handleSmallCertificate = async () => {
+        if (contextMenu.item) {
+            const { type, id } = contextMenu.item;
+            const printType = PRINT_ROUTE_BY_TYPE[type];
+            if (!printType) {
+                addToast('Unknown item type.', 'error');
+                handleCloseContextMenu();
+                return;
+            }
+            try {
+                await triggerPrint(printType, id, { layout: 'small', itemLevel: true });
+            } catch (err) {
+                addToast('Failed to generate small certificate. Please try again.', 'error');
             }
         }
         handleCloseContextMenu();
@@ -973,9 +993,14 @@ const WorkflowBoard = () => {
                         show Receipt (GT/ST only — certs have their own print path); Delete is
                         hidden once DONE. */}
                     {(contextMenu.item?.status === 'IN_PROGRESS' || contextMenu.item?.status === 'DONE') && (
-                        <button className="menu-item" onClick={handleCertificate}>
-                            <FaCertificate className="me-2" /> Certificate
-                        </button>
+                        <>
+                            <button className="menu-item" onClick={handleCertificate}>
+                                <FaCertificate className="me-2" /> Certificate
+                            </button>
+                            <button className="menu-item" onClick={handleSmallCertificate}>
+                                <FaPrint className="me-2" /> Small Certificate
+                            </button>
+                        </>
                     )}
                     {(contextMenu.item?.status === 'TODO' || contextMenu.item?.status === 'DONE')
                         && (contextMenu.item?.type === 'gold' || contextMenu.item?.type === 'silver') && (

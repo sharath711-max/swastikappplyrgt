@@ -23,16 +23,17 @@ class PhotoCertificateRepository {
             const certId = genId('PCR');
             // GAP 9 fix: use bare-DB composable helper so the sequence increment
             // participates in the outer transaction (SAVEPOINT-safe and explicit).
-            const parentAutoNumber = seqSvc._generateGlobalSequenceWork('photo', { context: 'CERT', isGst: Boolean(gst) });
+            const billNo = seqSvc._generateGlobalSequenceWork('photo', { context: 'CERT', isGst: Boolean(gst) });
+            const parentAutoNumber = seqSvc.generateTechnicalAutoNumber('PC');
 
             // 1. Insert Parent
             this.db.prepare(`
                 INSERT INTO photo_certificate (
-                    id, auto_number, customer_id, status, mode_of_payment, total, 
+                    id, auto_number, bill_no, customer_id, status, mode_of_payment, total, 
                     gst, gst_bill_number, total_tax, created, lastmodified
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-                certId, parentAutoNumber, customer_id, status, mode_of_payment, total,
+                certId, parentAutoNumber, billNo, customer_id, status, mode_of_payment, total,
                 gst ? 1 : 0, gst_bill_number, total_tax, timestamp, timestamp
             );
 
@@ -41,7 +42,8 @@ class PhotoCertificateRepository {
             let itemSeq = 1;
             for (const item of items) {
                 const itemId = genId('PCI');
-                const itemNumber = `${parentAutoNumber}-${itemSeq++}`;
+                const itemNumber = `${billNo}-${itemSeq++}`;
+                const itemAutoNumber = seqSvc.generateTechnicalAutoNumber('PCI');
                 // Operator-supplied value wins (allows manual override / migration).
                 // Otherwise fall through to the global A001-Z999 generator that
                 // already serves GCI/SCI — same SEQ_KEY family (PHOTO_CERT_ITEM_SEQ).
@@ -49,12 +51,14 @@ class PhotoCertificateRepository {
 
                 this.db.prepare(`
                     INSERT INTO photo_certificate_item (
-                        id, item_number, photo_certificate_id, certificate_number,
+                        id, auto_number, parent_auto_number, item_number, photo_certificate_id, certificate_number,
                         name, item_type, gross_weight, test_weight, net_weight,
                         purity, fine_weight, item_total, returned, show_kt, media_path, created
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
                     itemId,
+                    itemAutoNumber,
+                    parentAutoNumber,
                     itemNumber,
                     certId,
                     certNum,
@@ -62,7 +66,12 @@ class PhotoCertificateRepository {
                     item.item_type || item.item_name || 'Item',
                     item.gross_weight || item.weight || null,
                     item.test_weight || 0,
-                    item.net_weight || item.gross_weight || item.weight || 0,
+                    // Net = Gross − Test (matches gold/silver cert convention and
+                    // the backend recompute on results submit). Storing the full
+                    // gross here made Phase-2 read items as "overweight".
+                    item.net_weight != null
+                        ? item.net_weight
+                        : Math.max(0, Number(item.gross_weight || item.weight || 0) - Number(item.test_weight || 0)),
                     item.purity || null,
                     item.fine_weight || 0,
                     item.item_total || 0,
@@ -74,6 +83,8 @@ class PhotoCertificateRepository {
 
                 insertedItems.push({
                     id: itemId,
+                    auto_number: itemAutoNumber,
+                    parent_auto_number: parentAutoNumber,
                     item_number: itemNumber,
                     ...item,
                     created: timestamp
@@ -89,7 +100,7 @@ class PhotoCertificateRepository {
             this.db.prepare(`UPDATE photo_certificate SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, certId);
 
             writeAuditLog({ action: 'CREATE_CERTIFICATE', entityType: 'photo_cert', entityId: certId, newValue: parentAutoNumber });
-            return { id: certId, auto_number: parentAutoNumber, items: insertedItems, created: timestamp };
+            return { id: certId, auto_number: parentAutoNumber, bill_no: billNo, items: insertedItems, created: timestamp };
         })();
     }
 
@@ -120,11 +131,12 @@ class PhotoCertificateRepository {
             query += ` AND (
                 c.name LIKE ? 
                 OR c.phone LIKE ? 
+                OR pc.bill_no LIKE ?
                 OR pc.auto_number LIKE ? 
-                OR EXISTS (SELECT 1 FROM photo_certificate_item pci WHERE pci.photo_certificate_id = pc.id AND pci.item_number LIKE ?)
+                OR EXISTS (SELECT 1 FROM photo_certificate_item pci WHERE pci.photo_certificate_id = pc.id AND (pci.item_number LIKE ? OR pci.auto_number LIKE ? OR pci.parent_auto_number LIKE ? OR pci.name LIKE ? OR pci.item_type LIKE ?))
             )`;
             const s = `%${filters.search}%`;
-            params.push(s, s, s, s);
+            params.push(s, s, s, s, s, s, s, s, s);
         }
         query += " ORDER BY pc.created DESC";
         if (filters.limit) { query += " LIMIT ? OFFSET ?"; params.push(filters.limit, filters.offset || 0); }
@@ -141,11 +153,12 @@ class PhotoCertificateRepository {
             query += ` AND (
                 c.name LIKE ? 
                 OR c.phone LIKE ? 
+                OR pc.bill_no LIKE ?
                 OR pc.auto_number LIKE ? 
-                OR EXISTS (SELECT 1 FROM photo_certificate_item pci WHERE pci.photo_certificate_id = pc.id AND pci.item_number LIKE ?)
+                OR EXISTS (SELECT 1 FROM photo_certificate_item pci WHERE pci.photo_certificate_id = pc.id AND (pci.item_number LIKE ? OR pci.auto_number LIKE ? OR pci.parent_auto_number LIKE ? OR pci.name LIKE ? OR pci.item_type LIKE ?))
             )`;
             const s = `%${filters.search}%`;
-            params.push(s, s, s, s);
+            params.push(s, s, s, s, s, s, s, s, s);
         }
         return this.db.prepare(query).get(...params).total;
     }

@@ -1,5 +1,6 @@
 const BaseRepository = require('./baseRepository');
 const { genId, now } = require('../db/db');
+const seqSvc = require('../services/v2/sequenceService');
 
 class CustomerRepository extends BaseRepository {
     constructor() {
@@ -10,13 +11,14 @@ class CustomerRepository extends BaseRepository {
         const { name, phone, notes, balance = 0 } = customer;
         const id = genId('CUS');
         const timestamp = now();
+        const autoNumber = seqSvc.generateTechnicalAutoNumber('CUS');
 
         this.db.prepare(`
-            INSERT INTO customer (id, name, phone, notes, balance, created, lastmodified)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(id, name, phone, notes, balance, timestamp, timestamp);
+            INSERT INTO customer (id, customer_no, auto_number, name, phone, notes, balance, created, lastmodified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(id, id, autoNumber, name, phone, notes, balance, timestamp, timestamp);
 
-        return { id, name, phone, notes, balance, created: timestamp };
+        return { id, customer_no: id, auto_number: autoNumber, name, phone, notes, balance, created: timestamp };
     }
 
     update(id, customer) {
@@ -51,9 +53,9 @@ class CustomerRepository extends BaseRepository {
         const params = [];
 
         if (search) {
-            wheres.push('(c.name LIKE ? OR c.phone LIKE ?)');
+            wheres.push('(c.name LIKE ? OR c.phone LIKE ? OR c.customer_no LIKE ? OR c.auto_number LIKE ?)');
             const like = `%${search}%`;
-            params.push(like, like);
+            params.push(like, like, like, like);
         }
 
         if (balanceFilter === 'due')      wheres.push('c.balance > 0');
@@ -118,9 +120,9 @@ class CustomerRepository extends BaseRepository {
     search(query) {
         return this.db.prepare(`
             SELECT * FROM customer 
-            WHERE (name LIKE ? OR phone LIKE ?) AND deletedon IS NULL
+            WHERE (name LIKE ? OR phone LIKE ? OR customer_no LIKE ? OR auto_number LIKE ?) AND deletedon IS NULL
             LIMIT 10
-        `).all(`%${query}%`, `%${query}%`);
+        `).all(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`);
     }
 }
 

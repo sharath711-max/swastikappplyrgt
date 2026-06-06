@@ -18,17 +18,8 @@ const PrintManager = ({ type, data, item, photos = [], layout = 'full' }) => {
     // PC is intentionally excluded: Python's photo small slip dropped the photo and the
     // cert#, leaving a bill-only stub with no operator value over the full PCI.
     if (layout === 'small') {
-        const isSilver = type === 'silver-test' || type === 'ST' || type === 'silver' || type === 'SC';
-        const isGold   = type === 'gold-test'   || type === 'GT' || type === 'certificate' || type === 'gold' || type === 'GC';
-        if (!isSilver && !isGold) {
-            return (
-                <div style={{ padding: '40px', color: '#64748b', textAlign: 'center' }}>
-                    <h3 className="fw-bold">Small Certificate Not Available</h3>
-                    <p>Small certificate printing is restricted to Gold/Silver tests and Gold/Silver certificates.</p>
-                </div>
-            );
-        }
-        return <SmallCert test={data} item={item} recordType={isSilver ? 'silver' : 'gold'} />;
+        const recordType = type.toString().toLowerCase().includes('silver') || type === 'ST' ? 'silver' : 'gold';
+        return <SmallCert test={data} item={item} recordType={recordType} />;
     }
 
     switch (type) {

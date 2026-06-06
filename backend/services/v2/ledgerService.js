@@ -20,6 +20,7 @@
 
 const { db, genId, now } = require('../../db/db');
 const { BusinessError, SystemError, ERR } = require('./errors');
+const seqSvc = require('./sequenceService');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EntryType    = Object.freeze({ DEBIT: 'DEBIT', CREDIT: 'CREDIT' });
@@ -117,14 +118,15 @@ function _recordTransaction(source_type, opts, tx = db) {
     } = opts;
 
     const id        = genId('CHS');
+    const autoNumber = seqSvc.generateTechnicalAutoNumber('CH');
     const timestamp = now();
 
     // 1. Insert ledger row — customer-centric only. No workflow back-references.
     tx.prepare(`
         INSERT INTO credit_history
-          (id, customer_id, amount, type, mode_of_payment, description, created)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, customer_id, amount, entry_type, mode_of_payment, description, timestamp);
+          (id, auto_number, customer_id, amount, type, mode_of_payment, description, created)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, autoNumber, customer_id, amount, entry_type, mode_of_payment, description, timestamp);
 
     // 2. Roll-up money balance (throws SystemError if customer vanished)
     const new_balance = _rollupBalance(customer_id);
@@ -132,13 +134,14 @@ function _recordTransaction(source_type, opts, tx = db) {
     // 3. Cash register
     if (post_cash_register && amount > 0) {
         const cashType = entry_type === 'DEBIT' ? 'IN' : 'OUT';
+        const cashAutoNumber = seqSvc.generateTechnicalAutoNumber('CR');
         db.prepare(
-            'INSERT INTO cash_register (date, type, amount, description, created_at) VALUES (?, ?, ?, ?, ?)'
-        ).run(timestamp, cashType, amount, description, timestamp);
+            'INSERT INTO cash_register (auto_number, date, type, amount, description, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(cashAutoNumber, timestamp, cashType, amount, description, timestamp);
     }
 
     return {
-        id, customer_id, amount,
+        id, auto_number: autoNumber, customer_id, amount,
         type            : entry_type,
         mode_of_payment,
         description,

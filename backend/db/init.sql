@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS sequences (
 -- 👥 CUSTOMER
 CREATE TABLE IF NOT EXISTS customer (
   id                    TEXT PRIMARY KEY,
+  customer_no           TEXT,
+  auto_number           TEXT UNIQUE,
   name                  TEXT NOT NULL,
   phone                 TEXT,
   balance               REAL DEFAULT 0,
@@ -48,6 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_customer_name  ON customer(name);
 CREATE TABLE IF NOT EXISTS gold_test (
   id                    TEXT PRIMARY KEY,
   auto_number           TEXT NOT NULL UNIQUE,
+  bill_no               TEXT,
   customer_id           TEXT NOT NULL,
   status                TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
   mode_of_payment       TEXT,
@@ -65,6 +68,7 @@ CREATE TABLE IF NOT EXISTS gold_test (
 CREATE TABLE IF NOT EXISTS silver_test (
   id                    TEXT PRIMARY KEY,
   auto_number           TEXT NOT NULL UNIQUE,
+  bill_no               TEXT,
   customer_id           TEXT NOT NULL,
   status                TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
   mode_of_payment       TEXT,
@@ -82,6 +86,8 @@ CREATE TABLE IF NOT EXISTS silver_test (
 -- 🧪 TEST ITEMS (CHILD)
 CREATE TABLE IF NOT EXISTS gold_test_item (
   id TEXT PRIMARY KEY,
+  auto_number TEXT UNIQUE,
+  parent_auto_number TEXT,
   item_number TEXT NOT NULL UNIQUE,
   gold_test_id TEXT NOT NULL,
   name TEXT,
@@ -102,6 +108,8 @@ CREATE TABLE IF NOT EXISTS gold_test_item (
 
 CREATE TABLE IF NOT EXISTS silver_test_item (
   id TEXT PRIMARY KEY,
+  auto_number TEXT UNIQUE,
+  parent_auto_number TEXT,
   item_number TEXT NOT NULL UNIQUE,
   silver_test_id TEXT NOT NULL,
   name TEXT,
@@ -124,6 +132,7 @@ CREATE TABLE IF NOT EXISTS silver_test_item (
 CREATE TABLE IF NOT EXISTS gold_certificate (
   id                 TEXT PRIMARY KEY,
   auto_number        TEXT NOT NULL UNIQUE,
+  bill_no            TEXT,
   customer_id        TEXT NOT NULL,
   status             TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
   total              REAL DEFAULT 0,
@@ -147,6 +156,7 @@ CREATE TABLE IF NOT EXISTS gold_certificate (
 CREATE TABLE IF NOT EXISTS silver_certificate (
   id                 TEXT PRIMARY KEY,
   auto_number        TEXT NOT NULL UNIQUE,
+  bill_no            TEXT,
   customer_id        TEXT NOT NULL,
   status             TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
   total              REAL DEFAULT 0,
@@ -169,6 +179,7 @@ CREATE TABLE IF NOT EXISTS silver_certificate (
 CREATE TABLE IF NOT EXISTS photo_certificate (
   id                 TEXT PRIMARY KEY,
   auto_number        TEXT NOT NULL UNIQUE,
+  bill_no            TEXT,
   customer_id        TEXT NOT NULL,
   status             TEXT CHECK (status IN ('TODO','IN_PROGRESS','DONE')) NOT NULL,
   total              REAL DEFAULT 0,
@@ -192,6 +203,8 @@ CREATE TABLE IF NOT EXISTS photo_certificate (
 -- 📄 CERTIFICATE ITEMS (CHILD)
 CREATE TABLE IF NOT EXISTS gold_certificate_item (
   id TEXT PRIMARY KEY,
+  auto_number TEXT UNIQUE,
+  parent_auto_number TEXT,
   item_number TEXT NOT NULL UNIQUE,
   gold_certificate_id TEXT NOT NULL,
 
@@ -217,6 +230,8 @@ CREATE TABLE IF NOT EXISTS gold_certificate_item (
 
 CREATE TABLE IF NOT EXISTS silver_certificate_item (
   id TEXT PRIMARY KEY,
+  auto_number TEXT UNIQUE,
+  parent_auto_number TEXT,
   item_number TEXT NOT NULL UNIQUE,
   silver_certificate_id TEXT NOT NULL,
   certificate_number TEXT NOT NULL,
@@ -238,6 +253,8 @@ CREATE TABLE IF NOT EXISTS silver_certificate_item (
 
 CREATE TABLE IF NOT EXISTS photo_certificate_item (
   id TEXT PRIMARY KEY,
+  auto_number TEXT UNIQUE,
+  parent_auto_number TEXT,
   item_number TEXT NOT NULL UNIQUE,
   photo_certificate_id TEXT NOT NULL,
   certificate_number TEXT NOT NULL,
@@ -264,6 +281,7 @@ CREATE TABLE IF NOT EXISTS photo_certificate_item (
 --    analytics) via WHERE deletedon IS NULL.
 CREATE TABLE IF NOT EXISTS credit_history (
   id               TEXT PRIMARY KEY,
+  auto_number      TEXT UNIQUE,
   customer_id      TEXT NOT NULL,
   amount           REAL DEFAULT 0,
   type             TEXT CHECK (type IN ('CREDIT','DEBIT')) NOT NULL,
@@ -283,6 +301,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_history_request_id ON credit_histor
 --    Same lifecycle contract as credit_history.
 CREATE TABLE IF NOT EXISTS weight_loss_history (
   id              TEXT PRIMARY KEY,
+  auto_number     TEXT UNIQUE,
   customer_id     TEXT NOT NULL,
   amount          REAL NOT NULL,
   reason          TEXT,
@@ -311,6 +330,7 @@ CREATE TABLE IF NOT EXISTS receipts (
 -- 💵 CASH REGISTER (APPEND ONLY LEDGER)
 CREATE TABLE IF NOT EXISTS cash_register (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  auto_number TEXT UNIQUE,
   date DATETIME NOT NULL,
   type TEXT CHECK (type IN ('IN','OUT')) NOT NULL,
   amount REAL NOT NULL,

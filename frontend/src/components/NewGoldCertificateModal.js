@@ -141,7 +141,13 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
             addToast(`A certificate cannot have more than ${MAX_ITEMS} items`, 'error');
             return;
         }
-        setSampleRows(rows => [...rows, emptyRow()]);
+        const lastRow = sampleRows[sampleRows.length - 1];
+        const newRow = {
+            ...emptyRow(),
+            name: lastRow ? lastRow.name : '',
+            item: lastRow ? lastRow.item : '',
+        };
+        setSampleRows(rows => [...rows, newRow]);
     };
 
     const removeRow = (idx) => {
@@ -315,6 +321,7 @@ const NewGoldCertificateModal = ({ show, onHide, onSuccess }) => {
                     <a href="#" id="addCustomerBtn" onClick={handleAddCustomerLinkClick}>
                         Add New Customer?
                     </a>
+                    {/* eslint-disable-next-line jsx-a11y/heading-has-content */}
                     <h4 id="previousCertificate" className="mb-0"></h4>
                 </div>
 

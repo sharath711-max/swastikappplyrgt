@@ -35,6 +35,16 @@ function _todayStr() {
     return `${d.getUTCFullYear()}${mm}${dd}`;
 }
 
+function _timestampStr() {
+    const d  = nowIST();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const mi = String(d.getUTCMinutes()).padStart(2, '0');
+    const ss = String(d.getUTCSeconds()).padStart(2, '0');
+    return `${d.getUTCFullYear()}${mm}${dd}${hh}${mi}${ss}`;
+}
+
 /**
  * Ensure a globals row exists (INSERT OR IGNORE).
  * Bare-DB — call inside a transaction.
@@ -95,19 +105,30 @@ function _generateGlobalSequenceWork(_type, opts = {}) {
         ).run();
     }
 
-    // 3. For test sequences: self-heal if counter is behind the max existing auto_number.
+    // 3. For test sequences: self-heal if counter is behind the max existing auto_number/bill_no.
     //    This prevents UNIQUE constraint failures after a daily reset when the year-prefixed
     //    format (e.g. GT26-001) matches a record from a previous day in the same year.
+    //    Crucial: limit the lookup to records created today (IST timezone) to allow daily resetting to 001.
     if (!isCert) {
         const curRow = db.prepare('SELECT CAST(value AS INTEGER) AS v FROM globals WHERE key = ?').get(SEQ_KEY);
         const cur = curRow?.v || 0;
         const yyEarly    = today.slice(2, 4);   // e.g. '26' from '20260503'
         const testTable  = _type === 'gold' ? 'gold_test'   : 'silver_test';
         const testPrefix = _type === 'gold' ? `GT${yyEarly}-` : `ST${yyEarly}-`;
+
+        // Compute explicit today's start prefix in IST to avoid UTC midnight shift bugs
+        const d = nowIST();
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const dd = String(d.getUTCDate()).padStart(2, '0');
+        const todayPrefix = `${d.getUTCFullYear()}-${mm}-${dd}`;
+
         const maxRow = db.prepare(
-            `SELECT MAX(CAST(SUBSTR(auto_number, INSTR(auto_number,'-')+1) AS INTEGER)) AS m
-             FROM ${testTable} WHERE auto_number LIKE ?`
-        ).get(`${testPrefix}%`);
+            `SELECT MAX(CAST(SUBSTR(COALESCE(bill_no, auto_number), INSTR(COALESCE(bill_no, auto_number),'-')+1) AS INTEGER)) AS m
+             FROM ${testTable} 
+             WHERE COALESCE(bill_no, auto_number) LIKE ? 
+               AND created LIKE ?`
+        ).get(`${testPrefix}%`, `${todayPrefix}%`);
+        
         const maxExisting = maxRow?.m || 0;
         if (maxExisting > cur) {
             db.prepare('UPDATE globals SET value = ?, lastmodified = CURRENT_TIMESTAMP WHERE key = ?')
@@ -120,9 +141,9 @@ function _generateGlobalSequenceWork(_type, opts = {}) {
     if (isCert) {
         const curRow = db.prepare('SELECT CAST(value AS INTEGER) AS v FROM globals WHERE key = ?').get(SEQ_KEY);
         const cur = curRow?.v || 0;
-        // Extract max numeric suffix from existing auto_numbers (format: N26-009 or G26-009)
-        const maxGold   = db.prepare(`SELECT MAX(CAST(SUBSTR(auto_number, INSTR(auto_number,'-')+1) AS INTEGER)) AS m FROM gold_certificate   WHERE auto_number IS NOT NULL AND auto_number NOT LIKE 'GCR%'`).get()?.m || 0;
-        const maxSilver = db.prepare(`SELECT MAX(CAST(SUBSTR(auto_number, INSTR(auto_number,'-')+1) AS INTEGER)) AS m FROM silver_certificate WHERE auto_number IS NOT NULL AND auto_number NOT LIKE 'SCR%'`).get()?.m || 0;
+        // Extract max numeric suffix from existing bill_no values (format: N26-009 or G26-009)
+        const maxGold   = db.prepare(`SELECT MAX(CAST(SUBSTR(COALESCE(bill_no, auto_number), INSTR(COALESCE(bill_no, auto_number),'-')+1) AS INTEGER)) AS m FROM gold_certificate   WHERE COALESCE(bill_no, auto_number) IS NOT NULL`).get()?.m || 0;
+        const maxSilver = db.prepare(`SELECT MAX(CAST(SUBSTR(COALESCE(bill_no, auto_number), INSTR(COALESCE(bill_no, auto_number),'-')+1) AS INTEGER)) AS m FROM silver_certificate WHERE COALESCE(bill_no, auto_number) IS NOT NULL`).get()?.m || 0;
         const maxExisting = Math.max(maxGold, maxSilver, 0);
         if (maxExisting > cur) {
             db.prepare('UPDATE globals SET value = ?, lastmodified = CURRENT_TIMESTAMP WHERE key = ?')
@@ -291,6 +312,34 @@ function generateTestItemNumber(parentAutoNumber, itemSeq) {
     return `${parentAutoNumber}-${itemSeq}`;
 }
 
+function generateTechnicalAutoNumber(prefix) {
+    if (!prefix || typeof prefix !== 'string') {
+        throw new BusinessError('generateTechnicalAutoNumber: prefix is required', ERR.MISSING_FIELD, 400);
+    }
+
+    const cleanPrefix = prefix.trim().toUpperCase();
+    const stamp = _timestampStr();
+    const seqKey = `AUTO_NUMBER_${cleanPrefix}_${stamp}`;
+    _ensureGlobal(seqKey, '0');
+
+    const row = db.prepare(`
+        UPDATE globals
+        SET    value        = CAST(CAST(value AS INTEGER) + 1 AS TEXT),
+               lastmodified = CURRENT_TIMESTAMP
+        WHERE  key = ?
+        RETURNING CAST(value AS INTEGER) AS new_seq
+    `).get(seqKey);
+
+    if (!row || row.new_seq == null) {
+        throw new SystemError(
+            `generateTechnicalAutoNumber: RETURNING returned no row for key ${seqKey}`,
+            null, { seqKey, prefix: cleanPrefix }
+        );
+    }
+
+    return `${cleanPrefix}-${stamp}-${row.new_seq}`;
+}
+
 /**
  * Peek at current sequence state without incrementing.
  * @returns {{ date: string, value: number }}
@@ -364,6 +413,7 @@ module.exports = {
     generateGlobalSequence,
     generateCertificateLabel,
     generateTestItemNumber,
+    generateTechnicalAutoNumber,
     peekGlobalSequence,
     getNextBillNumber,
     getNextCertificateItemNumber,

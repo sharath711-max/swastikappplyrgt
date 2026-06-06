@@ -52,22 +52,22 @@ const GoldCertificateTemplate = ({ test, item, recordType = 'gold' }) => {
     return (
         <div className={isTest ? 'gt-cert-container' : 'gc-cert-container'}>
             <table className="cert-slip-table">
-                <tbody>
-                    {/* Row 1: reference number + date */}
-                    <tr>
-                        <td><span className="cert-h5 cert-ml">{refNo}</span></td>
-                        <td className="cert-right"><span className="cert-h5">{date}</span></td>
-                    </tr>
+                {isTest ? (
+                    <tbody>
+                        {/* Row 1: reference number + date */}
+                        <tr>
+                            <td><span className="cert-h5 cert-ml">{refNo}</span></td>
+                            <td className="cert-right"><span className="cert-h5">{date}</span></td>
+                        </tr>
 
-                    {/* Row 2: customer name */}
-                    <tr>
-                        <td colSpan={2}>
-                            <span className="cert-h5 cert-ml">{customer}</span>
-                        </td>
-                    </tr>
+                        {/* Row 2: customer name */}
+                        <tr>
+                            <td colSpan={2}>
+                                <span className="cert-h5 cert-ml">{customer}</span>
+                            </td>
+                        </tr>
 
-                    {/* Row 3: weight — test cert shows gross/test, cert shows gross + carats */}
-                    {isTest ? (
+                        {/* Row 3: weight */}
                         <tr>
                             <td colSpan={2}>
                                 <span className="cert-h5 cert-ml">
@@ -75,32 +75,45 @@ const GoldCertificateTemplate = ({ test, item, recordType = 'gold' }) => {
                                 </span>
                             </td>
                         </tr>
-                    ) : (
+
+                        {/* Row 4: item name */}
                         <tr>
-                            <td><span className="cert-h5 cert-ml">{grossWt} gm</span></td>
+                            <td colSpan={2}>
+                                <span className="cert-h5 cert-ml">{itemName}</span>
+                            </td>
+                        </tr>
+
+                        {/* Row 5: purity */}
+                        <tr>
+                            <td colSpan={2}>
+                                {purity > 0
+                                    ? <span className="cert-purity">{purity.toFixed(2)}%</span>
+                                    : <span className="cert-purity cert-no-gold">NO GOLD</span>
+                                }
+                            </td>
+                        </tr>
+                    </tbody>
+                ) : (
+                    <tbody>
+                        {/* Row 1: reference number + date */}
+                        <tr>
+                            <td><span className="cert-h5 cert-ml">{refNo}</span></td>
+                            <td className="cert-right"><span className="cert-h5">{date}</span></td>
+                        </tr>
+
+                        {/* Row 2: customer name + total weight */}
+                        <tr>
+                            <td><span className="cert-h5 cert-ml">{customer}</span></td>
+                            <td className="cert-right"><span className="cert-h5">{grossWt} gm</span></td>
+                        </tr>
+
+                        {/* Row 3: item name + carats */}
+                        <tr>
+                            <td><span className="cert-h5 cert-ml">{itemName}</span></td>
                             <td className="cert-right"><span className="cert-h5">{toCarat(purity)}</span></td>
                         </tr>
-                    )}
 
-                    {/* Row 4: item name */}
-                    <tr>
-                        <td colSpan={2}>
-                            <span className="cert-h5 cert-ml">{itemName}</span>
-                        </td>
-                    </tr>
-
-                    {/* Row 5: purity — large display */}
-                    <tr>
-                        <td colSpan={2}>
-                            {purity > 0
-                                ? <span className="cert-purity">{purity.toFixed(2)}%</span>
-                                : <span className="cert-purity cert-no-gold">NO GOLD</span>
-                            }
-                        </td>
-                    </tr>
-
-                    {/* Row 6 (cert only): purity number + words */}
-                    {!isTest && (
+                        {/* Row 4: purity number + words */}
                         <tr className="purity-row">
                             <td colSpan={2} className="purity-number" style={{ paddingTop: 0 }}>
                                 <span className="cert-h5" style={{ marginLeft: '1.6cm' }}>
@@ -111,8 +124,8 @@ const GoldCertificateTemplate = ({ test, item, recordType = 'gold' }) => {
                                 </span>
                             </td>
                         </tr>
-                    )}
-                </tbody>
+                    </tbody>
+                )}
             </table>
         </div>
     );

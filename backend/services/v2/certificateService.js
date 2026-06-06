@@ -475,8 +475,9 @@ function listCertificates(type, filters = {}) {
         const s = `%${filters.search}%`;
         addF(` AND (cu.name LIKE ? OR cu.phone LIKE ? OR ${alias}.auto_number LIKE ?
             OR EXISTS (SELECT 1 FROM ${c.itemTable} ${ia}
-                       WHERE ${ia}.${c.fkColumn} = ${alias}.id AND ${ia}.item_number LIKE ?))`,
-            s, s, s, s);
+                       WHERE ${ia}.${c.fkColumn} = ${alias}.id
+                         AND (${ia}.item_number LIKE ? OR ${ia}.name LIKE ? OR ${ia}.item_type LIKE ?)))`,
+            s, s, s, s, s, s);
     }
 
     listQ += ` ORDER BY ${alias}.created DESC LIMIT ? OFFSET ?`;

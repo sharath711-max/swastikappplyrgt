@@ -312,6 +312,7 @@ function _validatePurityBeforeFinalize(type, testId, submittedItems = [], { trx 
 // ─── Item normaliser ──────────────────────────────────────────────────────────
 function _normaliseItem(raw, type, stripPurity = false) {
     return {
+        name         : raw.name || raw.description || '',
         item_type    : raw.item_type || raw.item_name || raw.name || (type === 'gold' ? 'Gold Sample' : 'Silver Sample'),
         gross_weight : parseFloat(raw.gross_weight || raw.total_weight || raw.weight || 0),
         sample_weight: parseFloat(raw.sample_weight || 0),
@@ -343,7 +344,7 @@ function _finalizeItemsWork(type, testId, items, ts) {
             test_weight : current.test_weight,
             purity      : parseFloat(raw.purity),
             returned    : raw.returned == 1 || raw.returned === true,
-            item_type   : current.item_type,
+            item_type   : raw.item_type !== undefined ? raw.item_type : current.item_type,
         });
 
         // Persist operator cert-eligibility override alongside purity
@@ -351,15 +352,18 @@ function _finalizeItemsWork(type, testId, items, ts) {
             ? (raw.certificate_required ? 1 : 0)
             : current.certificate_required ?? 0;
 
+        const nameVal = raw.name !== undefined ? raw.name : current.name;
+        const itemTypeVal = raw.item_type !== undefined ? raw.item_type : current.item_type;
+
         db.prepare(`
             UPDATE ${c.itemTable}
             SET purity = ?, returned = ?, fine_weight = ?, item_total = ?,
-                certificate_required = ?, lastmodified = ?
+                certificate_required = ?, name = ?, item_type = ?, lastmodified = ?
             WHERE id = ? AND ${c.fkColumn} = ? AND deletedon IS NULL
         `).run(
             calc.purity, calc.returned ? 1 : 0,
             calc.fine_weight, calc.item_total,
-            certRequired, ts, raw.id, testId
+            certRequired, nameVal, itemTypeVal, ts, raw.id, testId
         );
     }
 }
@@ -421,13 +425,14 @@ function createTest(type, data) {
         const ts         = now();
         const testId     = genId(c.parentPrefix);
         // Sequence inside transaction — race-safe
-        const autoNumber = seqSvc._generateGlobalSequenceWork(type, { context: 'TEST' });
+        const billNo     = seqSvc._generateGlobalSequenceWork(type, { context: 'TEST' });
+        const autoNumber = seqSvc.generateTechnicalAutoNumber(c.parentPrefix.slice(0, 2));
 
         db.prepare(`
             INSERT INTO ${c.parentTable}
-              (id, auto_number, customer_id, status, mode_of_payment, total, created, lastmodified)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(testId, autoNumber, customer_id, status, mode_of_payment, 0, ts, ts);
+              (id, auto_number, bill_no, customer_id, status, mode_of_payment, total, created, lastmodified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(testId, autoNumber, billNo, customer_id, status, mode_of_payment, 0, ts, ts);
 
         const insertedItems = [];
         let   itemSeq = 1;
@@ -436,22 +441,31 @@ function createTest(type, data) {
             const norm = _normaliseItem(raw, type, stripPurity);
             const calc = c.calc.calculateItem(norm);
             const itemId     = genId(c.itemPrefix);
-            const itemNumber = seqSvc.generateTestItemNumber(autoNumber, itemSeq++);
+            const itemNumber = seqSvc.generateTestItemNumber(billNo, itemSeq++);
+            const itemAutoNumber = seqSvc.generateTechnicalAutoNumber(c.itemPrefix);
 
             db.prepare(`
                 INSERT INTO ${c.itemTable}
-                  (id, ${c.fkColumn}, item_number, item_type,
+                  (id, ${c.fkColumn}, auto_number, parent_auto_number, item_number, name, item_type,
                    gross_weight, sample_weight, test_weight, net_weight,
                    purity, fine_weight, item_total, returned, created)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-                itemId, testId, itemNumber, calc.item_type,
+                itemId, testId, itemAutoNumber, autoNumber, itemNumber, norm.name, calc.item_type,
                 calc.gross_weight, norm.sample_weight, calc.test_weight,
                 calc.net_weight, calc.purity, calc.fine_weight,
                 calc.item_total, calc.returned ? 1 : 0, ts
             );
 
-            insertedItems.push({ id: itemId, item_number: itemNumber, ...calc, created: ts });
+            insertedItems.push({
+                id: itemId,
+                auto_number: itemAutoNumber,
+                parent_auto_number: autoNumber,
+                item_number: itemNumber,
+                name: norm.name,
+                ...calc,
+                created: ts
+            });
         }
 
         const printSvc = require('./printService');
@@ -460,14 +474,14 @@ function createTest(type, data) {
         db.prepare(`UPDATE ${c.parentTable} SET print_snapshot = ?, snapshot_hash = ?, snapshot_key_version = ? WHERE id = ? AND deletedon IS NULL`).run(snapshotJson, snapshotHash, snapshotKeyVersion, testId);
 
         writeAuditLog({ action: 'CREATE_TEST', entityType: type, entityId: testId, newValue: autoNumber });
-        return { id: testId, auto_number: autoNumber, items: insertedItems, created: ts };
+        return { id: testId, auto_number: autoNumber, bill_no: billNo, items: insertedItems, created: ts };
     });
 
     try {
         const result = _txn();
-        audit.commit('testService.createTest', { id: result.id, auto_number: result.auto_number, type });
+        audit.commit('testService.createTest', { id: result.id, auto_number: result.auto_number, bill_no: result.bill_no, type });
         audit.sequence('testService.createTest', result.auto_number, type, result.id);
-        socket.emit(`${type}_test`, 'item:added', { id: result.id, auto_number: result.auto_number, type });
+        socket.emit(`${type}_test`, 'item:added', { id: result.id, auto_number: result.auto_number, bill_no: result.bill_no, type });
         socket.emit('workflow',     'item:added', { id: result.id, type });
         return result;
     } catch (err) {
@@ -502,7 +516,7 @@ function saveTestDraft(type, id, data) {
                 test_weight : raw.test_weight !== undefined ? parseFloat(raw.test_weight) : current.test_weight,
                 purity      : raw.purity      !== undefined ? parseFloat(raw.purity)      : current.purity,
                 returned    : raw.returned    !== undefined ? raw.returned                : current.returned,
-                item_type   : current.item_type,
+                item_type   : raw.item_type   !== undefined ? raw.item_type               : current.item_type,
                 net_weight  : raw.net_weight  !== undefined ? parseFloat(raw.net_weight)  : undefined,
             };
 
@@ -513,14 +527,17 @@ function saveTestDraft(type, id, data) {
                 ? (raw.certificate_required ? 1 : 0)
                 : current.certificate_required ?? 0;
 
+            const nameVal = raw.name !== undefined ? raw.name : current.name;
+            const itemTypeVal = raw.item_type !== undefined ? raw.item_type : current.item_type;
+
             db.prepare(`
                 UPDATE ${c.itemTable}
                 SET purity = ?, returned = ?, fine_weight = ?, item_total = ?,
-                    test_weight = ?, net_weight = ?, certificate_required = ?, lastmodified = ?
+                    test_weight = ?, net_weight = ?, certificate_required = ?, name = ?, item_type = ?, lastmodified = ?
                 WHERE id = ? AND ${c.fkColumn} = ? AND deletedon IS NULL
             `).run(
                 calc.purity, calc.returned ? 1 : 0, calc.fine_weight, calc.item_total,
-                calc.test_weight, calc.net_weight, certRequired, ts,
+                calc.test_weight, calc.net_weight, certRequired, nameVal, itemTypeVal, ts,
                 raw.id, id
             );
         }
@@ -1017,10 +1034,11 @@ function listTests(type, filters = {}) {
     if (filters.customer_id) addF(` AND ${alias}.customer_id = ?`, filters.customer_id);
     if (filters.search) {
         const s = `%${filters.search}%`;
-        addF(` AND (cu.name LIKE ? OR cu.phone LIKE ? OR ${alias}.auto_number LIKE ?
+        addF(` AND (cu.name LIKE ? OR cu.phone LIKE ? OR ${alias}.auto_number LIKE ? OR ${alias}.bill_no LIKE ?
             OR EXISTS (SELECT 1 FROM ${c.itemTable} ${itemAlias}
-                       WHERE ${itemAlias}.${c.fkColumn} = ${alias}.id AND ${itemAlias}.item_number LIKE ?))`,
-            s, s, s, s);
+                       WHERE ${itemAlias}.${c.fkColumn} = ${alias}.id
+                         AND (${itemAlias}.item_number LIKE ? OR ${itemAlias}.item_type LIKE ? OR ${itemAlias}.name LIKE ?)))`,
+            s, s, s, s, s, s, s);
     }
 
     listQ += ` ORDER BY ${alias}.created DESC LIMIT ? OFFSET ?`;

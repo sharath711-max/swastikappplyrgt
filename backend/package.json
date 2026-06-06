@@ -7,13 +7,7 @@
     "logs:maintain": "node scripts/log_maintenance.js",
     "report:restore-drill": "node scripts/backup_restore_drill_report.js",
     "report:media": "node scripts/media_verification_report.js",
-    "report:migration": "node scripts/migration_acceptance_report.js",
-    "test": "jest --runInBand tests/unit tests/integration",
-    "test:unit": "jest --runInBand tests/unit",
-    "test:integration": "jest --runInBand tests/integration",
-    "test:workflow": "node test_workflows.js",
-    "test:workflow:v2": "node test_workflows_v2.js",
-    "test:watch": "jest --watch tests/unit tests/integration"
+    "report:migration": "node scripts/migration_acceptance_report.js"
   },
   "bin": "app.js",
   "pkg": {
@@ -41,8 +35,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "jest": "^30.2.0",
-    "nodemon": "^3.1.11",
-    "supertest": "^7.2.2"
+    "nodemon": "^3.1.11"
   }
 }

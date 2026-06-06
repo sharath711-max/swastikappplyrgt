@@ -1,4 +1,5 @@
 const { db, now, genId, transaction } = require('../db/db');
+const seqSvc = require('../services/v2/sequenceService');
 
 class CreditHistoryRepository {
     constructor() {
@@ -13,18 +14,19 @@ class CreditHistoryRepository {
 
         return transaction(() => {
             const id = genId('CHS');
+            const autoNumber = seqSvc.generateTechnicalAutoNumber('CH');
             const timestamp = now();
 
             // 1. Insert into credit_history (Append-Only)
             this.db.prepare(`
-                INSERT INTO credit_history (id, customer_id, amount, type, mode_of_payment, description, created)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `).run(id, customer_id, amount, type, mode_of_payment, description, timestamp);
+                INSERT INTO credit_history (id, auto_number, customer_id, amount, type, mode_of_payment, description, created)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(id, autoNumber, customer_id, amount, type, mode_of_payment, description, timestamp);
 
             // 2. Trigger Balance Roll-up
             this.updateCustomerBalance(customer_id);
 
-            return { id, customer_id, amount, type, mode_of_payment, description, created: timestamp };
+            return { id, auto_number: autoNumber, customer_id, amount, type, mode_of_payment, description, created: timestamp };
         })();
     }
 

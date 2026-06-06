@@ -3,6 +3,7 @@
 // DO NOT EDIT — run `npm run sync:validation` at repo root to regenerate.
 // Hash verified by scripts/check-validation.js (pre-build, pre-test).
 // ===========================================================================
+/* eslint-disable strict */
 'use strict';
 
 /*
@@ -32,6 +33,25 @@ module.exports = {
     validateItem,
     validateHeader,
 
-    ...errorCodes,
-    ...normalization,
+    // Explicit exports from errorCodes
+    ERROR_CODES: errorCodes.ERROR_CODES,
+    SEVERITY: errorCodes.SEVERITY,
+    SOURCE: errorCodes.SOURCE,
+    SUPPORTED_WORKFLOW_TYPES: errorCodes.SUPPORTED_WORKFLOW_TYPES,
+    OPERATIONS: errorCodes.OPERATIONS,
+    ACTORS: errorCodes.ACTORS,
+
+    // Explicit exports from normalization
+    WEIGHT_DECIMAL_PLACES: normalization.WEIGHT_DECIMAL_PLACES,
+    MAX_WEIGHT_GRAMS: normalization.MAX_WEIGHT_GRAMS,
+    MIN_POSITIVE_WEIGHT: normalization.MIN_POSITIVE_WEIGHT,
+    EQUALITY_EPSILON: normalization.EQUALITY_EPSILON,
+    coerceNumber: normalization.coerceNumber,
+    normalizeWeight: normalization.normalizeWeight,
+    subtractWeights: normalization.subtractWeights,
+    safeEquals: normalization.safeEquals,
+    isPositiveWeight: normalization.isPositiveWeight,
+    isNonNegativeWeight: normalization.isNonNegativeWeight,
+    isWithinMax: normalization.isWithinMax,
+    isWeightEmpty: normalization.isWeightEmpty,
 };

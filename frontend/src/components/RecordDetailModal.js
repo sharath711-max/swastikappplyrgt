@@ -100,10 +100,27 @@ export default function RecordDetailModal({ show, onHide, type, id }) {
     const canConvert   = isDoneTest && (data?.items?.length || 0) > 0;
     const metalLabel   = view.type === 'silver-tests' ? 'Silver' : 'Gold';
 
+    // Test items carry no per-item valuation (`item_total` is 0) — the fee is a
+    // flat per-item test charge that sums to the record total (backend:
+    // testFeeTotal = TEST_FEE_RATE × itemCount). Distribute the record total
+    // evenly so the per-item "Total" column matches the Python receipt's CHARGE
+    // column and sums back to the record total, with no hardcoded rate.
+    const itemCount = data?.items?.length || 0;
+    const perItemTestCharge = isTestParent && itemCount > 0
+        ? Number(data?.total || 0) / itemCount
+        : null;
+
     const printItem = async (item) => {
         const route = PRINT_ROUTE[view.type];
         if (!route || !data?.items) return;
         try { await triggerPrint(route, view.id, { itemIndex: data.items.indexOf(item) }); }
+        catch { addToast('Print failed. Please try again.', 'error'); }
+    };
+
+    const printSmallCertificate = async (item) => {
+        const route = PRINT_ROUTE[view.type];
+        if (!route || !data?.items) return;
+        try { await triggerPrint(route, view.id, { itemIndex: data.items.indexOf(item), layout: 'small' }); }
         catch { addToast('Print failed. Please try again.', 'error'); }
     };
 
@@ -235,7 +252,7 @@ export default function RecordDetailModal({ show, onHide, type, id }) {
                                             <td className="text-end">{item.gross_weight ?? item.total_weight ?? 0} g</td>
                                             <td className="text-end">{(cert ? item.fine_weight : item.sample_weight) ?? 0} g</td>
                                             <td className="text-end fw-semibold text-primary">{item.purity ?? 0}%</td>
-                                            <td className="text-end fw-semibold">{money(item.item_total ?? item.amount ?? 0)}</td>
+                                            <td className="text-end fw-semibold">{money(isTestParent ? (perItemTestCharge ?? 0) : (item.item_total ?? item.amount ?? 0))}</td>
                                             <td className="text-center text-nowrap">
                                                 <Button variant="link" size="sm" className="p-1 text-secondary" title="View item"
                                                     onClick={() => setView({ type: itemTypeOf(view.type), id: item.id })}>
@@ -244,6 +261,10 @@ export default function RecordDetailModal({ show, onHide, type, id }) {
                                                 <Button variant="link" size="sm" className="p-1 text-secondary" title="Print item"
                                                     onClick={() => printItem(item)}>
                                                     <FaPrint />
+                                                </Button>
+                                                <Button variant="link" size="sm" className="p-1 text-primary" title="Print Small Certificate"
+                                                    onClick={() => printSmallCertificate(item)}>
+                                                    <FaPrint style={{ transform: 'scale(0.85)' }} />
                                                 </Button>
                                             </td>
                                         </tr>

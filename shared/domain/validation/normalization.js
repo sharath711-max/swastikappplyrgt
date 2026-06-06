@@ -1,3 +1,4 @@
+/* eslint-disable strict */
 'use strict';
 
 const Decimal = require('decimal.js');

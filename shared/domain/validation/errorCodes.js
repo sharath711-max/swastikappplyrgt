@@ -1,3 +1,4 @@
+/* eslint-disable strict */
 'use strict';
 
 const ERROR_CODES = Object.freeze({

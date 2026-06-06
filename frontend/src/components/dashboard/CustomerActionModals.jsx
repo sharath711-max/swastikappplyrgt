@@ -11,29 +11,26 @@ import CustomerCombobox from '../customer/CustomerCombobox';
 // other than CREDIT will return 400 and the toast will display the
 // backend's error. Intentional: the dashboard ships ready, the backend
 // ticket can land independently.
-const CREDIT_TYPES = [
-    { value: 'CREDIT',            label: 'Customer Advance / Credit' },
-    { value: 'ADJUSTMENT',        label: 'Adjustment' },
-    { value: 'SETTLEMENT',        label: 'Settlement' },
-    { value: 'REFUND',            label: 'Refund' },
-    { value: 'MANUAL_CORRECTION', label: 'Manual Correction' },
-];
-
-const PAYMENT_MODES_CREDIT  = ['cash', 'upi', 'balance'];
 const PAYMENT_MODES_EXPENSE = ['cash', 'upi'];
 
 export function CustomerCreditModal({ show, onHide, onSuccess }) {
     const { addToast } = useToast();
     const [customerId, setCustomerId] = useState('');
     const [amount, setAmount]         = useState('');
-    const [mode, setMode]             = useState('cash');
+    const [mode, setMode]             = useState('Cash');
+    const [transactionType, setTransactionType] = useState('DEPOSIT');
     const [type, setType]             = useState('CREDIT');
-    const [description, setDescription] = useState('');
+    const [description, setDescription] = useState('[DEPOSIT] ');
     const [submitting, setSubmitting] = useState(false);
 
     const resetTransientState = () => {
-        setCustomerId(''); setAmount(''); setMode('cash');
-        setType('CREDIT'); setDescription(''); setSubmitting(false);
+        setCustomerId('');
+        setAmount('');
+        setMode('Cash');
+        setTransactionType('DEPOSIT');
+        setType('CREDIT');
+        setDescription('[DEPOSIT] ');
+        setSubmitting(false);
     };
 
     const { safeClose, mountedRef } = useSafeModalClose({ show, onHide });
@@ -45,21 +42,31 @@ export function CustomerCreditModal({ show, onHide, onSuccess }) {
 
     const submit = async (e) => {
         e.preventDefault();
-        if (!customerId || !amount) {
-            addToast('Customer and amount are required', 'error');
+        if (!customerId) {
+            addToast('Please select a customer', 'error');
             return;
         }
+        const parsedAmount = parseFloat(amount);
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            addToast('Please enter a valid positive amount', 'error');
+            return;
+        }
+        if (!description || !description.trim()) {
+            addToast('Description is required', 'error');
+            return;
+        }
+
         setSubmitting(true);
         try {
             await api.post('/credit-history', {
                 customer_id: customerId,
-                amount: parseFloat(amount),
+                amount: parsedAmount,
                 mode_of_payment: mode,
                 type,
-                description: description.trim() || CREDIT_TYPES.find((t) => t.value === type)?.label,
+                description: description.trim(),
             });
             if (!mountedRef.current) return;
-            addToast('Credit recorded', 'success');
+            addToast('Transaction recorded successfully', 'success');
             onSuccess?.();
             closeSafely();
         } catch (err) {
@@ -72,7 +79,7 @@ export function CustomerCreditModal({ show, onHide, onSuccess }) {
     return (
         <Modal show={show} onHide={closeSafely} centered size="lg" contentClassName="cam-modal">
             <Modal.Header closeButton>
-                <Modal.Title className="cam-title">Customer Credit</Modal.Title>
+                <Modal.Title className="cam-title">New Financial Transaction</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form onSubmit={submit}>
@@ -82,7 +89,64 @@ export function CustomerCreditModal({ show, onHide, onSuccess }) {
                     </Form.Group>
 
                     <div className="cam-row">
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 w-50">
+                            <Form.Label className="cam-label">Transaction Type</Form.Label>
+                            <Form.Select
+                                value={transactionType}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setTransactionType(val);
+                                    let mappedType = type;
+                                    if (val === 'DEPOSIT' || val === 'SETTLEMENT' || val === 'DISCOUNT') {
+                                        mappedType = 'CREDIT';
+                                    }
+                                    setType(mappedType);
+                                    let desc = description;
+                                    if (!description || (description.startsWith('[') && description.includes(']'))) {
+                                        desc = `[${val}] `;
+                                    }
+                                    setDescription(desc);
+                                }}
+                                size="lg"
+                            >
+                                <option value="DEPOSIT">DEPOSIT (Payment Received / Jama)</option>
+                                <option value="CORRECTION">CORRECTION (Adjustment)</option>
+                                <option value="SETTLEMENT">SETTLEMENT (Account Settlement)</option>
+                                <option value="DISCOUNT">DISCOUNT (Waiver / Discount)</option>
+                            </Form.Select>
+                        </Form.Group>
+
+                        {transactionType === 'CORRECTION' ? (
+                            <Form.Group className="mb-3 w-50">
+                                <Form.Label className="cam-label">Adjustment Direction</Form.Label>
+                                <div className="d-flex gap-3 mt-2">
+                                    <Form.Check
+                                        type="radio"
+                                        label="CREDIT (Reduce Balance)"
+                                        name="type"
+                                        value="CREDIT"
+                                        checked={type === 'CREDIT'}
+                                        onChange={(e) => setType(e.target.value)}
+                                        id="type-credit-dashboard"
+                                        className="fw-medium text-success"
+                                    />
+                                    <Form.Check
+                                        type="radio"
+                                        label="DEBIT (Increase Balance)"
+                                        name="type"
+                                        value="DEBIT"
+                                        checked={type === 'DEBIT'}
+                                        onChange={(e) => setType(e.target.value)}
+                                        id="type-debit-dashboard"
+                                        className="fw-medium text-danger"
+                                    />
+                                </div>
+                            </Form.Group>
+                        ) : null}
+                    </div>
+
+                    <div className="cam-row">
+                        <Form.Group className="mb-3 w-50">
                             <Form.Label className="cam-label">Amount (₹)</Form.Label>
                             <Form.Control
                                 type="number"
@@ -92,43 +156,46 @@ export function CustomerCreditModal({ show, onHide, onSuccess }) {
                                 onChange={(e) => setAmount(e.target.value)}
                                 required
                                 size="lg"
+                                placeholder="0.00"
                             />
                         </Form.Group>
 
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 w-50">
                             <Form.Label className="cam-label">Mode of Payment</Form.Label>
                             <Form.Select value={mode} onChange={(e) => setMode(e.target.value)} size="lg">
-                                {PAYMENT_MODES_CREDIT.map((m) => (
-                                    <option key={m} value={m}>{m.toUpperCase()}</option>
-                                ))}
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Other">Other</option>
                             </Form.Select>
                         </Form.Group>
                     </div>
 
                     <Form.Group className="mb-3">
-                        <Form.Label className="cam-label">Audit Type</Form.Label>
-                        <Form.Select value={type} onChange={(e) => setType(e.target.value)} size="lg">
-                            {CREDIT_TYPES.map((t) => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
-                            ))}
-                        </Form.Select>
-                        <Form.Text className="text-muted">
-                            Choose the operator intent. Recorded to the audit ledger; cannot be edited later.
-                        </Form.Text>
-                    </Form.Group>
-
-                    <Form.Group className="mb-3">
-                        <Form.Label className="cam-label">Description (optional)</Form.Label>
+                        <Form.Label className="cam-label">Description / Notes</Form.Label>
                         <Form.Control
+                            as="textarea"
+                            rows={3}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Free-text note for the audit entry"
+                            placeholder="Enter details about this transaction..."
+                            required
                         />
                     </Form.Group>
 
+                    <div className="mt-3 mb-3 p-3 bg-light rounded border">
+                        <small className="text-muted d-block mb-1">Impact Analysis:</small>
+                        {type === 'CREDIT' ? (
+                            <span className="text-success fw-bold">This will REDUCE the customer's outstanding balance.</span>
+                        ) : (
+                            <span className="text-danger fw-bold">This will INCREASE the customer's outstanding balance.</span>
+                        )}
+                    </div>
+
                     <div className="d-grid">
                         <Button type="submit" size="lg" variant="primary" disabled={submitting}>
-                            {submitting ? <Spinner animation="border" size="sm" /> : 'Record Credit'}
+                            {submitting ? <Spinner animation="border" size="sm" /> : 'Record Transaction'}
                         </Button>
                     </div>
                 </Form>

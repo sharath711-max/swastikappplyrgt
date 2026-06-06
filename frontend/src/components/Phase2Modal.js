@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Button, Form, Alert, Badge, Spinner, InputGroup } from 'react-bootstrap';
+import { Modal, Button, Form, Alert, Badge, Spinner } from 'react-bootstrap';
 import { FaCamera, FaCopy, FaFileAlt, FaExclamationTriangle, FaFileInvoice, FaLock } from 'react-icons/fa';
 import { useModal } from '../contexts/ModalContext';
 import { useToast } from '../contexts/ToastContext';
@@ -14,9 +14,18 @@ const CURRENT_SYSTEM = 'LAB';
 const getWeights = (item) => {
     const gross = Number(item.gross_weight || 0);
     const test  = Number(item.test_weight  || 0);
-    const net = (item.net_weight != null && item.net_weight !== '')
+    // Physical maximum for the returned (net) weight: you cannot return more
+    // than what is left after the assay sample is taken.
+    const maxNet = parseFloat((gross - test).toFixed(3));
+    const rawNet = (item.net_weight != null && item.net_weight !== '')
         ? Number(item.net_weight)
-        : parseFloat((gross - test).toFixed(3));
+        : maxNet;
+    // Clamp to the physical max. Photo-cert intake stores net_weight as the full
+    // gross (a placeholder — it is recomputed to gross − test on results submit),
+    // which would otherwise read as "overweight" by the sample weight. Clamping
+    // matches what the backend persists and keeps real weight-loss (net < maxNet)
+    // intact for tests.
+    const net = Math.min(rawNet, maxNet);
     const loss = parseFloat((gross - (test + net)).toFixed(3));
     return { gross, test, net, loss };
 };
@@ -295,6 +304,8 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                         purity: i.purity !== '' ? Number(i.purity) : 0,
                         returned: !!i.returned,
                         item_number: i.item_number || i.item_no,
+                        name: i.name,
+                        item_type: i.item_type,
                     }))
                 });
             } else {
@@ -307,6 +318,8 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                         test_weight: i.test_weight !== '' && i.test_weight !== undefined ? Number(i.test_weight) : undefined,
                         net_weight: i.net_weight !== '' && i.net_weight !== undefined ? Number(i.net_weight) : undefined,
                         certificate_required: i.certificate_required,
+                        name: i.name,
+                        item_type: i.item_type,
                     }))
                 });
             }
@@ -353,6 +366,8 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                         show_kt: !!i.show_kt,
                         returned: !!i.returned,
                         purity: i.purity !== '' ? Number(i.purity) : 0,
+                        name: i.name,
+                        item_type: i.item_type,
                         ...(i.media && !photos[i.id] ? { media: i.media } : {}),
                     }))
                 });
@@ -364,7 +379,9 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                         id: i.id,
                         purity: i.purity !== '' ? Number(i.purity) : 0,
                         returned: !!i.returned,
-                        item_number: i.item_number || i.item_no
+                        item_number: i.item_number || i.item_no,
+                        name: i.name,
+                        item_type: i.item_type,
                     }))
                 });
             }
@@ -409,6 +426,8 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                         returned            : !!i.returned,
                         item_number         : i.item_number || i.item_no,
                         certificate_required: i.returned ? null : (certificateRequired ? 1 : 0),
+                        name                : i.name,
+                        item_type           : i.item_type,
                     })),
                     mode_of_payment: modeOfPayment,
                     weight_loss: finalLoss,
@@ -669,7 +688,7 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                     <table className="table table-striped align-middle">
                         <thead>
                             <tr>
-                                {isCertificate && <th>Certificate Number</th>}
+                                <th>{isCertificate ? 'Certificate Number' : 'Item Number'}</th>
                                 <th>Name</th>
                                 <th>Item Type</th>
                                 <th>Total Weight (g)</th>
@@ -687,18 +706,16 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                 const w = getWeights(item);
                                 return (
                                     <tr key={item.id || idx} className="sampleDetails">
-                                        {isCertificate && (
-                                            <td>
-                                                <div className="input-group w-100">
-                                                    <Form.Control
-                                                        type="text"
-                                                        name="certificate_number"
-                                                        value={item.certificate_number || item.item_number || item.item_no || ''}
-                                                        disabled
-                                                    />
-                                                </div>
-                                            </td>
-                                        )}
+                                        <td>
+                                            <div className="input-group w-100">
+                                                <Form.Control
+                                                    type="text"
+                                                    name="item_number"
+                                                    value={item.certificate_number || item.item_number || item.item_no || ''}
+                                                    disabled
+                                                />
+                                            </div>
+                                        </td>
                                         <td>
                                             <div className="input-group w-100">
                                                 <Form.Control
@@ -706,8 +723,8 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                                     name="name"
                                                     placeholder="Name"
                                                     maxLength={32}
-                                                    value={item.item_type || ''}
-                                                    onChange={(e) => handleItemChange(idx, 'item_type', e.target.value)}
+                                                    value={item.name || ''}
+                                                    onChange={(e) => handleItemChange(idx, 'name', e.target.value)}
                                                     disabled={isModalReadOnly}
                                                 />
                                             </div>
@@ -716,11 +733,12 @@ const Phase2Modal = ({ show, onHide, test, onSuccess, onConflict, readOnly = fal
                                             <div className="input-group w-100">
                                                 <Form.Control
                                                     type="text"
-                                                    name="item"
-                                                    placeholder="Item type"
+                                                    name="item_type"
+                                                    placeholder="Item Type"
                                                     maxLength={32}
-                                                    value={item.item_no || item.item_number || ''}
-                                                    disabled
+                                                    value={item.item_type || ''}
+                                                    onChange={(e) => handleItemChange(idx, 'item_type', e.target.value)}
+                                                    disabled={isModalReadOnly}
                                                 />
                                             </div>
                                         </td>

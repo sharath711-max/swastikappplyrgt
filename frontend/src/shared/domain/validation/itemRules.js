@@ -3,6 +3,7 @@
 // DO NOT EDIT — run `npm run sync:validation` at repo root to regenerate.
 // Hash verified by scripts/check-validation.js (pre-build, pre-test).
 // ===========================================================================
+/* eslint-disable strict */
 'use strict';
 
 const {

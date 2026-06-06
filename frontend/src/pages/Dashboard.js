@@ -9,9 +9,11 @@ import {
 import api from '../services/api';
 import { useFetch } from '../hooks/useFetch';
 import { useSocket } from '../hooks/useSocket';
-import { useWorkflow } from '../contexts/WorkflowContext';
 
 import SystemAnomaliesWidget   from '../components/dashboard/SystemAnomaliesWidget';
+import NewGoldTestModal from '../components/NewGoldTestModal';
+import NewSilverTestModal from '../components/NewSilverTestModal';
+import NewCertificateModal from '../components/NewCertificateModal';
 import {
     RevenueTodayModal,
     RevenueAllTimeModal,
@@ -60,7 +62,6 @@ const EXTRA_WORKFLOW_KEYS = ['silver'];
 // preserved below the hero rather than dropped.
 export default function Dashboard() {
     const navigate = useNavigate();
-    const { setSelectedWorkflow, tryWorkflowSwitch } = useWorkflow();
 
     const fetchSummary = useCallback(
         () => api.get('/analytics/summary').then((r) => r.data?.data ?? r.data),
@@ -126,11 +127,22 @@ export default function Dashboard() {
 
     const [breakdownScope, setBreakdownScope] = useState(null);  // 'today' | 'allTime' | 'cash'
     const [actionModal,    setActionModal]    = useState(null);  // 'credit' | 'weightloss'
+    const [showGoldTestModal, setShowGoldTestModal] = useState(false);
+    const [showSilverTestModal, setShowSilverTestModal] = useState(false);
+    const [certModal, setCertModal] = useState({ show: false, type: 'gold' });
 
     const handleWorkflowClick = (key) => {
-        if (!tryWorkflowSwitch(key)) return;
-        setSelectedWorkflow(key);
-        navigate('/workflow');
+        if (key === 'gold') {
+            setShowGoldTestModal(true);
+        } else if (key === 'silver') {
+            setShowSilverTestModal(true);
+        } else if (key === 'gold_cert') {
+            setCertModal({ show: true, type: 'gold' });
+        } else if (key === 'silver_cert') {
+            setCertModal({ show: true, type: 'silver' });
+        } else if (key === 'photo_cert') {
+            setCertModal({ show: true, type: 'photo' });
+        }
     };
 
     if (loading && !data) {
@@ -267,11 +279,21 @@ export default function Dashboard() {
                 <button
                     type="button"
                     className="py-stat-card py-stat-card--clickable"
-                    onClick={() => setBreakdownScope('cash')}
-                    aria-label="Open Cash In Hand breakdown"
+                    onClick={() => navigate('/cash-in-hand')}
+                    aria-label="Open Cash In Hand ledger"
                 >
                     <div className="py-stat-card__value">{fmtINR(data?.cashInHand)}</div>
                     <div className="py-stat-card__label">Cash In Hand</div>
+                </button>
+
+                <button
+                    type="button"
+                    className="py-stat-card py-stat-card--clickable"
+                    onClick={() => navigate('/weight-loss')}
+                    aria-label="Open Expense today"
+                >
+                    <div className="py-stat-card__value">{fmtINR(data?.todayExpense)}</div>
+                    <div className="py-stat-card__label">Expense today</div>
                 </button>
 
                 <div className="py-stat-card">
@@ -300,6 +322,24 @@ export default function Dashboard() {
             <CashInHandModal     show={breakdownScope === 'cash'}    onHide={() => setBreakdownScope(null)} />
             <CustomerCreditModal show={actionModal === 'credit'}     onHide={() => setActionModal(null)} onSuccess={refreshAll} />
             <WeightLossModal     show={actionModal === 'weightloss'} onHide={() => setActionModal(null)} onSuccess={refreshAll} />
+
+            {/* ── INTAKE FORM MODALS ── */}
+            <NewGoldTestModal
+                show={showGoldTestModal}
+                onHide={() => setShowGoldTestModal(false)}
+                onSuccess={refreshAll}
+            />
+            <NewSilverTestModal
+                show={showSilverTestModal}
+                onHide={() => setShowSilverTestModal(false)}
+                onSuccess={refreshAll}
+            />
+            <NewCertificateModal
+                show={certModal.show}
+                type={certModal.type}
+                onHide={() => setCertModal(prev => ({ ...prev, show: false }))}
+                onSuccess={refreshAll}
+            />
         </div>
     );
 }

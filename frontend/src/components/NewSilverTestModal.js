@@ -139,7 +139,13 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
             addToast(`A test cannot have more than ${MAX_ITEMS} items`, 'error');
             return;
         }
-        setSampleRows(rows => [...rows, emptyRow()]);
+        const lastRow = sampleRows[sampleRows.length - 1];
+        const newRow = {
+            ...emptyRow(),
+            name: lastRow ? lastRow.name : '',
+            item: lastRow ? lastRow.item : '',
+        };
+        setSampleRows(rows => [...rows, newRow]);
     };
 
     const removeRow = (idx) => {
@@ -217,6 +223,7 @@ const NewSilverTestModal = ({ show, onHide, onSuccess }) => {
                     await api.post('/silver-tests', {
                         customer_id: selectedCustomer.id,
                         items: sampleRows.map(r => ({
+                            name:         r.name || '',
                             item_name:    r.name || r.item,
                             item_type:    r.item,
                             description:  r.name || '',

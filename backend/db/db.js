@@ -55,6 +55,26 @@ function ensureColumn(tableName, columnName, definition) {
 // ─── Post-init migrations (legacy / patch set) ───────────────────────────────
 
 function applyPostInitMigrations() {
+    ensureColumn('customer', 'customer_no', 'TEXT');
+    ensureColumn('customer', 'auto_number', 'TEXT');
+
+    for (const table of ['gold_test', 'silver_test', 'gold_certificate', 'silver_certificate', 'photo_certificate']) {
+        ensureColumn(table, 'bill_no', 'TEXT');
+    }
+    for (const [table] of [
+        ['gold_test_item'],
+        ['silver_test_item'],
+        ['gold_certificate_item'],
+        ['silver_certificate_item'],
+        ['photo_certificate_item'],
+    ]) {
+        ensureColumn(table, 'auto_number', 'TEXT');
+        ensureColumn(table, 'parent_auto_number', 'TEXT');
+    }
+    ensureColumn('credit_history',      'auto_number', 'TEXT');
+    ensureColumn('weight_loss_history', 'auto_number', 'TEXT');
+    ensureColumn('cash_register',       'auto_number', 'TEXT');
+
     ensureColumn('gold_certificate',  'total_net_weight',  'REAL DEFAULT 0');
     ensureColumn('gold_certificate',  'total_fine_weight', 'REAL DEFAULT 0');
     ensureColumn('silver_certificate','total_net_weight',  'REAL DEFAULT 0');

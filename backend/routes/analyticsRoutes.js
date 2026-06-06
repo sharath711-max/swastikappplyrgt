@@ -291,24 +291,33 @@ router.get('/search', (req, res) => {
         const tests = db.prepare(`
             SELECT gt.id, gt.auto_number, gt.status, gt.total, c.name AS customer_name, 'gold' AS metal_type
             FROM gold_test gt JOIN customer c ON gt.customer_id = c.id
-            WHERE gt.deletedon IS NULL AND (gt.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE gt.deletedon IS NULL AND (gt.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM gold_test_item WHERE gold_test_id = gt.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             UNION ALL
             SELECT st.id, st.auto_number, st.status, st.total, c.name AS customer_name, 'silver' AS metal_type
             FROM silver_test st JOIN customer c ON st.customer_id = c.id
-            WHERE st.deletedon IS NULL AND (st.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE st.deletedon IS NULL AND (st.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM silver_test_item WHERE silver_test_id = st.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             ORDER BY auto_number DESC LIMIT 10
-        `).all(like, like, like, like);
+        `).all(like, like, like, like, like, like, like, like);
 
         const certs = db.prepare(`
             SELECT gc.id, gc.auto_number, gc.status, gc.total, c.name AS customer_name, 'gold' AS metal_type
             FROM gold_certificate gc JOIN customer c ON gc.customer_id = c.id
-            WHERE gc.deletedon IS NULL AND (gc.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE gc.deletedon IS NULL AND (gc.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM gold_certificate_item WHERE gold_certificate_id = gc.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             UNION ALL
             SELECT sc.id, sc.auto_number, sc.status, sc.total, c.name AS customer_name, 'silver' AS metal_type
             FROM silver_certificate sc JOIN customer c ON sc.customer_id = c.id
-            WHERE sc.deletedon IS NULL AND (sc.auto_number LIKE ? OR c.name LIKE ?)
+            WHERE sc.deletedon IS NULL AND (sc.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM silver_certificate_item WHERE silver_certificate_id = sc.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
+            UNION ALL
+            SELECT pc.id, pc.auto_number, pc.status, pc.total, c.name AS customer_name, 'photo' AS metal_type
+            FROM photo_certificate pc JOIN customer c ON pc.customer_id = c.id
+            WHERE pc.deletedon IS NULL AND (pc.auto_number LIKE ? OR c.name LIKE ?
+                OR EXISTS (SELECT 1 FROM photo_certificate_item WHERE photo_certificate_id = pc.id AND deletedon IS NULL AND (name LIKE ? OR item_type LIKE ?)))
             ORDER BY auto_number DESC LIMIT 10
-        `).all(like, like, like, like);
+        `).all(like, like, like, like, like, like, like, like, like, like, like, like);
 
         res.json({ success: true, data: { customers, tests, certs } });
     } catch (e) {

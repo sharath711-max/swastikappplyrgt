@@ -12,11 +12,11 @@ import useFocusWhen from '../hooks/useFocusWhen';
 import PrerequisiteBanner from './core/PrerequisiteBanner';
 import CustomerCombobox from './customer/CustomerCombobox';
 
-// NOTE: Backend `/certificates/with-photo` uses multer.single('photo') —
-// only ONE photo attaches per cert (binds to items[0].media_path). Per-row
-// photos are a P-E PCI attachment subsystem feature (not yet built).
-// Visual parity shows per-row file inputs; only the first row's photo
-// actually persists on submit. See [[project_workflow_platform]] phase P-E.
+// NOTE: Photo capture happens in Phase 2 (the results step, Phase2Modal),
+// NOT at intake. Phase 2 captures a photo per item and requires one before
+// submission via `/certificates/{id}/results`. Intake creates the cert
+// record only; the backend `/certificates/with-photo` endpoint accepts the
+// JSON payload with no photo attached (req.file is optional).
 
 const MAX_ITEMS = 20;
 const WORKFLOW_TYPE = 'PC';
@@ -29,7 +29,6 @@ const emptyRow = () => ({
     totalWeight: '',
     testWeight:  '0',
     returned:    true,
-    photo:       null,    // File object
     errors:      {},
 });
 
@@ -136,7 +135,13 @@ const NewPhotoCertificateModal = ({ show, onHide, onSuccess }) => {
             addToast(`A certificate cannot have more than ${MAX_ITEMS} items`, 'error');
             return;
         }
-        setSampleRows(rows => [...rows, emptyRow()]);
+        const lastRow = sampleRows[sampleRows.length - 1];
+        const newRow = {
+            ...emptyRow(),
+            name: lastRow ? lastRow.name : '',
+            item: lastRow ? lastRow.item : '',
+        };
+        setSampleRows(rows => [...rows, newRow]);
     };
 
     const removeRow = (idx) => {
@@ -230,11 +235,9 @@ const NewPhotoCertificateModal = ({ show, onHide, onSuccess }) => {
                     const formData = new FormData();
                     formData.append('data', JSON.stringify(payload));
 
-                    // Attach first row's photo only — backend uses upload.single('photo').
-                    // Per-row attachments require the P-E PCI attachment subsystem.
-                    const firstPhoto = sampleRows.find(r => r.photo)?.photo;
-                    if (firstPhoto) formData.append('photo', firstPhoto);
-
+                    // No photo at intake — it is captured per item in Phase 2
+                    // (results step). Backend `upload.single('photo')` treats
+                    // the file as optional, so this posts the JSON payload only.
                     await api.post('/certificates/with-photo', formData, {
                         headers: { 'X-Request-Id': submitReqRef.current },
                     });
@@ -293,6 +296,7 @@ const NewPhotoCertificateModal = ({ show, onHide, onSuccess }) => {
                     <a href="#" id="addCustomerBtn" onClick={handleAddCustomerLinkClick}>
                         Add New Customer?
                     </a>
+                    {/* eslint-disable-next-line jsx-a11y/heading-has-content */}
                     <h4 id="previousCertificate" className="mb-0"></h4>
                 </div>
 
@@ -419,13 +423,6 @@ const NewPhotoCertificateModal = ({ show, onHide, onSuccess }) => {
                                                 label={<span className="ms-1 fw-bold">Sample Returned</span>}
                                             />
                                         </span>
-                                        <Form.Control
-                                            className="photo"
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(e) => updateRow(idx, 'photo', e.target.files?.[0] || null)}
-                                            aria-label="Sample photo"
-                                        />
                                         <Button
                                             type="button" variant="danger"
                                             className={`deleteSampleDetailsBtn ${sampleRows.length === 1 ? 'invisible' : ''}`}

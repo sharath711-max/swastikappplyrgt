@@ -1,4 +1,5 @@
 const { db, now, genId, transaction } = require('../db/db');
+const seqSvc = require('../services/v2/sequenceService');
 
 class WeightLossHistoryRepository {
     constructor() {
@@ -28,22 +29,24 @@ class WeightLossHistoryRepository {
             return null;
         }
         const id = genId('WLH');
+        const autoNumber = seqSvc.generateTechnicalAutoNumber('WLH');
+        const cashAutoNumber = seqSvc.generateTechnicalAutoNumber('CR');
         const timestamp = now();
         tx.prepare(`
-            INSERT INTO weight_loss_history (id, customer_id, amount, reason, mode_of_payment, created)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(id, customer_id, numericAmount, reason, mode_of_payment, timestamp);
+            INSERT INTO weight_loss_history (id, auto_number, customer_id, amount, reason, mode_of_payment, created)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(id, autoNumber, customer_id, numericAmount, reason, mode_of_payment, timestamp);
 
         // Mirror the WLH amount into cash_register as an OUT movement so the
         // running Cash In Hand balance reflects the payout. Same transaction
         // handle: outer rollback discards both rows together.
         const today = timestamp.split('T')[0]; // YYYY-MM-DD
         tx.prepare(`
-            INSERT INTO cash_register (date, type, amount, description, created_at)
-            VALUES (?, 'OUT', ?, ?, ?)
-        `).run(today, numericAmount, `WLH: ${reason}`, timestamp);
+            INSERT INTO cash_register (auto_number, date, type, amount, description, created_at)
+            VALUES (?, ?, 'OUT', ?, ?, ?)
+        `).run(cashAutoNumber, today, numericAmount, `WLH: ${reason}`, timestamp);
 
-        return { id, customer_id, amount: numericAmount, reason, mode_of_payment, created: timestamp };
+        return { id, auto_number: autoNumber, customer_id, amount: numericAmount, reason, mode_of_payment, created: timestamp };
     }
 
     // ── Read paths exclude soft-deleted rows by default ──────────────────────

@@ -122,7 +122,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'gold_test'     AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -136,7 +136,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'silver_test'   AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -150,7 +150,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'gold_cert'     AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -164,7 +164,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'silver_cert'   AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,
@@ -178,7 +178,7 @@ router.get('/:id/timeline', async (req, res) => {
             SELECT
                 id,
                 'photo_cert'    AS event_type,
-                auto_number     AS reference,
+                COALESCE(bill_no, auto_number) AS reference,
                 status,
                 total           AS amount,
                 mode_of_payment,

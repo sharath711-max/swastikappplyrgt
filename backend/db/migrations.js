@@ -547,6 +547,100 @@ function migrateLifecycleStandardisation() {
 
 // ─── Public entry point ───────────────────────────────────────────────────────
 
+function _isTechnicalAutoNumber(value) {
+    return /^[A-Z]+-\d{14}-\d+$/.test(String(value || ''));
+}
+
+function _stampFromCreated(created) {
+    const digits = String(created || '').replace(/\D/g, '');
+    if (digits.length >= 14) return digits.slice(0, 14);
+    const d = new Date(Date.now() + (5.5 * 60 * 60 * 1000));
+    return [
+        d.getUTCFullYear(),
+        String(d.getUTCMonth() + 1).padStart(2, '0'),
+        String(d.getUTCDate()).padStart(2, '0'),
+        String(d.getUTCHours()).padStart(2, '0'),
+        String(d.getUTCMinutes()).padStart(2, '0'),
+        String(d.getUTCSeconds()).padStart(2, '0'),
+    ].join('');
+}
+
+function _backfillTechnicalAutoNumbers(table, prefix, idColumn = 'id', createdColumn = 'created') {
+    const rows = db.prepare(
+        `SELECT ${idColumn} AS row_id, auto_number, ${createdColumn} AS created FROM ${table} ORDER BY ${createdColumn}, ${idColumn}`
+    ).all();
+    const counters = new Map();
+
+    for (const row of rows) {
+        if (_isTechnicalAutoNumber(row.auto_number)) continue;
+        const stamp = _stampFromCreated(row.created);
+        const key = `${prefix}-${stamp}`;
+        const next = (counters.get(key) || 0) + 1;
+        counters.set(key, next);
+        db.prepare(`UPDATE ${table} SET auto_number = ? WHERE ${idColumn} = ?`)
+            .run(`${prefix}-${stamp}-${next}`, row.row_id);
+    }
+}
+
+function migrateAutoNumberSplit() {
+    ensureCol('customer', 'customer_no', 'TEXT');
+    ensureCol('customer', 'auto_number', 'TEXT');
+
+    const parentTables = [
+        ['gold_test', 'GT'],
+        ['silver_test', 'ST'],
+        ['gold_certificate', 'GC'],
+        ['silver_certificate', 'SC'],
+        ['photo_certificate', 'PC'],
+    ];
+
+    for (const [table, prefix] of parentTables) {
+        ensureCol(table, 'bill_no', 'TEXT');
+        db.prepare(`UPDATE ${table} SET bill_no = auto_number WHERE (bill_no IS NULL OR bill_no = '') AND auto_number IS NOT NULL`).run();
+        _backfillTechnicalAutoNumbers(table, prefix);
+        ensureIndex(`idx_${table}_bill_no`, `CREATE INDEX IF NOT EXISTS idx_${table}_bill_no ON ${table}(bill_no) WHERE deletedon IS NULL`);
+        ensureIndex(`idx_${table}_auto_number_tech`, `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_auto_number_tech ON ${table}(auto_number) WHERE auto_number IS NOT NULL`);
+    }
+
+    _backfillTechnicalAutoNumbers('customer', 'CUS');
+    db.prepare(`UPDATE customer SET customer_no = id WHERE (customer_no IS NULL OR customer_no = '')`).run();
+    ensureIndex('idx_customer_auto_number', `CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_auto_number ON customer(auto_number) WHERE auto_number IS NOT NULL`);
+    ensureIndex('idx_customer_customer_no', `CREATE INDEX IF NOT EXISTS idx_customer_customer_no ON customer(customer_no) WHERE deletedon IS NULL`);
+
+    const childTables = [
+        ['gold_test_item', 'GTI', 'gold_test', 'gold_test_id'],
+        ['silver_test_item', 'STI', 'silver_test', 'silver_test_id'],
+        ['gold_certificate_item', 'GCI', 'gold_certificate', 'gold_certificate_id'],
+        ['silver_certificate_item', 'SCI', 'silver_certificate', 'silver_certificate_id'],
+        ['photo_certificate_item', 'PCI', 'photo_certificate', 'photo_certificate_id'],
+    ];
+
+    for (const [table, prefix, parentTable, fk] of childTables) {
+        ensureCol(table, 'auto_number', 'TEXT');
+        ensureCol(table, 'parent_auto_number', 'TEXT');
+        _backfillTechnicalAutoNumbers(table, prefix);
+        db.prepare(`
+            UPDATE ${table}
+               SET parent_auto_number = (
+                   SELECT p.auto_number FROM ${parentTable} p WHERE p.id = ${table}.${fk}
+               )
+             WHERE parent_auto_number IS NULL OR parent_auto_number = ''
+        `).run();
+        ensureIndex(`idx_${table}_auto_number`, `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_auto_number ON ${table}(auto_number) WHERE auto_number IS NOT NULL`);
+        ensureIndex(`idx_${table}_parent_auto_number`, `CREATE INDEX IF NOT EXISTS idx_${table}_parent_auto_number ON ${table}(parent_auto_number) WHERE deletedon IS NULL`);
+    }
+
+    for (const [table, prefix, idColumn, createdColumn = 'created'] of [
+        ['credit_history', 'CH', 'id'],
+        ['weight_loss_history', 'WLH', 'id'],
+        ['cash_register', 'CR', 'id', 'created_at'],
+    ]) {
+        ensureCol(table, 'auto_number', 'TEXT');
+        _backfillTechnicalAutoNumbers(table, prefix, idColumn, createdColumn);
+        ensureIndex(`idx_${table}_auto_number`, `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_auto_number ON ${table}(auto_number) WHERE auto_number IS NOT NULL`);
+    }
+}
+
 function applyMigrations() {
     migrateIdempotencyKeys();             // priority 1
     migrateVersionColumns();              // priority 2
@@ -558,5 +652,11 @@ function applyMigrations() {
     migrateDropWorkflowLinks();           // priority 8 — customer-centric CH/WLH
     migrateLifecycleStandardisation();    // priority 9 — receipts rename + triggers
 }
+
+const _applyMigrationsCore = applyMigrations;
+applyMigrations = function applyMigrationsWithAutoNumberSplit() {
+    _applyMigrationsCore();
+    migrateAutoNumberSplit();
+};
 
 module.exports = { applyMigrations };

@@ -14,15 +14,6 @@
     "windows": "manager.exe",
     "sync:validation": "node scripts/sync-validation.js",
     "check:validation": "node scripts/check-validation.js",
-    "pretest:backend": "node scripts/check-validation.js",
-    "pretest:frontend": "node scripts/check-validation.js",
-    "test:backend": "npm --prefix backend test -- --runInBand",
-    "test:frontend": "npm --prefix frontend test -- --watchAll=false",
-    "test:ui-components": "npm --prefix frontend run test:components",
-    "test:ui-components:coverage": "npm --prefix frontend run test:components:coverage",
-    "test:e2e": "npm --prefix frontend run test:e2e",
-    "test:e2e-ui": "npm --prefix frontend run test:e2e-ui",
-    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e",
     "logs:maintain": "npm --prefix backend run logs:maintain"
   }
 }

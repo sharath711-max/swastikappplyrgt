@@ -66,6 +66,32 @@ export default function useSafeModalClose({ show, onHide, lifecycleKey = null })
                 clearTimeout(cleanupTimer.current);
                 cleanupTimer.current = null;
             }
+            // Cleanup of modal backdrops and body locks on unmount. When a modal
+            // unmounts abruptly (e.g. parent re-renders onSuccess), the transition
+            // timer is cancelled, so we sweep orphans here to prevent stuck
+            // backdrops / UI freezes.
+            if (typeof document !== 'undefined') {
+                // Body unlock is safe synchronously — it touches no React-owned
+                // nodes. Do it immediately so scroll lock never lingers.
+                if (document.querySelectorAll('.modal.show').length === 0) {
+                    document.body.classList.remove('modal-open');
+                    document.body.style.removeProperty('overflow');
+                    document.body.style.removeProperty('padding-right');
+                }
+                // Backdrop NODE removal is deferred to a macrotask so React's own
+                // portal/backdrop teardown — running in THIS same commit — removes
+                // its nodes first. Removing a backdrop React still owns mid-commit
+                // throws "removeChild: node is not a child of this node". A
+                // standalone timeout fires regardless of this component unmounting.
+                setTimeout(() => {
+                    if (typeof document === 'undefined') return;
+                    if (document.querySelectorAll('.modal.show').length > 0) return;
+                    document.querySelectorAll('.modal-backdrop').forEach(b => { try { b.remove(); } catch (_e) {} });
+                    document.body.classList.remove('modal-open');
+                    document.body.style.removeProperty('overflow');
+                    document.body.style.removeProperty('padding-right');
+                }, 0);
+            }
             // Belt-and-braces: if the consumer unmounted without ever
             // toggling show=false, release our stack entry here too.
             if (lifecycleHandleRef.current) {

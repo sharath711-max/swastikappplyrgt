@@ -12,16 +12,18 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
     const [errors, setErrors] = useState({});
     const [formData, setFormData] = useState({
         amount: '',
+        transaction_type: 'DEPOSIT',
         type: 'CREDIT',
         mode_of_payment: 'Cash',
-        description: ''
+        description: '[DEPOSIT] '
     });
     const resetForm = () => {
         setFormData({
             amount: '',
+            transaction_type: 'DEPOSIT',
             type: 'CREDIT',
             mode_of_payment: 'Cash',
-            description: ''
+            description: '[DEPOSIT] '
         });
         setErrors({});
     };
@@ -86,32 +88,63 @@ const NewCreditHistoryModal = ({ show, onHide, customerId, onSuccess }) => {
                 <Modal.Body className="p-4">
                     <Row className="g-3">
                         <Col md={6}>
-                            <Form.Group>
+                            <Form.Group controlId="transaction_type">
                                 <Form.Label className="fw-semibold small text-muted text-uppercase">Transaction Type</Form.Label>
-                                <div className="d-flex gap-3 mt-1">
-                                    <Form.Check
-                                        type="radio"
-                                        label="CREDIT (Payment Received / Jama)"
-                                        name="type"
-                                        value="CREDIT"
-                                        checked={formData.type === 'CREDIT'}
-                                        onChange={handleChange}
-                                        id="type-credit"
-                                        className="fw-medium text-success"
-                                    />
-                                    <Form.Check
-                                        type="radio"
-                                        label="DEBIT (Billed / Udhaar)"
-                                        name="type"
-                                        value="DEBIT"
-                                        checked={formData.type === 'DEBIT'}
-                                        onChange={handleChange}
-                                        id="type-debit"
-                                        className="fw-medium text-danger"
-                                    />
-                                </div>
+                                <Form.Select
+                                    name="transaction_type"
+                                    value={formData.transaction_type}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFormData(prev => {
+                                            let mappedType = prev.type;
+                                            if (val === 'DEPOSIT' || val === 'SETTLEMENT' || val === 'DISCOUNT') {
+                                                mappedType = 'CREDIT';
+                                            }
+                                            let desc = prev.description;
+                                            if (!prev.description || (prev.description.startsWith('[') && prev.description.includes(']'))) {
+                                                desc = `[${val}] `;
+                                            }
+                                            return { ...prev, transaction_type: val, type: mappedType, description: desc };
+                                        });
+                                    }}
+                                >
+                                    <option value="DEPOSIT">DEPOSIT (Payment Received / Jama)</option>
+                                    <option value="CORRECTION">CORRECTION (Adjustment)</option>
+                                    <option value="SETTLEMENT">SETTLEMENT (Account Settlement)</option>
+                                    <option value="DISCOUNT">DISCOUNT (Waiver / Discount)</option>
+                                </Form.Select>
                             </Form.Group>
                         </Col>
+
+                        {formData.transaction_type === 'CORRECTION' ? (
+                            <Col md={6}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold small text-muted text-uppercase">Adjustment Direction</Form.Label>
+                                    <div className="d-flex gap-3 mt-1">
+                                        <Form.Check
+                                            type="radio"
+                                            label="CREDIT (Reduce Customer Balance)"
+                                            name="type"
+                                            value="CREDIT"
+                                            checked={formData.type === 'CREDIT'}
+                                            onChange={handleChange}
+                                            id="type-credit"
+                                            className="fw-medium text-success"
+                                        />
+                                        <Form.Check
+                                            type="radio"
+                                            label="DEBIT (Increase Customer Balance)"
+                                            name="type"
+                                            value="DEBIT"
+                                            checked={formData.type === 'DEBIT'}
+                                            onChange={handleChange}
+                                            id="type-debit"
+                                            className="fw-medium text-danger"
+                                        />
+                                    </div>
+                                </Form.Group>
+                            </Col>
+                        ) : null}
 
                         <Col md={6}>
                             <Form.Group controlId="amount">

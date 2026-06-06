@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     FaTachometerAlt, FaUsers, FaTable, FaChartBar,
@@ -20,6 +20,17 @@ const WORKFLOW_ICONS = {
 
 const WORKFLOW_ROLES = ['admin', 'manager', 'technician', 'front_desk'];
 
+// Records sub-nav — vertical expansion of the 5 record types (GT/GC/ST/SC/PC).
+// Each links to the shared list-views page (same GT-style table) by tab.
+// Items + Ledger remain reachable by URL but are intentionally not surfaced here.
+const RECORD_LINKS = [
+    { tab: 'gold-tests',          category: 'tests',        label: 'Gold Test' },
+    { tab: 'gold-certificates',   category: 'certificates', label: 'Gold Certificate' },
+    { tab: 'silver-tests',        category: 'tests',        label: 'Silver Test' },
+    { tab: 'silver-certificates', category: 'certificates', label: 'Silver Certificate' },
+    { tab: 'photo-certificates',  category: 'certificates', label: 'Photo Certificate' },
+];
+
 const Sidebar = ({ sidebarCollapsed }) => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -37,6 +48,9 @@ const Sidebar = ({ sidebarCollapsed }) => {
     };
 
     const onWorkflowsPath = location.pathname.startsWith('/workflow');
+    const onRecordsPath   = location.pathname.startsWith('/list-views');
+    const currentRecordTab = new URLSearchParams(location.search).get('tab');
+    const [recordsOpen, setRecordsOpen] = useState(onRecordsPath);
 
     const handleSelectWorkflow = (key) => {
         if (!tryWorkflowSwitch(key)) return;
@@ -94,13 +108,48 @@ const Sidebar = ({ sidebarCollapsed }) => {
                     </Link>
                 </ProtectedComponent>
                 <ProtectedComponent roles={['admin', 'manager']}>
-                    <Link
-                        to="/list-views"
-                        className={`nav-item ${isActive('/list-views') ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon"><FaTable /></span>
-                        {!sidebarCollapsed && <span className="nav-label">Records</span>}
-                    </Link>
+                    <div className={`nav-group ${onRecordsPath ? 'active' : ''}`}>
+                        <button
+                            type="button"
+                            className="nav-group-header nav-item--button"
+                            onClick={() => {
+                                // Collapsed rail can't show children — jump to the
+                                // first record list instead of a dead toggle.
+                                if (sidebarCollapsed) {
+                                    navigate('/list-views?category=tests&tab=gold-tests');
+                                    return;
+                                }
+                                setRecordsOpen((o) => !o);
+                            }}
+                            aria-expanded={recordsOpen}
+                            title="Records"
+                        >
+                            <span className="nav-icon"><FaTable /></span>
+                            {!sidebarCollapsed && <span className="nav-label">Records</span>}
+                            {!sidebarCollapsed && (
+                                <span
+                                    className="nav-caret"
+                                    aria-hidden="true"
+                                    style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.7 }}
+                                >
+                                    {recordsOpen ? '▾' : '▸'}
+                                </span>
+                            )}
+                        </button>
+                        {!sidebarCollapsed && recordsOpen && (
+                            <div className="nav-subitems">
+                                {RECORD_LINKS.map((r) => (
+                                    <Link
+                                        key={r.tab}
+                                        to={`/list-views?category=${r.category}&tab=${r.tab}`}
+                                        className={`nav-subitem ${onRecordsPath && currentRecordTab === r.tab ? 'active' : ''}`}
+                                    >
+                                        {r.label}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </ProtectedComponent>
                 <ProtectedComponent roles={['admin', 'manager', 'front_desk']}>
                     <Link
